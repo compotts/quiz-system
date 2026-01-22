@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+<div>
+  <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-requests">Requests</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-users">Users</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-codes">Registration Codes</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-requests">
+      <h5>Registration Requests</h5>
+      <div id="requests-list"></div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-users">
+      <h5>Users</h5>
+      <div class="mb-3">
+        <input class="form-control mb-2" id="user-search" placeholder="Search by email or username">
+      </div>
+      <div id="users-list"></div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-codes">
+      <h5>Registration Codes</h5>
+      <form id="create-code-form" class="row g-2 mb-3">
+        <div class="col-6">
+          <select id="code-role" class="form-select">
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+        <div class="col-4">
+          <input id="code-expires" class="form-control" type="number" min="1" value="24">
+        </div>
+        <div class="col-2">
+          <button class="btn btn-primary w-100" type="submit">Create</button>
+        </div>
+      </form>
+      <div id="codes-list"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

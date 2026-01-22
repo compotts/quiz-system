@@ -1,0 +1,65 @@
+quizz/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                  # FastAPI(app) + routers
+│   ├── config.py                # pydantic-settings (DB_URL, SECRET_KEY)
+│   ├── database.py              # Ormar config + engine
+│   ├── dependencies.py          # get_current_user, first_user_only()
+│   │
+│   ├── database/                  # Ormar модели [web:67]
+│   │   ├── __init__.py
+│   │   ├── engine_setup.py              # engine setup
+│   │   ├── base_config.py               # base_ormar_config
+│   │   └── models/                  # Ormar модели
+│   │       ├── __init__.py
+│   │       ├── base.py              # BaseMeta (base_ormar_config)
+│   │       ├── user.py              # User, RegistrationCode
+│   │       ├── group.py             # Group, GroupMember
+│   │       ├── quiz.py              # Quiz, Question, Option
+│   │       └── attempt.py           # QuizAttempt, Answer
+│   │
+│   ├── schemas/                 # Pydantic модели
+│   │   ├── __init__.py
+│   │   ├── user.py              # UserCreate, UserOut, Login
+│   │   ├── quiz.py              # QuizCreate, QuestionCreate
+│   │   └── admin.py             # AdminInit
+│   │
+│   ├── routers/                 # APIRouter по модулям
+│   │   ├── __init__.py
+│   │   ├── auth.py              # /auth/register, /auth/login, /admin/init
+│   │   ├── admin.py             # /admin/users, /admin/keys
+│   │   ├── teacher.py           # /teacher/quizzes, /teacher/groups
+│   │   └── student.py           # /student/groups, /student/quizzes/{id}/attempt
+│   │
+│   ├── core/                    # Утилиты
+│   │   ├── __init__.py
+│   │   ├── security.py          # pwd_context = CryptContext(['bcrypt'])
+│   │   └── crud.py              # CRUD функции (get_user_by_email)
+│   │
+│   └── services/                # Бизнес-логика
+│       ├── __init__.py
+│       ├── auth.py              # verify_key, create_registration_code
+│       └── quiz.py              # calculate_score
+│
+├── alembic/                     # Миграции
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+├── static/                      # CSS/JS/images
+│   ├── css/
+│   └── js/
+├── templates/                   # HTML Jinja2
+│   ├── base.html
+│   ├── auth/
+│   │   ├── login.html
+│   │   └── register.html
+│   ├── admin/
+│   └── teacher/
+├── tests/                       # Pytest
+│   ├── test_auth.py
+│   └── conftest.py
+├── .env                         # DB_URL=postgresql://...
+├── alembic.ini
+├── requirements.txt
+├── Dockerfile
+└── README.md
