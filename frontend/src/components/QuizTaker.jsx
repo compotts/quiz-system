@@ -16,7 +16,6 @@ export default function QuizTaker({ quiz, onComplete }) {
 
   const startQuiz = async () => {
     try {
-      // Проверяем незавершенную попытку
       const currentRes = await attemptsAPI.getCurrentAttempt(quiz.id);
       
       if (currentRes.data.has_attempt) {
@@ -27,12 +26,10 @@ export default function QuizTaker({ quiz, onComplete }) {
           return;
         }
       } else {
-        // Начинаем новую попытку
         const attemptRes = await attemptsAPI.startAttempt(quiz.id);
         setAttemptId(attemptRes.data.id);
       }
 
-      // Загружаем вопросы
       const questionsRes = await quizzesAPI.getQuestions(quiz.id);
       setQuestions(questionsRes.data);
       setLoading(false);
@@ -71,7 +68,6 @@ export default function QuizTaker({ quiz, onComplete }) {
         selected_options: selectedOptions,
       });
 
-      // Переход к следующему вопросу или завершение
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedOptions([]);

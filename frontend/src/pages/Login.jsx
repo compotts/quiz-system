@@ -18,7 +18,6 @@ export default function Login() {
     try {
       const user = await login(formData);
       
-      // Редирект в зависимости от роли
       if (user.role === 'admin') {
         navigate('/admin');
       } else if (user.role === 'teacher') {

@@ -8,7 +8,6 @@ export const useAuthStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Вход
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
@@ -18,7 +17,6 @@ export const useAuthStore = create((set, get) => ({
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
 
-      // Получаем данные пользователя
       const userResponse = await authAPI.getMe();
       const user = userResponse.data;
       
@@ -41,7 +39,6 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Регистрация
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
@@ -57,7 +54,6 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Выход
   logout: () => {
     localStorage.clear();
     set({
@@ -67,7 +63,6 @@ export const useAuthStore = create((set, get) => ({
     });
   },
 
-  // Загрузка данных пользователя
   loadUser: async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -97,6 +92,5 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Очистка ошибки
   clearError: () => set({ error: null }),
 }));

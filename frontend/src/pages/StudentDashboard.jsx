@@ -22,7 +22,6 @@ export default function StudentDashboard() {
       const groupsRes = await groupsAPI.getGroups();
       const groupsData = groupsRes.data;
 
-      // Загружаем викторины для каждой группы
       const groupsWithQuizzes = await Promise.all(
         groupsData.map(async (group) => {
           const quizzesRes = await quizzesAPI.getQuizzes(group.id);

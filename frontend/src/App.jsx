@@ -2,15 +2,11 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 
-// Pages
 import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
-// Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user, isLoading } = useAuthStore();
 
@@ -27,7 +23,6 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Редирект на соответствующую панель
     if (user?.role === 'admin') return <Navigate to="/admin" replace />;
     if (user?.role === 'teacher') return <Navigate to="/teacher" replace />;
     if (user?.role === 'student') return <Navigate to="/student" replace />;
@@ -40,7 +35,6 @@ function App() {
   const { loadUser, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    // Загружаем данные пользователя при запуске
     if (localStorage.getItem('access_token')) {
       loadUser();
     }

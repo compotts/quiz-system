@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Создаем instance axios с базовой конфигурацией
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -10,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// Interceptor для добавления токена к каждому запросу
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -22,7 +20,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor для обработки ошибок авторизации
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -54,7 +51,6 @@ api.interceptors.response.use(
   }
 );
 
-// ============ AUTH API ============
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
@@ -62,7 +58,6 @@ export const authAPI = {
   refresh: (refreshToken) => api.post('/auth/refresh', { refresh_token: refreshToken }),
 };
 
-// ============ ADMIN API ============
 export const adminAPI = {
   initAdmin: (data) => api.post('/admin/init', data),
   getRegistrationRequests: (status = null) => 
@@ -78,7 +73,6 @@ export const adminAPI = {
   deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
 };
 
-// ============ GROUPS API ============
 export const groupsAPI = {
   createGroup: (data) => api.post('/groups', data),
   getGroups: () => api.get('/groups'),
@@ -92,7 +86,6 @@ export const groupsAPI = {
   leaveGroup: (groupId) => api.post(`/groups/${groupId}/leave`),
 };
 
-// ============ QUIZZES API ============
 export const quizzesAPI = {
   createQuiz: (data) => api.post('/quizzes', data),
   getQuizzes: (groupId = null) => 
@@ -101,7 +94,6 @@ export const quizzesAPI = {
   updateQuiz: (quizId, data) => api.patch(`/quizzes/${quizId}`, data),
   deleteQuiz: (quizId) => api.delete(`/quizzes/${quizId}`),
   
-  // Questions
   createQuestion: (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data),
   getQuestions: (quizId) => api.get(`/quizzes/${quizId}/questions`),
   updateQuestion: (quizId, questionId, data) => 
@@ -110,7 +102,6 @@ export const quizzesAPI = {
     api.delete(`/quizzes/${quizId}/questions/${questionId}`),
 };
 
-// ============ ATTEMPTS API ============
 export const attemptsAPI = {
   startAttempt: (quizId) => api.post('/attempts/start', { quiz_id: quizId }),
   submitAnswer: (data) => api.post('/attempts/answer', data),
