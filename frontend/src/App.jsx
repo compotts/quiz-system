@@ -1,106 +1,34 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/useAuthStore';
-
-import Home from './pages/Home';
-import StudentDashboard from './pages/StudentDashboard';
-import TeacherDashboard from './pages/TeacherDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-
-function ProtectedRoute({ children, allowedRoles }) {
-  const { isAuthenticated, user, isLoading } = useAuthStore();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
-    if (user?.role === 'teacher') return <Navigate to="/teacher" replace />;
-    if (user?.role === 'student') return <Navigate to="/student" replace />;
-  }
-
-  return children;
-}
+import { Routes, Route, useLocation } from "react-router-dom";
+import Header from "./components/Header.jsx";
+import Footer from "./components/Footer.jsx";
+import Home from "./pages/Home.jsx";
+import Info from "./pages/Info.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminInit from "./pages/AdminInit.jsx";
+import TeacherDashboard from "./pages/TeacherDashboard.jsx";
+import StudentDashboard from "./pages/StudentDashboard.jsx";
 
 function App() {
-  const { loadUser, isAuthenticated } = useAuthStore();
-
-  useEffect(() => {
-    if (localStorage.getItem('access_token')) {
-      loadUser();
-    }
-  }, []);
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith("/dashboard");
+  const hideFooter = isDashboard || location.pathname === "/admin/init";
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        
-        <Route 
-          path="/login" 
-          element={
-            isAuthenticated ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } 
-        />
-        <Route 
-          path="/register" 
-          element={
-            isAuthenticated ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } 
-        />
-
-        {/* Protected Routes */}
-        <Route
-          path="/student"
-          element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'admin']}>
-              <StudentDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        <Route
-          path="/teacher"
-          element={
-            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-              <TeacherDashboard />
-            </ProtectedRoute>
-          }
-        />
-        
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <div className="flex min-h-screen flex-col bg-[var(--bg)] transition-colors duration-200">
+      <Header />
+      <main className="flex flex-1 flex-col">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/info" element={<Info />} />
+          <Route path="/admin/init" element={<AdminInit />} />
+          <Route path="/dashboard/admin" element={<AdminDashboard />} />
+          <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
+          <Route path="/dashboard/student" element={<StudentDashboard />} />
+        </Routes>
+      </main>
+      {!hideFooter && <Footer />}
+    </div>
   );
 }
-
 
 export default App;

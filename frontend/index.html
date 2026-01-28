@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quizz System</title>
+    <title>Quizz — система тестирования</title>
+    <script>
+      (function () {
+        var s = localStorage.getItem("quizz-theme");
+        var dark = s ? s === "dark" : false;
+        document.documentElement.classList.toggle("dark", dark);
+        var lang = localStorage.getItem("quizz-lang");
+        document.documentElement.lang = (lang && ["ru","lt","en"].indexOf(lang) !== -1) ? lang : "ru";
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,233 +1,626 @@
-import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/useAuthStore';
-import { groupsAPI, quizzesAPI, attemptsAPI } from '../services/api';
-import QuizTaker from '../components/QuizTaker';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import {
+  Users,
+  ClipboardList,
+  History,
+  Plus,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  X,
+  ChevronRight,
+} from "lucide-react";
+import {
+  authApi,
+  groupsApi,
+  quizzesApi,
+  attemptsApi,
+} from "../services/api.js";
+
+const TABS = [
+  { id: "groups", icon: Users },
+  { id: "quizzes", icon: ClipboardList },
+  { id: "attempts", icon: History },
+];
+
+function formatDate(dateString) {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function StudentDashboard() {
-  const { user, logout } = useAuthStore();
-  const [groups, setGroups] = useState([]);
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("groups");
   const [loading, setLoading] = useState(true);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
-  const [joinError, setJoinError] = useState('');
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Groups
+  const [groups, setGroups] = useState([]);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(null);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+
+  // Quizzes
+  const [quizzes, setQuizzes] = useState([]);
+  const [groupsForQuizzes, setGroupsForQuizzes] = useState([]);
+  const [quizGroupFilter, setQuizGroupFilter] = useState("");
+  const [currentAttemptByQuiz, setCurrentAttemptByQuiz] = useState({});
+
+  // Quiz run
+  const [runState, setRunState] = useState(null); // null | 'running' | 'results'
+  const [runQuiz, setRunQuiz] = useState(null);
+  const [runAttemptId, setRunAttemptId] = useState(null);
+  const [runQuestions, setRunQuestions] = useState([]);
+  const [runAnswered, setRunAnswered] = useState([]);
+  const [runCurrentIndex, setRunCurrentIndex] = useState(0);
+  const [runSelected, setRunSelected] = useState([]);
+  const [runSubmitLoading, setRunSubmitLoading] = useState(false);
+  const [runResults, setRunResults] = useState(null);
+  const [runCompleteLoading, setRunCompleteLoading] = useState(false);
+
+  // Attempts
+  const [attempts, setAttempts] = useState([]);
+  const [quizTitleMap, setQuizTitleMap] = useState({});
+  const [attemptDetailId, setAttemptDetailId] = useState(null);
+  const [attemptDetail, setAttemptDetail] = useState(null);
 
   useEffect(() => {
-    loadGroups();
-  }, []);
+    let ignore = false;
+    authApi.getMe().then((u) => {
+      if (ignore) return;
+      setCurrentUser(u);
+      if (u.role !== "student") navigate("/", { replace: true });
+    }).catch(() => navigate("/", { replace: true }));
+    return () => { ignore = true; };
+  }, [navigate]);
 
   const loadGroups = async () => {
-    setLoading(true);
     try {
-      const groupsRes = await groupsAPI.getGroups();
-      const groupsData = groupsRes.data;
+      const data = await groupsApi.getGroups();
+      setGroups(Array.isArray(data) ? data : []);
+      setError("");
+    } catch (err) {
+      setError(err.message || t("student.groups.errorLoad"));
+    }
+  };
 
-      const groupsWithQuizzes = await Promise.all(
-        groupsData.map(async (group) => {
-          const quizzesRes = await quizzesAPI.getQuizzes(group.id);
-          return { ...group, quizzes: quizzesRes.data };
-        })
-      );
+  const loadQuizzes = async () => {
+    try {
+      const groupId = quizGroupFilter ? parseInt(quizGroupFilter, 10) : null;
+      const data = await quizzesApi.getQuizzes(groupId);
+      setQuizzes(Array.isArray(data) ? data : []);
+      setError("");
+    } catch (err) {
+      setError(err.message || t("student.quizzes.errorLoad"));
+    }
+  };
 
-      setGroups(groupsWithQuizzes);
-    } catch (error) {
-      console.error('Error loading groups:', error);
+  const loadAttempts = async () => {
+    try {
+      const data = await attemptsApi.getMyAttempts(null);
+      const list = Array.isArray(data) ? data : [];
+      setAttempts(list.filter((a) => a.is_completed));
+      const ids = [...new Set(list.map((a) => a.quiz_id))];
+      if (ids.length) {
+        const all = await quizzesApi.getQuizzes(null);
+        const map = {};
+        (Array.isArray(all) ? all : []).forEach((q) => { map[q.id] = q.title; });
+        setQuizTitleMap(map);
+      }
+      setError("");
+    } catch (err) {
+      setError(err.message || t("student.attempts.errorLoad"));
+    }
+  };
+
+  const loadCurrentAttemptsMap = async () => {
+    try {
+      const data = await attemptsApi.getMyAttempts(null);
+      const list = Array.isArray(data) ? data : [];
+      const map = {};
+      list.filter((a) => !a.is_completed).forEach((a) => { map[a.quiz_id] = a; });
+      setCurrentAttemptByQuiz(map);
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "student") return;
+    if (activeTab === "groups") {
+      setLoading(true);
+      loadGroups().finally(() => setLoading(false));
+    } else if (activeTab === "quizzes") {
+      setLoading(true);
+      groupsApi.getGroups().then((g) => {
+        const gr = Array.isArray(g) ? g : [];
+        setGroupsForQuizzes(gr);
+        if (!quizGroupFilter && gr.length) setQuizGroupFilter(String(gr[0].id));
+      }).catch(() => {});
+      loadCurrentAttemptsMap();
+      loadQuizzes().finally(() => setLoading(false));
+    } else if (activeTab === "attempts") {
+      setLoading(true);
+      loadAttempts().finally(() => setLoading(false));
+    }
+  }, [currentUser, activeTab, quizGroupFilter]);
+
+  const handleJoin = async (e) => {
+    e.preventDefault();
+    const code = String(joinCode).trim().replace(/\D/g, "").slice(0, 6);
+    if (code.length !== 6) return;
+    setJoinLoading(true);
+    setError("");
+    try {
+      await groupsApi.joinGroup(code);
+      setJoinCode("");
+      loadGroups();
+    } catch (err) {
+      setError(err.message || t("student.groups.errorJoin"));
     } finally {
-      setLoading(false);
+      setJoinLoading(false);
     }
   };
 
-  const handleJoinGroup = async () => {
-    if (joinCode.length !== 6) {
-      setJoinError('Код должен состоять из 6 цифр');
-      return;
-    }
-
+  const handleLeave = async () => {
+    if (!confirmLeave) return;
+    setLeaveLoading(true);
     try {
-      await groupsAPI.joinGroup(joinCode);
-      setShowJoinModal(false);
-      setJoinCode('');
-      setJoinError('');
+      await groupsApi.leaveGroup(confirmLeave.id);
+      setConfirmLeave(null);
       loadGroups();
-    } catch (error) {
-      setJoinError(error.response?.data?.detail || 'Ошибка присоединения');
+    } catch (err) {
+      setError(err.message || t("student.groups.errorLeave"));
+    } finally {
+      setLeaveLoading(false);
     }
   };
 
-  const handleLeaveGroup = async (groupId) => {
-    if (!window.confirm('Вы уверены, что хотите покинуть группу?')) return;
-
+  const startOrContinueQuiz = async (quiz) => {
+    setError("");
     try {
-      await groupsAPI.leaveGroup(groupId);
-      loadGroups();
-    } catch (error) {
-      console.error('Error leaving group:', error);
+      const cur = await attemptsApi.getCurrentAttempt(quiz.id);
+      let attemptId;
+      if (cur.has_attempt) {
+        attemptId = cur.attempt_id;
+      } else {
+        const started = await attemptsApi.startAttempt(quiz.id);
+        attemptId = started.id;
+      }
+      const qs = await quizzesApi.getQuestions(quiz.id);
+      const questions = Array.isArray(qs) ? qs : [];
+      const answered = cur.has_attempt ? cur.answered_questions || [] : [];
+      let idx = 0;
+      const order = questions.map((q) => q.id);
+      for (let i = 0; i < order.length; i++) {
+        if (!answered.includes(order[i])) { idx = i; break; }
+        idx = i + 1;
+      }
+      setRunQuiz(quiz);
+      setRunAttemptId(attemptId);
+      setRunQuestions(questions);
+      setRunAnswered(answered);
+      setRunCurrentIndex(Math.min(idx, questions.length));
+      setRunSelected([]);
+      setRunResults(null);
+      setRunState("running");
+    } catch (err) {
+      setError(err.message || t("student.quizzes.errorStart"));
     }
   };
 
-  const handleStartQuiz = (quiz) => {
-    setSelectedQuiz(quiz);
+  const submitCurrentAnswer = async () => {
+    const q = runQuestions[runCurrentIndex];
+    if (!q || runSubmitLoading) return;
+    const single = (q.question_type || "").startsWith("single");
+    const optIds = (q.options || []).map((o) => o.id);
+    const selected = single
+      ? (runSelected.length ? [runSelected[0]] : [])
+      : runSelected.filter((id) => optIds.includes(id));
+    if (!selected.length) return;
+    setRunSubmitLoading(true);
+    setError("");
+    try {
+      await attemptsApi.submitAnswer(q.id, selected);
+      const nextAnswered = [...runAnswered, q.id];
+      setRunAnswered(nextAnswered);
+      setRunSelected([]);
+      let nextIdx = runCurrentIndex + 1;
+      while (nextIdx < runQuestions.length && nextAnswered.includes(runQuestions[nextIdx].id)) nextIdx++;
+      setRunCurrentIndex(nextIdx);
+      if (nextIdx >= runQuestions.length) {
+        setRunCompleteLoading(true);
+        await attemptsApi.completeAttempt(runAttemptId);
+        const res = await attemptsApi.getAttemptResults(runAttemptId);
+        setRunResults(res);
+        setRunState("results");
+      }
+    } catch (err) {
+      setError(err.message || t("student.quizzes.errorSubmit"));
+    } finally {
+      setRunSubmitLoading(false);
+      setRunCompleteLoading(false);
+    }
   };
 
-  const handleQuizComplete = () => {
-    setSelectedQuiz(null);
-    loadGroups();
+  const loadAttemptDetail = async (id) => {
+    setAttemptDetailId(id);
+    setAttemptDetail(null);
+    try {
+      const d = await attemptsApi.getAttemptResults(id);
+      setAttemptDetail(d);
+    } catch (err) {
+      setError(err.message || t("student.attempts.errorLoad"));
+    }
   };
 
-  if (selectedQuiz) {
-    return <QuizTaker quiz={selectedQuiz} onComplete={handleQuizComplete} />;
+  const exitQuizRun = () => {
+    setRunState(null);
+    setRunQuiz(null);
+    setRunAttemptId(null);
+    setRunQuestions([]);
+    setRunAnswered([]);
+    setRunResults(null);
+    setError("");
+    loadQuizzes();
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-[var(--bg)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+      </div>
+    );
   }
 
+  const showQuizRun = runState === "running" || runState === "results";
+  const currentQ = runQuestions[runCurrentIndex];
+  const singleChoice = currentQ && (currentQ.question_type || "").startsWith("single");
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-6 sm:py-8 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-gray-800/40 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-700/50">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                🎯 Мои группы
-              </h1>
-              <p className="text-gray-400 text-sm sm:text-base">
-                Добро пожаловать, {user?.first_name || user?.username}!
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="bg-blue-600 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg text-sm sm:text-base"
-              >
-                + Присоединиться к группе
-              </button>
-              <button
-                onClick={logout}
-                className="bg-red-600 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-red-700 transition border border-red-500/50 text-sm sm:text-base"
-              >
-                Выход
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Groups List */}
-        {loading ? (
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          </div>
-        ) : groups.length === 0 ? (
-          <div className="bg-gray-800/40 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-8 sm:p-12 text-center border border-gray-700/50">
-            <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Вы пока не состоите ни в одной группе</h3>
-            <p className="text-gray-400 mb-6 text-sm sm:text-base">
-              Попросите учителя дать вам код группы и присоединитесь!
-            </p>
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="bg-blue-600 text-white font-semibold px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg text-sm sm:text-base"
-            >
-              Присоединиться к группе
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {groups.map((group) => (
-              <div key={group.id} className="bg-gray-800/40 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 border border-gray-700/50 hover:border-gray-600/70 transition-all duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">{group.name}</h3>
-                    <p className="text-gray-400 text-sm sm:text-base">
-                      Код: <span className="font-mono font-bold text-blue-400">{group.code}</span>
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-                    <span className="bg-gray-900/50 px-3 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm text-gray-300 border border-gray-700">
-                      👥 {group.member_count} участников
-                    </span>
-                    <button
-                      onClick={() => handleLeaveGroup(group.id)}
-                      className="text-red-400 hover:text-red-300 text-xs sm:text-sm font-medium transition-colors"
-                    >
-                      Покинуть группу
-                    </button>
-                  </div>
-                </div>
-
-                {group.quizzes.length > 0 ? (
-                  <div>
-                    <h5 className="font-semibold mb-3 text-gray-300">Викторины:</h5>
-                    <div className="space-y-2">
-                      {group.quizzes.map((quiz) => (
-                        <div
-                          key={quiz.id}
-                          onClick={() => handleStartQuiz(quiz)}
-                          className="bg-gray-900/50 p-4 rounded-lg hover:bg-gray-900/70 cursor-pointer transition border border-gray-700 hover:border-purple-500/50"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h6 className="font-semibold text-white">{quiz.title}</h6>
-                              <p className="text-sm text-gray-400">{quiz.description}</p>
-                            </div>
-                            <span className="bg-blue-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium">
-                              {quiz.question_count} вопросов
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-400 italic">Пока нет викторин</p>
-                )}
+    <div className="flex flex-1 flex-col bg-[var(--bg)]">
+      {!showQuizRun && (
+        <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+          <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
+                  {t("student.dashboardTitle")}
+                </h1>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  {t("student.welcome", { name: currentUser.first_name || currentUser.username })}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Join Group Modal */}
-      {showJoinModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800/90 backdrop-blur-lg rounded-xl sm:rounded-2xl p-6 sm:p-8 max-w-md w-full border border-gray-700/50 shadow-2xl">
-            <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Присоединиться к группе</h3>
-            <p className="text-gray-400 mb-4 text-sm sm:text-base">
-              Введите 6-значный код группы, который вам дал учитель
-            </p>
-
-            {joinError && (
-              <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 backdrop-blur-sm text-sm">
-                {joinError}
+              <div className="flex gap-2">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                        : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                    {t(`student.tabs.${tab.id}`)}
+                  </button>
+                ))}
               </div>
-            )}
-
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              maxLength={6}
-              placeholder="000000"
-              className="w-full px-4 py-3 sm:py-4 text-center text-xl sm:text-2xl font-mono tracking-widest bg-gray-900/50 border-2 border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 text-white placeholder-gray-500"
-            />
-
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <button
-                onClick={() => {
-                  setShowJoinModal(false);
-                  setJoinCode('');
-                  setJoinError('');
-                }}
-                className="flex-1 bg-gray-700 text-gray-300 font-semibold py-2 sm:py-3 rounded-lg hover:bg-gray-600 transition border border-gray-600 text-sm sm:text-base"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleJoinGroup}
-                className="flex-1 bg-blue-600 text-white font-semibold py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-lg text-sm sm:text-base"
-              >
-                Присоединиться
-              </button>
             </div>
           </div>
         </div>
       )}
+
+      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+              <button onClick={() => setError("")} className="ml-auto">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {showQuizRun ? (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={exitQuizRun}
+                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                >
+                  {t("student.quizzes.backToQuizzes")}
+                </button>
+                {runState === "running" && runQuiz && (
+                  <span className="text-sm text-[var(--text-muted)]">
+                    {runQuiz.title} — {runCurrentIndex + 1} / {runQuestions.length}
+                  </span>
+                )}
+              </div>
+
+              {runState === "results" && runResults && (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.quizzes.results")}</h2>
+                  <p className="mt-2 text-[var(--text-muted)]">
+                    {runResults.attempt?.score} / {runResults.attempt?.max_score} ({Math.round(runResults.percentage ?? 0)}%)
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {(runResults.answers || []).map((a, i) => (
+                      <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                        <p className="font-medium text-[var(--text)]">{a.question_text}</p>
+                        <p className={`mt-1 text-sm ${a.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          {a.is_correct ? "✓" : "✗"} {a.points_earned} / {a.max_points}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={exitQuizRun}
+                    className="mt-6 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
+                  >
+                    {t("student.quizzes.backToQuizzes")}
+                  </button>
+                </div>
+              )}
+
+              {runState === "running" && currentQ && (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                  <p className="font-medium text-[var(--text)]">{currentQ.text}</p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {t("teacher.quizzes.points")}: {currentQ.points} · {singleChoice ? t("teacher.quizzes.quizTypeSingle") : t("teacher.quizzes.quizTypeMultiple")}
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    {(currentQ.options || []).map((opt) => {
+                      const sel = runSelected.includes(opt.id);
+                      return (
+                        <label
+                          key={opt.id}
+                          className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                            sel ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] hover:bg-[var(--bg-card)]"
+                          }`}
+                        >
+                          <input
+                            type={singleChoice ? "radio" : "checkbox"}
+                            name="opt"
+                            checked={sel}
+                            onChange={() => {
+                              if (singleChoice) setRunSelected([opt.id]);
+                              else setRunSelected((s) => (s.includes(opt.id) ? s.filter((x) => x !== opt.id) : [...s, opt.id]));
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-[var(--text)]">{opt.text}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={submitCurrentAnswer}
+                    disabled={runSubmitLoading || runCompleteLoading || !runSelected.length}
+                    className="mt-6 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50"
+                  >
+                    {runSubmitLoading || runCompleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{" "}
+                    {runCurrentIndex < runQuestions.length - 1 ? t("student.quizzes.submitAnswer") : t("student.quizzes.complete")}
+                  </button>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <>
+              {activeTab === "groups" && (
+                <div>
+                  <form onSubmit={handleJoin} className="mb-6 flex flex-wrap gap-2">
+                    <input
+                      type="text"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder={t("student.groups.joinPlaceholder")}
+                      className="w-40 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
+                      maxLength={6}
+                    />
+                    <button
+                      type="submit"
+                      disabled={joinLoading || String(joinCode).replace(/\D/g, "").length !== 6}
+                      className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
+                    >
+                      {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      {t("student.groups.joinSubmit")}
+                    </button>
+                  </form>
+                  <div className="mb-4 flex gap-2">
+                    <button onClick={loadGroups} disabled={loading} className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50">
+                      <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                  {loading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                    </div>
+                  ) : groups.length === 0 ? (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
+                      {t("student.groups.noGroups")}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {groups.map((g) => (
+                        <div key={g.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                          <div>
+                            <span className="font-medium text-[var(--text)]">{g.name}</span>
+                            <span className="ml-2 text-sm text-[var(--text-muted)]">
+                              {t("student.groups.members")}: {g.member_count ?? 0}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmLeave(g)}
+                            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                          >
+                            {t("student.groups.leave")}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {confirmLeave && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                        <p className="text-[var(--text)]">{t("student.groups.confirmLeave", { name: confirmLeave.name })}</p>
+                        <div className="mt-4 flex gap-2">
+                          <button onClick={handleLeave} disabled={leaveLoading} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                            {leaveLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {t("common.yes")}
+                          </button>
+                          <button onClick={() => setConfirmLeave(null)} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]">
+                            {t("common.no")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "quizzes" && (
+                <div>
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    {groupsForQuizzes.length > 0 && (
+                      <>
+                        <span className="text-sm text-[var(--text-muted)]">{t("student.quizzes.filterGroup")}:</span>
+                        <select
+                          value={quizGroupFilter}
+                          onChange={(e) => setQuizGroupFilter(e.target.value)}
+                          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+                        >
+                          {groupsForQuizzes.map((gr) => (
+                            <option key={gr.id} value={gr.id}>{gr.name}</option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    <button onClick={() => { loadCurrentAttemptsMap(); loadQuizzes(); }} disabled={loading} className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50">
+                      <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                  {loading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                    </div>
+                  ) : quizzes.length === 0 ? (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
+                      {t("student.quizzes.noQuizzes")}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {quizzes.map((q) => {
+                        const hasCurrent = !!currentAttemptByQuiz[q.id];
+                        return (
+                          <div key={q.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                            <div>
+                              <span className="font-medium text-[var(--text)]">{q.title}</span>
+                              <span className="ml-2 text-sm text-[var(--text-muted)]">
+                                {t("student.quizzes.questions")}: {q.question_count ?? 0}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => startOrContinueQuiz(q)}
+                              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
+                            >
+                              {hasCurrent ? t("student.quizzes.continue") : t("student.quizzes.start")}
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "attempts" && (
+                <div>
+                  <div className="mb-4 flex gap-2">
+                    <button onClick={loadAttempts} disabled={loading} className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50">
+                      <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                  {loading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                    </div>
+                  ) : attempts.length === 0 ? (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
+                      {t("student.attempts.noAttempts")}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {attempts.map((a) => {
+                        const pct = a.max_score > 0 ? Math.round((a.score / a.max_score) * 100) : 0;
+                        return (
+                          <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                            <div>
+                              <span className="font-medium text-[var(--text)]">{quizTitleMap[a.quiz_id] ?? `Quiz #${a.quiz_id}`}</span>
+                              <span className="ml-2 text-sm text-[var(--text-muted)]">
+                                {a.score} / {a.max_score} ({pct}%) · {formatDate(a.completed_at)}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => loadAttemptDetail(a.id)}
+                              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                            >
+                              {t("student.attempts.viewDetails")}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {attemptDetailId && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                      <div className="my-8 w-full max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.attempts.viewDetails")}</h2>
+                          <button onClick={() => { setAttemptDetailId(null); setAttemptDetail(null); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                        {!attemptDetail ? (
+                          <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                        ) : (
+                          <div className="space-y-4">
+                            <p className="text-sm text-[var(--text-muted)]">
+                              {t("student.attempts.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} ({Math.round(attemptDetail.percentage ?? 0)}%)
+                            </p>
+                            {(attemptDetail.answers || []).map((ans, i) => (
+                              <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                                <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
+                                <p className={`mt-1 text-sm ${ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                  {ans.is_correct ? "✓" : "✗"} {ans.points_earned} / {ans.max_points}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
