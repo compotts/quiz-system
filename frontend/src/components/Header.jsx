@@ -22,7 +22,7 @@ export default function Header() {
           to="/"
           className="text-lg font-semibold tracking-tight text-[var(--text)] hover:opacity-80 sm:text-xl"
         >
-          {t("common.appName")}
+          {t("common.appNameDev")}
         </Link>
 
         <div className="flex items-center gap-1">
