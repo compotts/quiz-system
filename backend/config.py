@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     rate_limit_period: int = 60
     captcha_after_attempts: int = 3
     admin_init_enabled: bool = True
-    cors_origins: list = ["http://localhost:3000", "http://localhost:4173", "http://localhost:8000"]
+    cors_origins: list = [
+        "http://localhost:3000", 
+        "http://localhost:4173", 
+        "http://localhost:8000", 
+        "https://quiz-system-eta.vercel.app"
+    ]
     
     class Config:
         env_file = ".env"
