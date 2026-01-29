@@ -50,17 +50,16 @@ export default function TeacherDashboard() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Groups
   const [groups, setGroups] = useState([]);
   const [groupFormOpen, setGroupFormOpen] = useState(false);
   const [groupFormName, setGroupFormName] = useState("");
+  const [groupFormSubject, setGroupFormSubject] = useState("");
   const [groupEditId, setGroupEditId] = useState(null);
   const [groupMembers, setGroupMembers] = useState({});
   const [expandedGroupId, setExpandedGroupId] = useState(null);
   const [processingGroup, setProcessingGroup] = useState(null);
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(null);
 
-  // Quizzes
   const [quizzes, setQuizzes] = useState([]);
   const [groupsForQuizzes, setGroupsForQuizzes] = useState([]);
   const [quizGroupFilter, setQuizGroupFilter] = useState("");
@@ -72,6 +71,7 @@ export default function TeacherDashboard() {
     quiz_type: "single_choice",
     timer_mode: "quiz_total",
     time_limit: null,
+    available_until: "",
   });
   const [quizEditId, setQuizEditId] = useState(null);
   const [questionsViewQuizId, setQuestionsViewQuizId] = useState(null);
@@ -88,7 +88,6 @@ export default function TeacherDashboard() {
   const [confirmDeleteQuiz, setConfirmDeleteQuiz] = useState(null);
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(null);
 
-  // Results
   const [resultsQuizId, setResultsQuizId] = useState("");
   const [resultsQuizList, setResultsQuizList] = useState([]);
   const [quizResults, setQuizResults] = useState([]);
@@ -199,8 +198,12 @@ export default function TeacherDashboard() {
     if (!groupFormName.trim()) return;
     setProcessingGroup("create");
     try {
-      await groupsApi.createGroup({ name: groupFormName.trim() });
+      await groupsApi.createGroup({
+        name: groupFormName.trim(),
+        subject: groupFormSubject.trim() || null,
+      });
       setGroupFormName("");
+      setGroupFormSubject("");
       setGroupFormOpen(false);
       loadGroups();
     } catch (err) {
@@ -215,9 +218,13 @@ export default function TeacherDashboard() {
     if (!groupEditId || !groupFormName.trim()) return;
     setProcessingGroup(groupEditId);
     try {
-      await groupsApi.updateGroup(groupEditId, { name: groupFormName.trim() });
+      await groupsApi.updateGroup(groupEditId, {
+        name: groupFormName.trim(),
+        subject: groupFormSubject.trim() || null,
+      });
       setGroupEditId(null);
       setGroupFormName("");
+      setGroupFormSubject("");
       loadGroups();
     } catch (err) {
       setError(err.message || t("teacher.groups.errorUpdate"));
@@ -269,8 +276,9 @@ export default function TeacherDashboard() {
         quiz_type: quizForm.quiz_type,
         timer_mode: quizForm.timer_mode,
         time_limit: quizForm.time_limit || null,
+        available_until: quizForm.available_until ? new Date(quizForm.available_until).toISOString() : null,
       });
-      setQuizForm({ group_id: "", title: "", description: "", quiz_type: "single_choice", timer_mode: "quiz_total", time_limit: null });
+      setQuizForm({ group_id: "", title: "", description: "", quiz_type: "single_choice", timer_mode: "quiz_total", time_limit: null, available_until: "" });
       setQuizFormOpen(false);
       loadQuizzes();
     } catch (err) {
@@ -291,9 +299,10 @@ export default function TeacherDashboard() {
         quiz_type: quizForm.quiz_type,
         timer_mode: quizForm.timer_mode,
         time_limit: quizForm.time_limit || null,
+        available_until: quizForm.available_until ? new Date(quizForm.available_until).toISOString() : null,
       });
       setQuizEditId(null);
-      setQuizForm({ group_id: "", title: "", description: "", quiz_type: "single_choice", timer_mode: "quiz_total", time_limit: null });
+      setQuizForm({ group_id: "", title: "", description: "", quiz_type: "single_choice", timer_mode: "quiz_total", time_limit: null, available_until: "" });
       loadQuizzes();
     } catch (err) {
       setError(err.message || t("teacher.quizzes.errorUpdate"));
@@ -472,7 +481,7 @@ export default function TeacherDashboard() {
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => { setGroupFormOpen(true); setGroupEditId(null); setGroupFormName(""); }}
+                  onClick={() => { setGroupFormOpen(true); setGroupEditId(null); setGroupFormName(""); setGroupFormSubject(""); }}
                   className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90"
                 >
                   <Plus className="h-4 w-4" />
@@ -493,14 +502,23 @@ export default function TeacherDashboard() {
                   onSubmit={groupEditId ? handleUpdateGroup : handleCreateGroup}
                   className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
                 >
-                  <input
-                    type="text"
-                    value={groupFormName}
-                    onChange={(e) => setGroupFormName(e.target.value)}
-                    placeholder={t("teacher.groups.createPlaceholder")}
-                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
-                    required
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={groupFormName}
+                      onChange={(e) => setGroupFormName(e.target.value)}
+                      placeholder={t("teacher.groups.createPlaceholder")}
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={groupFormSubject}
+                      onChange={(e) => setGroupFormSubject(e.target.value)}
+                      placeholder="Предмет (например: Математика)"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                    />
+                  </div>
                   <div className="mt-3 flex gap-2">
                     <button
                       type="submit"
@@ -512,7 +530,7 @@ export default function TeacherDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setGroupFormOpen(false); setGroupEditId(null); setGroupFormName(""); }}
+                      onClick={() => { setGroupFormOpen(false); setGroupEditId(null); setGroupFormName(""); setGroupFormSubject(""); }}
                       className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                     >
                       {t("common.cancel")}
@@ -539,6 +557,11 @@ export default function TeacherDashboard() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium text-[var(--text)]">{g.name}</span>
+                          {g.subject ? (
+                            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                              {g.subject}
+                            </span>
+                          ) : null}
                           <span className="rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
                             {t("teacher.groups.code")}: {g.code}
                           </span>
@@ -557,7 +580,7 @@ export default function TeacherDashboard() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => { setGroupEditId(g.id); setGroupFormName(g.name); setGroupFormOpen(false); }}
+                            onClick={() => { setGroupEditId(g.id); setGroupFormName(g.name); setGroupFormSubject(g.subject || ""); setGroupFormOpen(false); }}
                             className="rounded-lg border border-[var(--border)] px-2 py-1 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                           >
                             <Pencil className="h-4 w-4" />
@@ -657,7 +680,7 @@ export default function TeacherDashboard() {
                       ))}
                     </select>
                     <button
-                      onClick={() => { setQuizFormOpen(true); setQuizEditId(null); setQuizForm({ ...quizForm, group_id: quizGroupFilter || (groupsForQuizzes[0]?.id ?? ""), title: "", description: "" }); }}
+                      onClick={() => { setQuizFormOpen(true); setQuizEditId(null); setQuizForm({ ...quizForm, group_id: quizGroupFilter || (groupsForQuizzes[0]?.id ?? ""), title: "", description: "", available_until: "" }); }}
                       disabled={!groupsForQuizzes.length}
                       className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50"
                     >
@@ -735,6 +758,15 @@ export default function TeacherDashboard() {
                             onChange={(e) => setQuizForm((f) => ({ ...f, time_limit: e.target.value ? parseInt(e.target.value, 10) : null }))}
                             placeholder="—"
                             className="mt-1 w-24 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--text)]">Доступно до</label>
+                          <input
+                            type="datetime-local"
+                            value={quizForm.available_until ?? ""}
+                            onChange={(e) => setQuizForm((f) => ({ ...f, available_until: e.target.value }))}
+                            className="mt-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                           />
                         </div>
                       </div>

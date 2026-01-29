@@ -65,7 +65,6 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Requests
   const [requests, setRequests] = useState([]);
   const [requestsTotal, setRequestsTotal] = useState(0);
   const [requestsPage, setRequestsPage] = useState(1);
@@ -76,7 +75,6 @@ export default function AdminDashboard() {
   const [roleSelectOpen, setRoleSelectOpen] = useState(null);
   const [selectedRole, setSelectedRole] = useState("student");
 
-  // Users
   const [users, setUsers] = useState([]);
   const [usersTotal, setUsersTotal] = useState(0);
   const [usersPage, setUsersPage] = useState(1);
@@ -91,9 +89,8 @@ export default function AdminDashboard() {
   const [confirmDelete, setConfirmDelete] = useState(null);
 
 
-  // Contact Messages
   const [messages, setMessages] = useState([]);
-  const [messagesFilter, setMessagesFilter] = useState("all"); // all, unread, read
+  const [messagesFilter, setMessagesFilter] = useState("all");
   const [messagesCount, setMessagesCount] = useState({ unread: 0, total: 0 });
   const [processingMessage, setProcessingMessage] = useState(null);
   const [expandedMessage, setExpandedMessage] = useState(null);
@@ -111,7 +108,6 @@ export default function AdminDashboard() {
       } else if (activeTab === "messages") {
         loadMessages();
       }
-      // Всегда загружаем счётчик непрочитанных
       loadMessagesCount();
     }
   }, [activeTab, requestsFilter, requestsPage, currentUser, usersPage, usersRoleFilter, usersStatusFilter, messagesFilter]);
@@ -204,7 +200,6 @@ export default function AdminDashboard() {
     setUsersPage(1);
   };
 
-  // Contact Messages functions
   const loadMessages = async () => {
     setLoading(true);
     setError("");
@@ -224,7 +219,6 @@ export default function AdminDashboard() {
       const data = await adminApi.getContactMessagesCount();
       setMessagesCount(data);
     } catch (err) {
-      // Игнорируем ошибку счётчика
     }
   };
 
@@ -273,14 +267,12 @@ export default function AdminDashboard() {
     let browser = t("common.unknown");
     let os = t("common.unknown");
     
-    // Browser detection
     if (ua.includes("Firefox/")) browser = "Firefox";
     else if (ua.includes("Edg/")) browser = "Edge";
     else if (ua.includes("Chrome/")) browser = "Chrome";
     else if (ua.includes("Safari/") && !ua.includes("Chrome")) browser = "Safari";
     else if (ua.includes("Opera") || ua.includes("OPR/")) browser = "Opera";
     
-    // OS detection
     if (ua.includes("Windows NT 10")) os = "Windows 10/11";
     else if (ua.includes("Windows")) os = "Windows";
     else if (ua.includes("Mac OS X")) os = "macOS";

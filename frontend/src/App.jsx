@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminInit from "./pages/AdminInit.jsx";
 import TeacherDashboard from "./pages/TeacherDashboard.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
+import StudentGroupPage from "./pages/StudentGroupPage.jsx";
 
 function App() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function App() {
           <Route path="/dashboard/admin" element={<AdminDashboard />} />
           <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
           <Route path="/dashboard/student" element={<StudentDashboard />} />
+          <Route path="/dashboard/student/groups/:groupId" element={<StudentGroupPage />} />
         </Routes>
       </main>
       {!hideFooter && <Footer />}

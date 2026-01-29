@@ -12,7 +12,6 @@ export default function UserMenu() {
   const menuRef = useRef(null);
 
   useEffect(() => {
-    // Получаем роль пользователя
     authApi.getMe().then((user) => setUserRole(user.role)).catch(() => {});
   }, []);
 

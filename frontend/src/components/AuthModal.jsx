@@ -15,11 +15,9 @@ export default function AuthModal({ isOpen, onClose }) {
   const [isSwitching, setIsSwitching] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Login form
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // Register form
   const [registerData, setRegisterData] = useState({
     username: "",
     email: "",
@@ -38,14 +36,12 @@ export default function AuthModal({ isOpen, onClose }) {
       const response = await authApi.login(loginUsername, loginPassword);
       saveTokens(response.access_token, response.refresh_token);
       
-      // Получаем данные пользователя для определения роли
       const user = await authApi.getMe();
       setSuccess(t("auth.successLogin"));
       
       setTimeout(() => {
         handleClose();
         setTimeout(() => {
-          // Редирект в зависимости от роли
           if (user.role === "admin") {
             navigate("/dashboard/admin");
           } else if (user.role === "teacher") {
@@ -123,9 +119,7 @@ export default function AuthModal({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      // Сначала рендерим с начальным состоянием, затем запускаем анимацию
       setIsAnimating(false);
-      // Используем requestAnimationFrame для гарантии, что DOM обновился
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setIsAnimating(true);

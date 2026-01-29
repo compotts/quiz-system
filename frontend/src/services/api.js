@@ -1,4 +1,4 @@
-const API_BASE_URL = "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -136,7 +136,6 @@ export const adminApi = {
     });
   },
 
-  // Contact messages
   async getContactMessages({ page = 1, perPage = 20, isRead = null } = {}) {
     const params = new URLSearchParams();
     params.append("page", page);
