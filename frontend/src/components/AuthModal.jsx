@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X, Eye, EyeOff } from "lucide-react";
 import { authApi, saveTokens } from "../services/api.js";
 
 export default function AuthModal({ isOpen, onClose }) {
@@ -17,6 +17,8 @@ export default function AuthModal({ isOpen, onClose }) {
 
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   const [registerData, setRegisterData] = useState({
     username: "",
@@ -231,15 +233,29 @@ export default function AuthModal({ isOpen, onClose }) {
                     >
                       {t("auth.password")}
                     </label>
-                    <input
-                      id="login-password"
-                      type="password"
-                      required
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)] placeholder:text-[var(--text-muted)] transition-all focus:border-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
-                      placeholder={t("auth.passwordPlaceholder")}
-                    />
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        type={showLoginPassword ? "text" : "password"}
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 pr-10 text-[var(--text)] placeholder:text-[var(--text-muted)] transition-all focus:border-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+                        placeholder={t("auth.passwordPlaceholder")}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 mt-0.75 p-1 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                        aria-label={showLoginPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                      >
+                        {showLoginPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <button

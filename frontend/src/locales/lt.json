@@ -77,7 +77,9 @@
     "successRegister": "Registracijos paraiška išsiųsta! Palaukite administracijos patvirtinimo.",
     "errorAlready": "Vartotojas tokiu vardu arba el. paštu jau egzistuoja arba laukia patvirtinimo",
     "errorRegister": "Registracijos klaida",
-    "required": " *"
+    "required": " *",
+    "showPassword": "Rodyti slaptažodį",
+    "hidePassword": "Slėpti slaptažodį"
   },
   "userMenu": {
     "dashboard": "Eiti į valdymo skydą",
