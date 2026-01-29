@@ -47,7 +47,3 @@ async def health_check():
         "message": "API is running",
         "timestamp": datetime.now().isoformat()
     }
-
-
-if __name__ == "__main__":
-    print("ready to go")
