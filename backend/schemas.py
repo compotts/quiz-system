@@ -39,6 +39,7 @@ class UserResponse(BaseModel):
 
 
 class AdminUpdateUserRequest(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=100)
     email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -226,3 +227,27 @@ class ContactMessageResponse(BaseModel):
     user_agent: Optional[str]
     is_read: bool
     created_at: datetime
+
+
+# ============ BLOG SCHEMAS ============
+class BlogPostCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    content: str = Field(..., min_length=1)
+    is_published: bool = True
+
+
+class BlogPostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    content: Optional[str] = Field(None, min_length=1)
+    is_published: Optional[bool] = None
+
+
+class BlogPostResponse(BaseModel):
+    id: int
+    title: str
+    content: str
+    author_id: int
+    author_name: Optional[str] = None
+    is_published: bool
+    created_at: datetime
+    updated_at: datetime

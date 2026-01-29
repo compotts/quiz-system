@@ -5,7 +5,7 @@ from app.database.database import lifespan
 from datetime import datetime
 from config import settings
 
-from app.routes import auth, admin, groups, quizzes, attempts, contact
+from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
 
 app = FastAPI(
     title="Quizz System API",
@@ -29,6 +29,7 @@ app.include_router(groups.router)
 app.include_router(quizzes.router)
 app.include_router(attempts.router)
 app.include_router(contact.router)
+app.include_router(blog.router)
 
 
 @app.get("/")

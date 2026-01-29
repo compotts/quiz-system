@@ -6,15 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 from config import settings
 
-from app.database.models.user import User
-from app.database.models.attempt import QuizAttempt, Answer
-from app.database.models.group import Group, GroupMember
-from app.database.models.quiz import Quiz, Question, Option
-from app.database.models.registration_code import RegistrationCode
-from app.database.models.registration_request import RegistrationRequest
 from app.database.database import base_ormar_config
-
-print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest]]}")  # debug
 
 config = context.config
 

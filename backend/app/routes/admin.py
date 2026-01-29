@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from schemas import (
     AdminInitRequest, UserResponse, RegistrationRequestResponse,
-    ReviewRegistrationRequest, AdminUpdateUserRequest
+    ReviewRegistrationRequest, AdminUpdateUserRequest, GroupResponse
 )
 from app.database.models.user import User, UserRole
+from app.database.models.group import Group, GroupMember
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
 from app.utils.auth import get_password_hash, get_current_admin
 from config import settings
@@ -268,13 +269,15 @@ async def update_user_details(
         )
 
     update_fields = {}
-    if data.email is not None:
-        existing = await User.objects.get_or_none(email=data.email)
+    if data.username is not None:
+        existing = await User.objects.get_or_none(username=data.username)
         if existing and existing.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already in use"
+                detail="Username already in use"
             )
+        update_fields["username"] = data.username
+    if data.email is not None:
         update_fields["email"] = data.email
     if data.first_name is not None:
         update_fields["first_name"] = data.first_name
@@ -286,6 +289,38 @@ async def update_user_details(
         user = await User.objects.get_or_none(id=user_id)
 
     return user
+
+
+@router.get("/users/{user_id}/groups", response_model=List[GroupResponse])
+async def get_user_groups(
+    user_id: int,
+    current_admin: User = Depends(get_current_admin)
+):
+    user = await User.objects.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    memberships = await GroupMember.objects.select_related("group__teacher").filter(
+        user=user
+    ).all()
+    result = []
+    for membership in memberships:
+        group = membership.group
+        member_count = await GroupMember.objects.filter(group=group).count()
+        teacher_full_name = (
+            f"{group.teacher.first_name} {group.teacher.last_name}".strip()
+            if (group.teacher.first_name or group.teacher.last_name)
+            else group.teacher.username
+        )
+        result.append({
+            **group.dict(),
+            "teacher_id": group.teacher.id,
+            "teacher_name": teacher_full_name,
+            "member_count": member_count,
+        })
+    return result
 
 
 @router.patch("/users/{user_id}/role")
