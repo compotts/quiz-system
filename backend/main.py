@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from app.database.database import lifespan
 from config import settings
 
-from app.routes import auth, admin, groups, quizzes, attempts
+from app.routes import auth, admin, groups, quizzes, attempts, contact
 
 app = FastAPI(
     title="Quizz System API",
@@ -27,6 +27,7 @@ app.include_router(admin.router)
 app.include_router(groups.router)
 app.include_router(quizzes.router)
 app.include_router(attempts.router)
+app.include_router(contact.router)
 
 
 @app.get("/")

@@ -1,16 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pydantic import BaseModel
 from schemas import (
     UserRegisterRequest, UserLogin, Token, UserResponse,
-    RegistrationRequestResponse
+    RegistrationRequestResponse, RefreshTokenRequest
 )
-from app.database.models.user import User, UserRole
+from app.database.models.user import User
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
 from app.utils.auth import (
     verify_password, get_password_hash, create_access_token,
     create_refresh_token, get_current_user
 )
 from app.utils.rate_limiter import check_login_rate_limit, check_registration_rate_limit
-from datetime import timedelta
+
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -34,17 +35,20 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
+
+    # Проверка pending request по username
+    pending_request = await RegistrationRequest.objects.get_or_none(
+        username=data.username,
+        status=RegistrationStatus.PENDING.value
+    )
     
-    pending_request = None
-    try:
-        pending_request = await RegistrationRequest.objects.filter(
-            username=data.username,
-            status=RegistrationStatus.PENDING.value
-        ).first()
-    except:
-        pass
+    # Проверка pending request по email
+    pending_email_request = await RegistrationRequest.objects.get_or_none(
+        email=data.email,
+        status=RegistrationStatus.PENDING.value
+    )
     
-    if pending_request:
+    if pending_request or pending_email_request:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registration request already pending approval"
@@ -68,8 +72,6 @@ async def login(
     data: UserLogin,
     _: None = Depends(check_login_rate_limit)
 ):
-    """Вход в систему"""
-    
     user = await User.objects.get_or_none(username=data.username)
     
     if not user or not verify_password(data.password, user.hashed_password):
@@ -85,9 +87,8 @@ async def login(
             detail="Account is not active. Please wait for approval."
         )
     
-    # Создание токенов
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return {
         "access_token": access_token,
@@ -98,18 +99,17 @@ async def login(
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
-    """Получение информации о текущем пользователе"""
     return current_user
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(refresh_token: str):
+async def refresh_token(data: RefreshTokenRequest):
     from jose import jwt, JWTError
-    from backend.config import settings
+    from config import settings
     
     try:
         payload = jwt.decode(
-            refresh_token,
+            data.refresh_token,
             settings.secret_key,
             algorithms=[settings.algorithm]
         )
@@ -120,22 +120,35 @@ async def refresh_token(refresh_token: str):
                 detail="Invalid token type"
             )
         
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
+        user_id = int(user_id_str)
         
-    except JWTError:
+    except (JWTError, ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
-    
-    # Создание новых токенов
-    access_token = create_access_token(data={"sub": user_id})
-    new_refresh_token = create_refresh_token(data={"sub": user_id})
+
+    # Проверка существования и активности пользователя
+    user = await User.objects.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is not active"
+        )
+
+    access_token = create_access_token(data={"sub": str(user_id)})
+    new_refresh_token = create_refresh_token(data={"sub": str(user_id)})
     
     return {
         "access_token": access_token,

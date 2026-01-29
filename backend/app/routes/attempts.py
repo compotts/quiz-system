@@ -47,18 +47,20 @@ async def start_quiz_attempt(
             detail="You are not a member of this group"
         )
     
-    # Проверка незавершенной попытки
-    existing_attempt = await QuizAttempt.objects.filter(
-        quiz=quiz,
-        student=current_user,
-        is_completed=False
-    ).first()
+
+    existing_attempt = None
+    try:
+        existing_attempt = await QuizAttempt.objects.filter(
+            quiz=quiz,
+            student=current_user,
+            is_completed=False
+        ).first()
+    except:
+        pass
     
     if existing_attempt:
-        # Возврат к существующей попытке
         return existing_attempt
     
-    # Вычисление максимального балла
     questions = await Question.objects.filter(quiz=quiz).all()
     max_score = sum(q.points for q in questions)
     
@@ -107,16 +109,30 @@ async def submit_answer(
             detail="No active quiz attempt found"
         )
     
-    # Проверка на повторный ответ
-    existing_answer = await Answer.objects.filter(
-        attempt=attempt,
-        question=question
-    ).first()
+    existing_answer = None
+    try:
+        existing_answer = await Answer.objects.filter(
+            attempt=attempt,
+            question=question
+        ).first()
+    except:
+        pass
     
     if existing_answer:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Question already answered"
+        )
+    
+    # Валидация выбранных опций (проверка, что они принадлежат вопросу)
+    all_question_options = await Option.objects.filter(question=question).all()
+    all_option_ids = set(opt.id for opt in all_question_options)
+    selected_ids = set(data.selected_options)
+    
+    if not selected_ids.issubset(all_option_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected options do not belong to this question"
         )
     
     # Получение правильных ответов
@@ -125,7 +141,6 @@ async def submit_answer(
         is_correct=True
     ).all()
     correct_ids = set(opt.id for opt in correct_options)
-    selected_ids = set(data.selected_options)
     
     # Проверка правильности
     is_correct = correct_ids == selected_ids
@@ -141,7 +156,8 @@ async def submit_answer(
         answered_at=datetime.utcnow()
     )
     
-    # Обновление балла попытки
+    # Обновление балла попытки (перезагружаем для актуального значения)
+    await attempt.load()
     await attempt.update(score=attempt.score + points_earned)
     
     return {
@@ -321,13 +337,15 @@ async def get_current_attempt(
     quiz_id: int,
     current_user: User = Depends(get_current_student)
 ):
-    """Получение текущей незавершенной попытки"""
-    
-    attempt = await QuizAttempt.objects.filter(
-        quiz=quiz_id,
-        student=current_user,
-        is_completed=False
-    ).first()
+    attempt = None
+    try:
+        attempt = await QuizAttempt.objects.filter(
+            quiz=quiz_id,
+            student=current_user,
+            is_completed=False
+        ).first()
+    except:
+        pass
     
     if not attempt:
         return {"has_attempt": False}

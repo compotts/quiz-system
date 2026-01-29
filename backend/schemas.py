@@ -37,6 +37,10 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+    
+
 # ============ ADMIN SCHEMAS ============
 class AdminInitRequest(BaseModel):
     username: str = Field(..., min_length=3)
@@ -67,17 +71,21 @@ class ReviewRegistrationRequest(BaseModel):
 # ============ GROUP SCHEMAS ============
 class GroupCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+    subject: Optional[str] = Field(None, min_length=1, max_length=255)
 
 
 class GroupUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    subject: Optional[str] = Field(None, min_length=1, max_length=255)
 
 
 class GroupResponse(BaseModel):
     id: int
     name: str
+    subject: Optional[str] = None
     code: str
     teacher_id: int
+    teacher_name: Optional[str] = None
     created_at: datetime
     member_count: Optional[int] = 0
 
@@ -94,6 +102,7 @@ class QuizCreate(BaseModel):
     quiz_type: QuizType = QuizType.SINGLE_CHOICE
     timer_mode: TimerMode = TimerMode.QUIZ_TOTAL
     time_limit: Optional[int] = None
+    available_until: Optional[datetime] = None
 
 
 class QuizUpdate(BaseModel):
@@ -103,6 +112,7 @@ class QuizUpdate(BaseModel):
     timer_mode: Optional[TimerMode] = None
     time_limit: Optional[int] = None
     is_active: Optional[bool] = None
+    available_until: Optional[datetime] = None
 
 
 class QuizResponse(BaseModel):
@@ -115,6 +125,7 @@ class QuizResponse(BaseModel):
     timer_mode: str
     time_limit: Optional[int]
     is_active: bool
+    available_until: Optional[datetime] = None
     created_at: datetime
     question_count: Optional[int] = 0
 
@@ -191,3 +202,20 @@ class QuizResultResponse(BaseModel):
     attempt: QuizAttemptResponse
     answers: List[dict]
     percentage: float
+
+
+# ============ CONTACT MESSAGE SCHEMAS ============
+class ContactMessageCreate(BaseModel):
+    message: str = Field(..., min_length=1, max_length=5000)
+
+
+class ContactMessageResponse(BaseModel):
+    id: int
+    message: str
+    user_id: Optional[int]
+    username: Optional[str]
+    email: Optional[str]
+    ip_address: str
+    user_agent: Optional[str]
+    is_read: bool
+    created_at: datetime

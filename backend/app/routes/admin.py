@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from schemas import (
@@ -12,25 +13,25 @@ from config import settings
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
+@router.get("/can-initialize", response_model=bool)
+async def can_initialize():
+    users_count = await User.objects.count()
+    return users_count == 0
+
+
 @router.post("/init", response_model=UserResponse)
 async def initialize_admin(data: AdminInitRequest):
-    """Инициализация первого администратора (только если БД пуста)"""
-    
     if not settings.admin_init_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin initialization is disabled"
         )
-    
-    # Проверка существующих пользователей
     users_count = await User.objects.count()
     if users_count > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Admin already exists. This endpoint is disabled."
         )
-    
-    # Создание админа
     hashed_password = get_password_hash(data.password)
     
     admin = await User.objects.create(
@@ -46,15 +47,15 @@ async def initialize_admin(data: AdminInitRequest):
     return admin
 
 
-@router.get("/registration-requests", response_model=List[RegistrationRequestResponse])
+@router.get("/registration-requests")
 async def get_registration_requests(
     status_filter: str = None,
+    page: int = 1,
+    per_page: int = 10,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Получение всех заявок на регистрацию"""
-    
     query = RegistrationRequest.objects
-    
+
     if status_filter:
         if status_filter not in [s.value for s in RegistrationStatus]:
             raise HTTPException(
@@ -62,9 +63,52 @@ async def get_registration_requests(
                 detail="Invalid status filter"
             )
         query = query.filter(status=status_filter)
-    
-    requests = await query.order_by("-created_at").all()
-    return requests
+
+    total = await query.count()
+    offset = (page - 1) * per_page
+    requests = await query.order_by("-created_at").offset(offset).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page if per_page > 0 else 0
+
+    return {
+        "requests": requests,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+    }
+
+
+@router.post("/registration-requests/approve-all")
+async def approve_all_registration_requests(
+    role: UserRole = UserRole.STUDENT,
+    current_admin: User = Depends(get_current_admin)
+):
+    pending = await RegistrationRequest.objects.filter(
+        status=RegistrationStatus.PENDING.value
+    ).all()
+    approved = 0
+    for reg_request in pending:
+        try:
+            user = await User.objects.create(
+                username=reg_request.username,
+                email=reg_request.email,
+                first_name=reg_request.first_name,
+                last_name=reg_request.last_name,
+                hashed_password=reg_request.hashed_password,
+                role=role.value,
+                is_active=True
+            )
+
+            await reg_request.update(
+                status=RegistrationStatus.APPROVED.value,
+                reviewed_by=current_admin,
+                reviewed_at=datetime.utcnow()
+            )
+        except:
+            pass
+        
+        approved += 1
+    return {"message": f"Approved {approved} registration requests", "approved": approved}
 
 
 @router.post("/registration-requests/{request_id}/review")
@@ -73,8 +117,6 @@ async def review_registration_request(
     review_data: ReviewRegistrationRequest,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Одобрение или отклонение заявки на регистрацию"""
-    
     reg_request = await RegistrationRequest.objects.get_or_none(id=request_id)
     
     if not reg_request:
@@ -90,7 +132,6 @@ async def review_registration_request(
         )
     
     if review_data.approve:
-        # Создание пользователя
         user = await User.objects.create(
             username=reg_request.username,
             email=reg_request.email,
@@ -100,36 +141,99 @@ async def review_registration_request(
             role=review_data.role.value if review_data.role else UserRole.STUDENT.value,
             is_active=True
         )
-        
-        # Обновление статуса заявки
         await reg_request.update(
             status=RegistrationStatus.APPROVED.value,
             reviewed_by=current_admin,
             reviewed_at=datetime.utcnow()
         )
-        
         return {"message": "User approved and created", "user_id": user.id}
     else:
-        # Отклонение заявки
         await reg_request.update(
             status=RegistrationStatus.REJECTED.value,
             reviewed_by=current_admin,
             reviewed_at=datetime.utcnow()
         )
-        
         return {"message": "Registration request rejected"}
 
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users")
 async def get_all_users(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    per_page: int = 10,
+    search: str = None,
+    search_field: str = None,  # username, email, first_name, last_name
+    role_filter: str = None,  # admin, teacher, student
+    status_filter: str = None,  # active, inactive
     current_admin: User = Depends(get_current_admin)
 ):
-    """Получение списка всех пользователей"""
+    query = User.objects
     
-    users = await User.objects.order_by("-created_at").paginate(skip, limit).all()
-    return users
+    # Поиск
+    if search and search_field:
+        search_term = search.lower()
+        if search_field == "username":
+            query = query.filter(username__icontains=search_term)
+        elif search_field == "email":
+            query = query.filter(email__icontains=search_term)
+        elif search_field == "first_name":
+            query = query.filter(first_name__icontains=search_term)
+        elif search_field == "last_name":
+            query = query.filter(last_name__icontains=search_term)
+        elif search_field == "all":
+            # Поиск по всем полям - ищем в каждом
+            all_users = await User.objects.order_by("-created_at").all()
+            filtered = [
+                u for u in all_users
+                if search_term in (u.username or "").lower()
+                or search_term in (u.email or "").lower()
+                or search_term in (u.first_name or "").lower()
+                or search_term in (u.last_name or "").lower()
+            ]
+            # Применяем остальные фильтры
+            if role_filter and role_filter in [r.value for r in UserRole]:
+                filtered = [u for u in filtered if u.role == role_filter]
+            if status_filter == "active":
+                filtered = [u for u in filtered if u.is_active]
+            elif status_filter == "inactive":
+                filtered = [u for u in filtered if not u.is_active]
+            
+            total = len(filtered)
+            start = (page - 1) * per_page
+            end = start + per_page
+            users = filtered[start:end]
+            
+            return {
+                "users": users,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": (total + per_page - 1) // per_page
+            }
+    
+    # Фильтр по роли
+    if role_filter and role_filter in [r.value for r in UserRole]:
+        query = query.filter(role=role_filter)
+    
+    # Фильтр по статусу
+    if status_filter == "active":
+        query = query.filter(is_active=True)
+    elif status_filter == "inactive":
+        query = query.filter(is_active=False)
+    
+    # Подсчёт общего количества
+    total = await query.count()
+    
+    # Пагинация
+    offset = (page - 1) * per_page
+    users = await query.order_by("-created_at").offset(offset).limit(per_page).all()
+    
+    return {
+        "users": users,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page
+    }
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
@@ -137,8 +241,6 @@ async def get_user_details(
     user_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Получение подробной информации о пользователе"""
-    
     user = await User.objects.get_or_none(id=user_id)
     
     if not user:
@@ -156,8 +258,6 @@ async def change_user_role(
     new_role: UserRole,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Изменение роли пользователя"""
-    
     user = await User.objects.get_or_none(id=user_id)
     
     if not user:
@@ -165,8 +265,6 @@ async def change_user_role(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
-    # Запрет на изменение своей роли
     if user.id == current_admin.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -183,8 +281,6 @@ async def toggle_user_status(
     user_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Активация/деактивация пользователя"""
-    
     user = await User.objects.get_or_none(id=user_id)
     
     if not user:
@@ -193,7 +289,6 @@ async def toggle_user_status(
             detail="User not found"
         )
     
-    # Запрет на деактивацию самого себя
     if user.id == current_admin.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -210,8 +305,6 @@ async def delete_user(
     user_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Удаление пользователя"""
-    
     user = await User.objects.get_or_none(id=user_id)
     
     if not user:
@@ -229,6 +322,3 @@ async def delete_user(
     await user.delete()
     
     return {"message": "User deleted successfully"}
-
-
-from datetime import datetime

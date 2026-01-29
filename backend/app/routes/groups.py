@@ -29,14 +29,17 @@ async def create_group(
     
     group = await Group.objects.create(
         name=data.name,
+        subject=data.subject,
         code=code,
         teacher=current_user
     )
     
     # Добавление количества участников
+    teacher_full_name = f"{current_user.first_name} {current_user.last_name}".strip() if current_user.first_name or current_user.last_name else current_user.username
     return {
         **group.dict(),
         "teacher_id": current_user.id,
+        "teacher_name": teacher_full_name,
         "member_count": 0
     }
 
@@ -47,20 +50,22 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
     
     if current_user.role == "teacher" or current_user.role == "admin":
         # Учитель видит созданные им группы
-        groups = await Group.objects.filter(teacher=current_user).all()
+        groups = await Group.objects.select_related("teacher").filter(teacher=current_user).all()
         
         result = []
         for group in groups:
             member_count = await GroupMember.objects.filter(group=group).count()
+            teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
             result.append({
                 **group.dict(),
                 "teacher_id": current_user.id,
+                "teacher_name": teacher_full_name,
                 "member_count": member_count
             })
         return result
     else:
         # Ученик видит группы, в которых он состоит
-        memberships = await GroupMember.objects.select_related("group").filter(
+        memberships = await GroupMember.objects.select_related("group__teacher").filter(
             user=current_user
         ).all()
         
@@ -68,9 +73,11 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
         for membership in memberships:
             group = membership.group
             member_count = await GroupMember.objects.filter(group=group).count()
+            teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
             result.append({
                 **group.dict(),
                 "teacher_id": group.teacher.id,
+                "teacher_name": teacher_full_name,
                 "member_count": member_count
             })
         return result
@@ -104,10 +111,12 @@ async def get_group(
         )
     
     member_count = await GroupMember.objects.filter(group=group).count()
+    teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
     
     return {
         **group.dict(),
         "teacher_id": group.teacher.id,
+        "teacher_name": teacher_full_name,
         "member_count": member_count
     }
 
@@ -206,10 +215,12 @@ async def join_group(
     )
     
     member_count = await GroupMember.objects.filter(group=group).count()
+    teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
     
     return {
         **group.dict(),
         "teacher_id": group.teacher.id,
+        "teacher_name": teacher_full_name,
         "member_count": member_count
     }
 

@@ -46,6 +46,7 @@ async def create_quiz(
         quiz_type=data.quiz_type.value,
         timer_mode=data.timer_mode.value,
         time_limit=data.time_limit,
+        available_until=data.available_until,
         is_active=True
     )
     

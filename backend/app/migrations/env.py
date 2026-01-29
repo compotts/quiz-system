@@ -4,20 +4,26 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from config import database_url
+from config import settings
 
+from app.database.models.user import User
+from app.database.models.attempt import QuizAttempt, Answer
+from app.database.models.group import Group, GroupMember
+from app.database.models.quiz import Quiz, Question, Option
+from app.database.models.registration_code import RegistrationCode
+from app.database.models.registration_request import RegistrationRequest
+from app.database.database import base_ormar_config
+
+print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest]]}")  # debug
 
 config = context.config
-
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", )
+config.set_main_option("sqlalchemy.url", "sqlite:///../backend/quiz.db" + "?async_fallback=True")
 
-
-target_metadata = None
-
+target_metadata = base_ormar_config.metadata
 
 
 def run_migrations_offline() -> None:
@@ -59,7 +65,8 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata, 
+            compare_server_default=True
         )
 
         with context.begin_transaction():

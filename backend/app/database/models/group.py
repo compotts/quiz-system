@@ -9,6 +9,7 @@ class Group(Model):
 
     id: int = Integer(primary_key=True)
     name: str = String(max_length=255)
+    subject: str = String(max_length=255, nullable=True)
     code: str = String(max_length=6, unique=True, index=True)
     teacher: User = ForeignKey(User, related_name="groups")
     created_at: datetime = DateTime(default=datetime.utcnow)

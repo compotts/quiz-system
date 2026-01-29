@@ -1,12 +1,13 @@
 from fastapi import Request, HTTPException
 from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict
 import asyncio
+
 
 class RateLimiter:
     def __init__(self):
-        # Структура: {ip_address: [(timestamp, count), ...]}
+        # {ip_address: [(timestamp, count), ...]}
         self.requests: Dict[str, list] = defaultdict(list)
         self.lock = asyncio.Lock()
     
@@ -25,21 +26,18 @@ class RateLimiter:
         current_time = datetime.utcnow()
         
         async with self.lock:
-            # Очистка старых записей
             cutoff_time = current_time - timedelta(seconds=period_seconds)
             self.requests[client_ip] = [
                 req_time for req_time in self.requests[client_ip]
                 if req_time > cutoff_time
             ]
             
-            # Проверка лимита
             if len(self.requests[client_ip]) >= max_requests:
                 raise HTTPException(
                     status_code=429,
                     detail=f"Too many requests. Please try again in {period_seconds} seconds."
                 )
             
-            # Добавление текущего запроса
             self.requests[client_ip].append(current_time)
             return True
     
@@ -56,15 +54,24 @@ class RateLimiter:
                     del self.requests[ip]
 
 
-# Глобальный rate limiter
 rate_limiter = RateLimiter()
 
 
 async def check_login_rate_limit(request: Request):
     """Middleware для проверки rate limit на логин"""
-    await rate_limiter.check_rate_limit(request, max_requests=5, period_seconds=60)
+    from config import settings
+    await rate_limiter.check_rate_limit(
+        request, 
+        max_requests=settings.rate_limit_login, 
+        period_seconds=settings.rate_limit_period
+    )
 
 
 async def check_registration_rate_limit(request: Request):
     """Middleware для проверки rate limit на регистрацию"""
-    await rate_limiter.check_rate_limit(request, max_requests=3, period_seconds=300)
+    from config import settings
+    await rate_limiter.check_rate_limit(
+        request, 
+        max_requests=settings.rate_limit_login, 
+        period_seconds=settings.rate_limit_period * 5  # 5 минут для регистрации
+    )

@@ -29,6 +29,7 @@ class Quiz(Model):
     timer_mode: TimerMode = String(max_length=20, default=TimerMode.QUIZ_TOTAL)
     time_limit: int = Integer(nullable=True)
     is_active: bool = Boolean(default=True)
+    available_until: datetime = DateTime(nullable=True)
     created_at: datetime = DateTime(default=datetime.utcnow)
     updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
 

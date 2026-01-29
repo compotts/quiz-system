@@ -23,4 +23,3 @@ class User(Model):
     is_active: bool = Boolean(default=True)
     created_at: datetime = DateTime(default=datetime.utcnow)
     updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
-    tes12t: str = String(max_length=20, nullable=True)
