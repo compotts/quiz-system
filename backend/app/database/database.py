@@ -18,7 +18,7 @@ base_ormar_config = OrmarConfig(
 async def lifespan(app: FastAPI):
     async_engine = create_async_engine(settings.database_url)
     async with async_engine.begin() as conn:
-        await conn.run_sync(metadata.drop_all)
+        # await conn.run_sync(metadata.drop_all)
         await conn.run_sync(metadata.create_all)
 
     if not database.is_connected:
