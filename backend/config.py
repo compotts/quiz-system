@@ -3,6 +3,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
+    # database_url: str = "postgresql+asyncpg://api_user:2402@78.61.225.135:5432/quizdb"
     database_url: str = "sqlite+aiosqlite:///../backend/quiz.db"
     secret_key: str = "your-secret-key-change-in-production"
     algorithm: str = "HS256"
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     cors_origins: list = [
         "http://localhost:3000", 
         "http://localhost:4173", 
+        "http://localhost:5173", 
         "http://localhost:8000", 
         "https://quiz-system-eta.vercel.app"
     ]

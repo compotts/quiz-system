@@ -189,7 +189,7 @@ async def delete_quiz(
 ):
     """Удаление викторины"""
     
-    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    quiz = await Quiz.objects.select_related("teacher").get_or_none(id=quiz_id)
     
     if not quiz:
         raise HTTPException(
@@ -203,6 +203,27 @@ async def delete_quiz(
             detail="Only quiz owner can delete it"
         )
     
+    # Удаление связанных данных в правильном порядке (FK constraints)
+    # 1. Ответы (answers -> attempt, question)
+    attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
+    for attempt in attempts:
+        answers = await Answer.objects.filter(attempt=attempt).all()
+        for ans in answers:
+            await ans.delete()
+    
+    # 2. Попытки (quiz_attempts -> quiz)
+    for attempt in attempts:
+        await attempt.delete()
+    
+    # 3. Варианты ответов и вопросы (options -> question, questions -> quiz)
+    questions = await Question.objects.filter(quiz=quiz).all()
+    for question in questions:
+        options = await Option.objects.filter(question=question).all()
+        for opt in options:
+            await opt.delete()
+        await question.delete()
+    
+    # 4. Сам квиз
     await quiz.delete()
     
     return {"message": "Quiz deleted successfully"}
@@ -371,6 +392,14 @@ async def delete_question(
             detail="Question not found"
         )
     
+    # Удаление связанных данных
+    # 1. Удаляем ответы пользователей на этот вопрос
+    await Answer.objects.filter(question=question).delete()
+    
+    # 2. Удаляем варианты ответа
+    await Option.objects.filter(question=question).delete()
+    
+    # 3. Удаляем сам вопрос
     await question.delete()
     
     return {"message": "Question deleted successfully"}

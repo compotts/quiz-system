@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from schemas import (
     AdminInitRequest, UserResponse, RegistrationRequestResponse,
-    ReviewRegistrationRequest
+    ReviewRegistrationRequest, AdminUpdateUserRequest
 )
 from app.database.models.user import User, UserRole
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
@@ -96,7 +96,8 @@ async def approve_all_registration_requests(
                 last_name=reg_request.last_name,
                 hashed_password=reg_request.hashed_password,
                 role=role.value,
-                is_active=True
+                is_active=True,
+                registration_ip=reg_request.ip_address
             )
 
             await reg_request.update(
@@ -249,6 +250,41 @@ async def get_user_details(
             detail="User not found"
         )
     
+    return user
+
+
+@router.patch("/users/{user_id}", response_model=UserResponse)
+async def update_user_details(
+    user_id: int,
+    data: AdminUpdateUserRequest,
+    current_admin: User = Depends(get_current_admin)
+):
+    user = await User.objects.get_or_none(id=user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    update_fields = {}
+    if data.email is not None:
+        existing = await User.objects.get_or_none(email=data.email)
+        if existing and existing.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+        update_fields["email"] = data.email
+    if data.first_name is not None:
+        update_fields["first_name"] = data.first_name
+    if data.last_name is not None:
+        update_fields["last_name"] = data.last_name
+
+    if update_fields:
+        await user.update(**update_fields)
+        user = await User.objects.get_or_none(id=user_id)
+
     return user
 
 

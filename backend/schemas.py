@@ -34,7 +34,14 @@ class UserResponse(BaseModel):
     last_name: Optional[str]
     role: str
     is_active: bool
+    registration_ip: Optional[str] = None
     created_at: datetime
+
+
+class AdminUpdateUserRequest(BaseModel):
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class RefreshTokenRequest(BaseModel):
