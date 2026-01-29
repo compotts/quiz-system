@@ -195,7 +195,13 @@
     "errorRole": "Ошибка изменения роли",
     "errorStatus": "Ошибка изменения статуса",
     "errorDeleteUser": "Ошибка удаления пользователя",
-    "errorDeleteMessage": "Ошибка удаления"
+    "errorDeleteMessage": "Ошибка удаления",
+    "details": "Подробнее",
+    "userDetails": "Данные пользователя",
+    "registrationIp": "IP регистрации",
+    "editUserDetails": "Редактировать данные",
+    "errorLoadUserDetails": "Ошибка загрузки данных пользователя",
+    "errorUpdateUserDetails": "Ошибка сохранения данных"
   },
   "teacher": {
     "dashboardTitle": "Панель преподавателя",

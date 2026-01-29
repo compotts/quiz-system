@@ -24,8 +24,10 @@ import {
   MailOpen,
   CheckCheck,
   Monitor,
+  Info,
 } from "lucide-react";
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
+import UserDetailsModal from "../components/UserDetailsModal.jsx";
 
 const TABS = [
   { id: "requests", icon: ClipboardList },
@@ -87,7 +89,7 @@ export default function AdminDashboard() {
   const [processingUser, setProcessingUser] = useState(null);
   const [userRoleSelectOpen, setUserRoleSelectOpen] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-
+  const [userDetailsModalUserId, setUserDetailsModalUserId] = useState(null);
 
   const [messages, setMessages] = useState([]);
   const [messagesFilter, setMessagesFilter] = useState("all");
@@ -333,6 +335,8 @@ export default function AdminDashboard() {
       setProcessingUser(null);
     }
   };
+
+  const openUserDetails = (user) => setUserDetailsModalUserId(user.id);
 
   if (!currentUser) {
     return (
@@ -773,8 +777,17 @@ export default function AdminDashboard() {
                               </div>
                             </div>
 
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  onClick={() => openUserDetails(user)}
+                                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)] hover:text-[var(--text)]"
+                                  title={t("admin.details")}
+                                >
+                                  <Info className="h-4 w-4" />
+                                  {t("admin.details")}
+                                </button>
                             {!isCurrentUser && (
-                              <div className="flex flex-wrap items-center gap-2">
+                              <>
                                 {/* Role selector */}
                                 <div className="relative">
                                   <button
@@ -863,8 +876,9 @@ export default function AdminDashboard() {
                                     <Trash2 className="h-4 w-4" />
                                   </button>
                                 )}
-                              </div>
+                              </>
                             )}
+                              </div>
                           </div>
                           <p className="mt-2 text-xs text-[var(--text-muted)]">
                             {t("admin.created")}: {formatDate(user.created_at)}
@@ -1094,6 +1108,13 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
+
+          <UserDetailsModal
+            isOpen={!!userDetailsModalUserId}
+            userId={userDetailsModalUserId}
+            onClose={() => setUserDetailsModalUserId(null)}
+            onSaved={loadUsers}
+          />
         </div>
       </div>
     </div>

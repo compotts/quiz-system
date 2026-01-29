@@ -118,6 +118,13 @@ export const adminApi = {
     return request(`/admin/users/${userId}`);
   },
 
+  async updateUserDetails(userId, data) {
+    return request(`/admin/users/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
   async changeUserRole(userId, newRole) {
     return request(`/admin/users/${userId}/role?new_role=${newRole}`, {
       method: "PATCH",
