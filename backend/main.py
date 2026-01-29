@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.database.database import lifespan
+from datetime import datetime
 from config import settings
 
 from app.routes import auth, admin, groups, quizzes, attempts, contact
@@ -39,9 +40,13 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get("/healtz")
 async def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "message": "API is running",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 if __name__ == "__main__":
