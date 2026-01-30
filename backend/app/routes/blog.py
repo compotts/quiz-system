@@ -5,6 +5,8 @@ from schemas import BlogPostCreate, BlogPostUpdate, BlogPostResponse
 from app.database.models.blog_post import BlogPost
 from app.database.models.user import User
 from app.utils.auth import get_current_admin, get_current_user_optional
+from app.database.database import utc_now
+
 
 router = APIRouter(prefix="/blog", tags=["Blog"])
 
@@ -46,7 +48,6 @@ async def get_blog_posts(
     if not is_admin or not include_unpublished:
         query = query.filter(is_published=True)
     
-    total = await query.count()
     offset = (page - 1) * per_page
     posts = await query.order_by("-created_at").offset(offset).limit(per_page).all()
     
@@ -118,7 +119,7 @@ async def update_blog_post(
         update_fields["is_published"] = data.is_published
     
     if update_fields:
-        update_fields["updated_at"] = datetime.utcnow()
+        update_fields["updated_at"] = utc_now()
         await post.update(**update_fields)
         post = await BlogPost.objects.select_related("author").get_or_none(id=post_id)
     

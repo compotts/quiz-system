@@ -1,5 +1,5 @@
 from ormar import Model, Integer, String, Text, Boolean, DateTime, ForeignKey
-from app.database.database import base_ormar_config
+from app.database.database import base_ormar_config, utc_now
 from app.database.models.user import User
 from datetime import datetime
 
@@ -12,5 +12,5 @@ class BlogPost(Model):
     content: str = Text()
     author: User = ForeignKey(User, related_name="blog_posts")
     is_published: bool = Boolean(default=True)
-    created_at: datetime = DateTime(default=datetime.utcnow)
-    updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)
+    updated_at: datetime = DateTime(default=utc_now)

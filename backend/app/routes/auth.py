@@ -120,7 +120,7 @@ async def refresh_token(data: RefreshTokenRequest):
                 detail="Invalid token type"
             )
         
-        user_id_str: str = payload.get("sub")
+        user_id_str: str | None = payload.get("sub")
         if user_id_str is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

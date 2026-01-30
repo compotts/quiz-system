@@ -6,7 +6,8 @@ import { adminApi } from "../services/api.js";
 export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
   const { t } = useTranslation();
   const [userDetails, setUserDetails] = useState(null);
-  const [form, setForm] = useState({ email: "", first_name: "", last_name: "" });
+  const [userGroups, setUserGroups] = useState([]);
+  const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "" });
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -15,13 +16,19 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
   useEffect(() => {
     if (!isOpen || !userId) return;
     setUserDetails(null);
+    setUserGroups([]);
     setLoadError("");
     setSaveError("");
     (async () => {
       try {
-        const u = await adminApi.getUserDetails(userId);
+        const [u, groups] = await Promise.all([
+          adminApi.getUserDetails(userId),
+          adminApi.getUserGroups(userId),
+        ]);
         setUserDetails(u);
+        setUserGroups(groups || []);
         setForm({
+          username: u.username || "",
           email: u.email || "",
           first_name: u.first_name || "",
           last_name: u.last_name || "",
@@ -45,13 +52,20 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
     setSaving(true);
     try {
       const u = await adminApi.updateUserDetails(userId, {
+        username: form.username || null,
         email: form.email || null,
         first_name: form.first_name || null,
         last_name: form.last_name || null,
       });
       setUserDetails(u);
-      setForm({ email: u.email || "", first_name: u.first_name || "", last_name: u.last_name || "" });
+      setForm({
+        username: u.username || "",
+        email: u.email || "",
+        first_name: u.first_name || "",
+        last_name: u.last_name || "",
+      });
       onSaved?.();
+      handleClose();
     } catch (err) {
       setSaveError(err.message || t("admin.errorUpdateUserDetails"));
     } finally {
@@ -111,11 +125,31 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
             <>
               <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3 text-sm">
                 <p><span className="text-[var(--text-muted)]">ID:</span> {userDetails.id}</p>
-                <p><span className="text-[var(--text-muted)]">{t("auth.username")}:</span> {userDetails.username}</p>
                 <p>
                   <span className="text-[var(--text-muted)]">{t("admin.registrationIp")}:</span>{" "}
                   {userDetails.registration_ip || "—"}
                 </p>
+              </div>
+              <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                <p className="text-xs font-medium text-[var(--text-muted)] mb-2">{t("admin.userGroups")}</p>
+                {userGroups.length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)]">{t("admin.noUserGroups")}</p>
+                ) : (
+                  <ul className="space-y-1.5 text-sm">
+                    {userGroups.map((g) => (
+                      <li
+                        key={g.id}
+                        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5"
+                      >
+                        <span className="font-medium text-[var(--text)]">{g.name}</span>
+                        <span className="text-[var(--text-muted)]">({t("teacher.groups.code")}: {g.code})</span>
+                        {g.teacher_name && (
+                          <span className="text-xs text-[var(--text-muted)]">— {g.teacher_name}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="space-y-3">
                 <p className="text-sm font-medium text-[var(--text)]">{t("admin.editUserDetails")}</p>
@@ -124,6 +158,17 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
                     {saveError}
                   </p>
                 )}
+                <div>
+                  <label className="mb-1 block text-xs text-[var(--text-muted)]">{t("auth.username")}</label>
+                  <input
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--text-muted)] focus:outline-none"
+                    placeholder={t("auth.usernamePlaceholder")}
+                    minLength={3}
+                  />
+                </div>
                 <div>
                   <label className="mb-1 block text-xs text-[var(--text-muted)]">{t("auth.email")}</label>
                   <input

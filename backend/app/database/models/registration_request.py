@@ -1,5 +1,5 @@
 from ormar import Model, Integer, String, DateTime, ForeignKey
-from app.database.database import base_ormar_config
+from app.database.database import base_ormar_config, utc_now
 from datetime import datetime
 from enum import Enum
 from app.database.models.user import User
@@ -13,7 +13,7 @@ class RegistrationStatus(str, Enum):
 
 
 class RegistrationRequest(Model):
-    ormar_config = base_ormar_config.copy(tablename="registration_requests")
+    ormar_config = base_ormar_config.copy(tablename="reg_requests")
 
     id: int = Integer(primary_key=True)
     username: str = String(max_length=100)
@@ -29,4 +29,4 @@ class RegistrationRequest(Model):
     role: str = String(max_length=20, nullable=True)
     reviewed_by: User = ForeignKey(User, nullable=True, related_name="reviewed_requests")
     reviewed_at: datetime = DateTime(nullable=True)
-    created_at: datetime = DateTime(default=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)

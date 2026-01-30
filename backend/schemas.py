@@ -1,8 +1,17 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.models.user import UserRole
 from app.database.models.quiz import QuizType, TimerMode
+
+
+def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """Normalize datetime to naive UTC for PostgreSQL/asyncpg."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 # ============ AUTH SCHEMAS ============
@@ -112,6 +121,11 @@ class QuizCreate(BaseModel):
     time_limit: Optional[int] = None
     available_until: Optional[datetime] = None
 
+    @field_validator("available_until", mode="after")
+    @classmethod
+    def available_until_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _naive_utc(v)
+
 
 class QuizUpdate(BaseModel):
     title: Optional[str] = None
@@ -121,6 +135,11 @@ class QuizUpdate(BaseModel):
     time_limit: Optional[int] = None
     is_active: Optional[bool] = None
     available_until: Optional[datetime] = None
+
+    @field_validator("available_until", mode="after")
+    @classmethod
+    def available_until_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _naive_utc(v)
 
 
 class QuizResponse(BaseModel):

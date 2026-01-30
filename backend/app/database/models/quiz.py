@@ -1,5 +1,5 @@
 from ormar import Model, Integer, String, Text, Boolean, ForeignKey, DateTime, Float
-from app.database.database import base_ormar_config
+from app.database.database import base_ormar_config, utc_now
 from datetime import datetime
 from enum import Enum
 from app.database.models.user import User
@@ -30,8 +30,8 @@ class Quiz(Model):
     time_limit: int = Integer(nullable=True)
     is_active: bool = Boolean(default=True)
     available_until: datetime = DateTime(nullable=True)
-    created_at: datetime = DateTime(default=datetime.utcnow)
-    updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)
+    updated_at: datetime = DateTime(default=utc_now)
 
 
 class Question(Model):
@@ -44,8 +44,8 @@ class Question(Model):
     order: int = Integer()
     points: float = Float(default=1.0)
     time_limit: int = Integer(nullable=True)
-    created_at: datetime = DateTime(default=datetime.utcnow)
-    updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)
+    updated_at: datetime = DateTime(default=utc_now)
 
 
 class Option(Model):
@@ -56,5 +56,5 @@ class Option(Model):
     text: str = Text()
     is_correct: bool = Boolean(default=False)
     order: int = Integer()
-    created_at: datetime = DateTime(default=datetime.utcnow)
-    updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)
+    updated_at: datetime = DateTime(default=utc_now)

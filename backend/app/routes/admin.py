@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from schemas import (
@@ -9,6 +8,7 @@ from app.database.models.user import User, UserRole
 from app.database.models.group import Group, GroupMember
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
 from app.utils.auth import get_password_hash, get_current_admin
+from app.database.database import utc_now
 from config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -104,7 +104,7 @@ async def approve_all_registration_requests(
             await reg_request.update(
                 status=RegistrationStatus.APPROVED.value,
                 reviewed_by=current_admin,
-                reviewed_at=datetime.utcnow()
+                reviewed_at=utc_now()
             )
         except:
             pass
@@ -146,14 +146,14 @@ async def review_registration_request(
         await reg_request.update(
             status=RegistrationStatus.APPROVED.value,
             reviewed_by=current_admin,
-            reviewed_at=datetime.utcnow()
+            reviewed_at=utc_now()
         )
         return {"message": "User approved and created", "user_id": user.id}
     else:
         await reg_request.update(
             status=RegistrationStatus.REJECTED.value,
             reviewed_by=current_admin,
-            reviewed_at=datetime.utcnow()
+            reviewed_at=utc_now()
         )
         return {"message": "Registration request rejected"}
 

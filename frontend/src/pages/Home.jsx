@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import AuthModal from "../components/AuthModal.jsx";
 
 const FEATURE_KEYS = [
@@ -38,13 +39,19 @@ export default function Home() {
           <p className="mt-5 text-lg text-[var(--text-muted)] sm:text-xl">
             {t("home.tagline")}
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-10 flex flex-col items-center gap-3">
             <button
               onClick={() => setIsAuthModalOpen(true)}
               className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90 hover:scale-105 hover:shadow-[var(--shadow-md)]"
             >
               {t("home.login")}
             </button>
+            <Link
+              to="/blog"
+              className="text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--accent)] hover:underline"
+            >
+              {t("home.devBlog")}
+            </Link>
           </div>
         </div>
       </section>

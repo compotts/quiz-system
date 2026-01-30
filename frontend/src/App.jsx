@@ -3,6 +3,7 @@ import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
 import Home from "./pages/Home.jsx";
 import Info from "./pages/Info.jsx";
+import Blog from "./pages/Blog.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminInit from "./pages/AdminInit.jsx";
 import TeacherDashboard from "./pages/TeacherDashboard.jsx";
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/info" element={<Info />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/admin/init" element={<AdminInit />} />
           <Route path="/dashboard/admin" element={<AdminDashboard />} />
           <Route path="/dashboard/teacher" element={<TeacherDashboard />} />

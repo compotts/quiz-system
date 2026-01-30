@@ -11,6 +11,7 @@ from app.database.models.group import Group, GroupMember
 from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.user import User
 from app.utils.auth import get_current_teacher, get_current_user, get_current_student
+from app.database.database import to_naive_utc
 from datetime import datetime
 import json
 
@@ -46,7 +47,7 @@ async def create_quiz(
         quiz_type=data.quiz_type.value,
         timer_mode=data.timer_mode.value,
         time_limit=data.time_limit,
-        available_until=data.available_until,
+        available_until=to_naive_utc(data.available_until),
         is_active=True
     )
     
@@ -169,6 +170,8 @@ async def update_quiz(
             update_data["quiz_type"] = update_data["quiz_type"].value
         if "timer_mode" in update_data:
             update_data["timer_mode"] = update_data["timer_mode"].value
+        if "available_until" in update_data:
+            update_data["available_until"] = to_naive_utc(update_data["available_until"])
         
         await quiz.update(**update_data)
     

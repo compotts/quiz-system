@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Quizz",
+    "appNameDev": "Quizz (kūrimas)",
     "close": "Uždaryti",
     "save": "Išsaugoti",
     "cancel": "Atšaukti",
@@ -32,6 +33,7 @@
   "home": {
     "tagline": "Kurkite viktorinas, spręskite testus ir stebėkite rezultatus – viskas vienoje vietoje.",
     "login": "Prisijungti",
+    "devBlog": "Dev blogas apie projekto pataisymus ir papildymus",
     "aboutTitle": "Apie projektą",
     "about1": "„Quizz“ – tai intelektualus pramoginis žaidimas ar testas, kurio metu dalyviai atsakinėja į klausimus iš įvairių sričių, siekdami surinkti kuo daugiau taškų.",
     "about2": "Mes įgyvendinome galimybę kurti viktorinas, jas vykdyti ir peržiūrėti rezultatus bei daug kitų funkcijų. Projektas yra aktyviai vystomas.",
@@ -151,6 +153,25 @@
     "errorExists": "Administratorius jau sukurtas. Prisijunkite.",
     "errorCreate": "Administratoriaus kūrimo klaida",
     "backToHome": "← Į pagrindinį"
+  },
+  "blog": {
+    "title": "Dev blogas",
+    "subtitle": "Kūrimo naujienos, klaidų taisymai ir projekto atnaujinimai",
+    "backToList": "Grįžti į sąrašą",
+    "createPost": "Sukurti įrašą",
+    "editPost": "Redaguoti įrašą",
+    "postTitle": "Pavadinimas",
+    "titlePlaceholder": "Įveskite įrašo pavadinimą",
+    "postContent": "Turinys",
+    "contentPlaceholder": "Rašykite įrašo turinį (palaikomas Markdown)...",
+    "markdownSupport": "Palaikomas Markdown formatavimas",
+    "showPreview": "Peržiūra",
+    "hidePreview": "Redaguoti",
+    "previewEmpty": "*Pradėkite rašyti, kad pamatytumėte peržiūrą*",
+    "publishImmediately": "Publikuoti iškart",
+    "draft": "Juodraštis",
+    "noPosts": "Įrašų dar nėra",
+    "confirmDelete": "Ištrinti šį blogo įrašą?"
   },
   "admin": {
     "dashboardTitle": "Administratoriaus skydas",

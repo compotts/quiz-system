@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Quizz",
+    "appNameDev": "Quizz (development)",
     "close": "Close",
     "save": "Save",
     "cancel": "Cancel",
@@ -32,6 +33,7 @@
   "home": {
     "tagline": "Create quizzes, take tests, and track results — all in one place.",
     "login": "Login",
+    "devBlog": "Dev blog about fixes and additions to the project",
     "aboutTitle": "About the project",
     "about1": "Quizz is an intellectual entertainment game or test where participants answer questions from various fields of knowledge to score maximum points.",
     "about2": "We have implemented the ability to create quizzes, conduct them, and view results, among many other features. The project is under active development.",
@@ -151,6 +153,25 @@
     "errorExists": "Administrator already exists. Use login.",
     "errorCreate": "Error creating administrator",
     "backToHome": "← Back to Home"
+  },
+  "blog": {
+    "title": "Dev Blog",
+    "subtitle": "Development news, bug fixes and project updates",
+    "backToList": "Back to list",
+    "createPost": "Create post",
+    "editPost": "Edit post",
+    "postTitle": "Title",
+    "titlePlaceholder": "Enter post title",
+    "postContent": "Content",
+    "contentPlaceholder": "Write post content (Markdown supported)...",
+    "markdownSupport": "Markdown formatting supported",
+    "showPreview": "Preview",
+    "hidePreview": "Edit",
+    "previewEmpty": "*Start typing to see preview*",
+    "publishImmediately": "Publish immediately",
+    "draft": "Draft",
+    "noPosts": "No posts yet",
+    "confirmDelete": "Delete this blog post?"
   },
   "admin": {
     "dashboardTitle": "Admin Panel",

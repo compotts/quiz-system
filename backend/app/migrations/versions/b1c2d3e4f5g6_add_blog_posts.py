@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('title', sa.String(length=255), nullable=False),
         sa.Column('content', sa.Text(), nullable=False),
         sa.Column('author', sa.Integer(), nullable=True),
-        sa.Column('is_published', sa.Boolean(), server_default='1', nullable=False),
+        sa.Column('is_published', sa.Boolean(), server_default=sa.text('true'), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['author'], ['users.id'], name='fk_blog_posts_author_users'),

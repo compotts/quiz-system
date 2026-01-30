@@ -118,6 +118,10 @@ export const adminApi = {
     return request(`/admin/users/${userId}`);
   },
 
+  async getUserGroups(userId) {
+    return request(`/admin/users/${userId}/groups`);
+  },
+
   async updateUserDetails(userId, data) {
     return request(`/admin/users/${userId}`, {
       method: "PATCH",
@@ -179,6 +183,40 @@ export const contactApi = {
     return request("/contact/send", {
       method: "POST",
       body: JSON.stringify({ message }),
+    });
+  },
+};
+
+export const blogApi = {
+  async getPosts(page = 1, perPage = 10, includeUnpublished = false) {
+    const params = new URLSearchParams();
+    params.append("page", page);
+    params.append("per_page", perPage);
+    if (includeUnpublished) params.append("include_unpublished", "true");
+    return request(`/blog/posts?${params.toString()}`);
+  },
+
+  async getPost(postId) {
+    return request(`/blog/posts/${postId}`);
+  },
+
+  async createPost(data) {
+    return request("/blog/posts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updatePost(postId, data) {
+    return request(`/blog/posts/${postId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePost(postId) {
+    return request(`/blog/posts/${postId}`, {
+      method: "DELETE",
     });
   },
 };

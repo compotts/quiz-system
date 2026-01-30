@@ -9,6 +9,7 @@ from app.database.models.group import GroupMember
 from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.user import User
 from app.utils.auth import get_current_student, get_current_user
+from app.database.database import utc_now
 from datetime import datetime
 import json
 
@@ -70,7 +71,7 @@ async def start_quiz_attempt(
         student=current_user,
         score=0.0,
         max_score=max_score,
-        started_at=datetime.utcnow(),
+        started_at=utc_now(),
         is_completed=False
     )
     
@@ -153,7 +154,7 @@ async def submit_answer(
         selected_options=json.dumps(data.selected_options),
         is_correct=is_correct,
         points_earned=points_earned,
-        answered_at=datetime.utcnow()
+        answered_at=utc_now()
     )
     
     # Обновление балла попытки (перезагружаем для актуального значения)
@@ -192,10 +193,11 @@ async def complete_quiz_attempt(
         )
     
     # Вычисление времени
-    time_spent = int((datetime.utcnow() - attempt.started_at).total_seconds())
+    now = utc_now()
+    time_spent = int((now - attempt.started_at).total_seconds())
     
     await attempt.update(
-        completed_at=datetime.utcnow(),
+        completed_at=now,
         time_spent=time_spent,
         is_completed=True
     )

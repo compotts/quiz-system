@@ -1,10 +1,10 @@
 from ormar import Integer, String, DateTime, Text, Boolean, Model
-from app.database.database import base_ormar_config
+from app.database.database import base_ormar_config, utc_now
 from datetime import datetime
 
 
 class ContactMessage(Model):
-    ormar_config = base_ormar_config.copy(tablename="contact_messages")
+    ormar_config = base_ormar_config.copy(tablename="contact_msgs")
 
     id: int = Integer(primary_key=True)
     message: str = Text()
@@ -14,4 +14,4 @@ class ContactMessage(Model):
     ip_address: str = String(max_length=45)
     user_agent: str = String(max_length=500, nullable=True)
     is_read: bool = Boolean(default=False)
-    created_at: datetime = DateTime(default=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)

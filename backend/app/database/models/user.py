@@ -1,5 +1,5 @@
 from ormar import Model, Integer, String, Boolean, DateTime
-from app.database.database import base_ormar_config
+from app.database.database import base_ormar_config, utc_now
 from datetime import datetime
 from enum import Enum
 
@@ -22,5 +22,5 @@ class User(Model):
     role: str = String(max_length=20, default=UserRole.STUDENT.value)
     is_active: bool = Boolean(default=True)
     registration_ip: str = String(max_length=100, nullable=True)
-    created_at: datetime = DateTime(default=datetime.utcnow)
-    updated_at: datetime = DateTime(default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: datetime = DateTime(default=utc_now)
+    updated_at: datetime = DateTime(default=utc_now)
