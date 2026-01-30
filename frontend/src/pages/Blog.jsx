@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, Save, X, AlertCircle } from "lucide-react";
 import { blogApi, authApi } from "../services/api.js";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Blog() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
-  const [selectedPost, setSelectedPost] = useState(null);
-  
-  // Admin form state
+
   const [showForm, setShowForm] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [formData, setFormData] = useState({ title: "", content: "", is_published: true });
@@ -50,6 +51,20 @@ export default function Blog() {
     loadPosts();
   }, [loadPosts]);
 
+  useEffect(() => {
+    const editPostId = location.state?.editPostId;
+    if (editPostId && posts.length > 0) {
+      const post = posts.find((p) => p.id === Number(editPostId));
+      if (post) {
+        setEditingPost(post);
+        setFormData({ title: post.title, content: post.content, is_published: post.is_published });
+        setShowPreview(false);
+        setShowForm(true);
+        navigate("/blog", { replace: true, state: {} });
+      }
+    }
+  }, [location.state?.editPostId, posts, navigate]);
+
   const handleCreatePost = () => {
     setEditingPost(null);
     setFormData({ title: "", content: "", is_published: true });
@@ -73,9 +88,6 @@ export default function Blog() {
     try {
       await blogApi.deletePost(postId);
       setPosts(posts.filter(p => p.id !== postId));
-      if (selectedPost?.id === postId) {
-        setSelectedPost(null);
-      }
     } catch (err) {
       alert(err.message);
     }
@@ -90,9 +102,6 @@ export default function Blog() {
       if (editingPost) {
         const updated = await blogApi.updatePost(editingPost.id, formData);
         setPosts(posts.map(p => p.id === editingPost.id ? updated : p));
-        if (selectedPost?.id === editingPost.id) {
-          setSelectedPost(updated);
-        }
       } else {
         const created = await blogApi.createPost(formData);
         setPosts([created, ...posts]);
@@ -117,66 +126,8 @@ export default function Blog() {
     });
   };
 
-  if (selectedPost) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <button
-          onClick={() => setSelectedPost(null)}
-          className="mb-6 flex items-center gap-2 text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("blog.backToList")}
-        </button>
-        
-        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
-          <header className="mb-6 border-b border-[var(--border)] pb-6">
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">
-                {selectedPost.title}
-              </h1>
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditPost(selectedPost)}
-                    className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeletePost(selectedPost.id)}
-                    className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-500/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--text-muted)]">
-              <span>{selectedPost.author_name}</span>
-              <span>•</span>
-              <span>{formatDate(selectedPost.created_at)}</span>
-              {!selectedPost.is_published && (
-                <>
-                  <span>•</span>
-                  <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-600 dark:text-yellow-400">
-                    {t("blog.draft")}
-                  </span>
-                </>
-              )}
-            </div>
-          </header>
-          
-          <div className="prose prose-neutral dark:prose-invert max-w-none text-[var(--text)]">
-            <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
-          </div>
-        </article>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Warning Alert */}
       <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-sm text-yellow-600 dark:text-yellow-400">
         <AlertCircle className="h-5 w-5 shrink-0" />
         <p>Рекомендуется обновить страницу через несколько секунд после входа для корректного отображения черновиков</p>
@@ -208,7 +159,6 @@ export default function Blog() {
         )}
       </div>
 
-      {/* Admin Form Modal */}
       {showForm && isAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -256,8 +206,10 @@ export default function Blog() {
                 
                 {showPreview ? (
                   <div className="min-h-[300px] rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4">
-                    <div className="prose prose-neutral dark:prose-invert max-w-none text-[var(--text)]">
-                      <ReactMarkdown>{formData.content || t("blog.previewEmpty")}</ReactMarkdown>
+                    <div className="blog-prose">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {formData.content || t("blog.previewEmpty")}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 ) : (
@@ -269,9 +221,6 @@ export default function Blog() {
                     required
                   />
                 )}
-                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                  {t("blog.markdownSupport")}
-                </p>
               </div>
               
               <div className="mb-6">
@@ -323,49 +272,58 @@ export default function Blog() {
           {posts.map((post) => (
             <article
               key={post.id}
-              className="group cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:border-[var(--accent)]/30 hover:shadow-lg"
-              onClick={() => setSelectedPost(post)}
+              className="group relative rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:border-[var(--accent)]/30 hover:shadow-lg"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h2 className="text-lg font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
-                    {post.title}
-                  </h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
-                    <span>{post.author_name}</span>
-                    <span>•</span>
-                    <span>{formatDate(post.created_at)}</span>
-                    {!post.is_published && (
-                      <>
-                        <span>•</span>
-                        <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-600 dark:text-yellow-400">
-                          {t("blog.draft")}
-                        </span>
-                      </>
-                    )}
+              <Link
+                to={`/blog/${post.id}`}
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 rounded-xl"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 overflow-hidden min-w-0">
+                    <h2 className="text-lg font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                      {post.title}
+                    </h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+                      <span>{post.author_name}</span>
+                      <span>•</span>
+                      <span>{formatDate(post.created_at)}</span>
+                      {!post.is_published && (
+                        <>
+                          <span>•</span>
+                          <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-600 dark:text-yellow-400">
+                            {t("blog.draft")}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div className="mt-3 line-clamp-2 blog-prose text-sm text-[var(--text-muted)]">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {post.content.length > 200 ? `${post.content.slice(0, 200)}...` : post.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
-                  <p className="mt-3 line-clamp-2 text-[var(--text-muted)]">
-                    {post.content.slice(0, 200)}...
-                  </p>
                 </div>
-                
-                {isAdmin && (
-                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleEditPost(post); }}
-                      className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeletePost(post.id); }}
-                      className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-500/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
+              </Link>
+              {isAdmin && (
+                <div className="absolute top-4 right-4 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); handleEditPost(post); }}
+                    className="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+                    title={t("blog.editPost")}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); handleDeletePost(post.id); }}
+                    className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-500/10"
+                    title={t("common.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
