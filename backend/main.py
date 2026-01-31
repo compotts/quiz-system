@@ -11,7 +11,10 @@ app = FastAPI(
     title="Quizz System API",
     description="Educational Quiz Platform",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs" if settings.env == "dev" else None,
+    redoc_url="/redoc" if settings.env == "dev" else None,
+    openapi_url="/openapi.json" if settings.env == "dev" else None
 )
 
 # CORS

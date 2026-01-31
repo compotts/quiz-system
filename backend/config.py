@@ -20,6 +20,7 @@ class Settings(BaseSettings):
         "http://localhost:8000", 
         "https://quiz-system-eta.vercel.app"
     ]
+    env: str = "dev"
     
     class Config:
         env_file = ".env"
