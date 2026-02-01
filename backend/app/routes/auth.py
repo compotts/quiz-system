@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from schemas import (
     UserRegisterRequest, UserLogin, Token, UserResponse,
-    RefreshTokenRequest, RegisterResponse
+    RefreshTokenRequest, RegisterResponse, ProfileUpdate, ChangePasswordRequest
 )
 from app.database.models.user import User, UserRole
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
@@ -144,6 +144,46 @@ async def login(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    data: ProfileUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Обновление профиля текущего пользователя."""
+    update_data = data.model_dump(exclude_unset=True)
+    if not update_data:
+        return current_user
+
+    if "email" in update_data and update_data["email"] != current_user.email:
+        existing = await User.objects.get_or_none(email=update_data["email"])
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+
+    await current_user.update(**update_data)
+    await current_user.load_all()
+    return current_user
+
+
+@router.post("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Смена пароля текущего пользователя."""
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    await current_user.update(
+        hashed_password=get_password_hash(data.new_password)
+    )
+    return {"message": "Password updated successfully"}
 
 
 @router.post("/refresh", response_model=Token)

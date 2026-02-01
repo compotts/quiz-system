@@ -64,6 +64,23 @@ export const authApi = {
     return request("/auth/me");
   },
 
+  async updateProfile(data) {
+    return request("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    return request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+  },
+
   async refreshToken(refreshToken) {
     return request("/auth/refresh", {
       method: "POST",

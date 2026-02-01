@@ -90,7 +90,38 @@
   },
   "userMenu": {
     "dashboard": "Перейти в дашборд",
+    "profile": "Профиль",
     "logout": "Выйти"
+  },
+  "profile": {
+    "title": "Профиль",
+    "subtitle": "Управление данными аккаунта",
+    "info": "Информация",
+    "username": "Имя пользователя",
+    "email": "Email",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "role": "Роль",
+    "memberSince": "В системе с",
+    "editProfile": "Редактировать профиль",
+    "saveProfile": "Сохранить изменения",
+    "savingProfile": "Сохранение…",
+    "profileUpdated": "Профиль обновлён",
+    "changePassword": "Сменить пароль",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmPassword": "Повторите новый пароль",
+    "submitPassword": "Сменить пароль",
+    "submittingPassword": "Смена…",
+    "passwordUpdated": "Пароль успешно изменён",
+    "passwordMismatch": "Пароли не совпадают",
+    "backToHome": "На главную",
+    "goToDashboard": "В дашборд",
+    "roles": {
+      "admin": "Администратор",
+      "teacher": "Преподаватель",
+      "student": "Студент"
+    }
   },
   "info": {
     "navFaq": "FAQ",

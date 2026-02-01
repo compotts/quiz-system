@@ -90,7 +90,38 @@
   },
   "userMenu": {
     "dashboard": "Eiti į valdymo skydą",
+    "profile": "Profilis",
     "logout": "Atsijungti"
+  },
+  "profile": {
+    "title": "Profilis",
+    "subtitle": "Tvarkykite savo paskyrą",
+    "info": "Informacija",
+    "username": "Vartotojo vardas",
+    "email": "El. paštas",
+    "firstName": "Vardas",
+    "lastName": "Pavardė",
+    "role": "Rolė",
+    "memberSince": "Narys nuo",
+    "editProfile": "Redaguoti profilį",
+    "saveProfile": "Išsaugoti pakeitimus",
+    "savingProfile": "Išsaugoma…",
+    "profileUpdated": "Profilis atnaujintas",
+    "changePassword": "Keisti slaptažodį",
+    "currentPassword": "Dabartinis slaptažodis",
+    "newPassword": "Naujas slaptažodis",
+    "confirmPassword": "Pakartokite naują slaptažodį",
+    "submitPassword": "Keisti slaptažodį",
+    "submittingPassword": "Keičiama…",
+    "passwordUpdated": "Slaptažodis sėkmingai pakeistas",
+    "passwordMismatch": "Slaptažodžiai nesutampa",
+    "backToHome": "Į pradžią",
+    "goToDashboard": "Į valdymo skydą",
+    "roles": {
+      "admin": "Administratorius",
+      "teacher": "Dėstytojas",
+      "student": "Studentas"
+    }
   },
   "info": {
     "navFaq": "DUK",

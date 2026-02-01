@@ -10,6 +10,7 @@ import AdminInit from "./pages/AdminInit.jsx";
 import TeacherDashboard from "./pages/TeacherDashboard.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import StudentGroupPage from "./pages/StudentGroupPage.jsx";
+import Profile from "./pages/Profile.jsx";
 
 function App() {
   const location = useLocation();
@@ -22,6 +23,7 @@ function App() {
       <main className="flex flex-1 flex-col">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/info" element={<Info />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:postId" element={<BlogPostPage />} />

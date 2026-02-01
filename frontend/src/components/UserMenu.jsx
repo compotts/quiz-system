@@ -78,6 +78,18 @@ export default function UserMenu() {
           <button
             type="button"
             role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate("/profile");
+            }}
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+          >
+            <User className="h-4 w-4 shrink-0" aria-hidden />
+            {t("userMenu.profile")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
             onClick={handleLogout}
             className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
           >

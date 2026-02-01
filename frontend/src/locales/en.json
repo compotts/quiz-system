@@ -90,7 +90,38 @@
   },
   "userMenu": {
     "dashboard": "Go to Dashboard",
+    "profile": "Profile",
     "logout": "Logout"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Manage your account",
+    "info": "Information",
+    "username": "Username",
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "role": "Role",
+    "memberSince": "Member since",
+    "editProfile": "Edit profile",
+    "saveProfile": "Save changes",
+    "savingProfile": "Saving…",
+    "profileUpdated": "Profile updated",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submitPassword": "Change password",
+    "submittingPassword": "Changing…",
+    "passwordUpdated": "Password changed successfully",
+    "passwordMismatch": "Passwords do not match",
+    "backToHome": "Back to home",
+    "goToDashboard": "Go to dashboard",
+    "roles": {
+      "admin": "Administrator",
+      "teacher": "Teacher",
+      "student": "Student"
+    }
   },
   "info": {
     "navFaq": "FAQ",

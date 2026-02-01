@@ -64,7 +64,19 @@ class AdminUpdateUserRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
-    
+
+
+class ProfileUpdate(BaseModel):
+    """Обновление профиля текущего пользователя (только свои поля)."""
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    email: Optional[EmailStr] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
+
 
 class AdminInitRequest(BaseModel):
     username: str = Field(..., min_length=3)
