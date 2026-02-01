@@ -14,9 +14,10 @@ from app.database.models.registration_code import RegistrationCode
 from app.database.models.registration_request import RegistrationRequest
 from app.database.models.contact_message import ContactMessage
 from app.database.models.blog_post import BlogPost
+from app.database.models.system_setting import SystemSetting
 from app.database.database import base_ormar_config
 
-print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest, ContactMessage, BlogPost]]}")  # debug
+print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest, ContactMessage, BlogPost, SystemSetting]]}")  # debug
 
 config = context.config
 

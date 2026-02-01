@@ -49,6 +49,10 @@ export const authApi = {
     });
   },
 
+  async getRegistrationSettings() {
+    return request("/auth/registration-settings");
+  },
+
   async register(data) {
     return request("/auth/register", {
       method: "POST",
@@ -98,6 +102,17 @@ export const adminApi = {
     return request(`/admin/registration-requests/${requestId}/review`, {
       method: "POST",
       body: JSON.stringify({ approve, role }),
+    });
+  },
+
+  async getSettings() {
+    return request("/admin/settings");
+  },
+
+  async updateSettings(data) {
+    return request("/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
     });
   },
 

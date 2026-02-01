@@ -27,7 +27,9 @@ export default function AuthModal({ isOpen, onClose }) {
     first_name: "",
     last_name: "",
     message: "",
+    role: "student",
   });
+  const [autoRegistrationEnabled, setAutoRegistrationEnabled] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,20 +75,39 @@ export default function AuthModal({ isOpen, onClose }) {
     setLoading(true);
 
     try {
-      await authApi.register(registerData);
-      setSuccess(t("auth.successRegister"));
-      setRegisterData({
-        username: "",
-        email: "",
-        password: "",
-        first_name: "",
-        last_name: "",
-        message: "",
-      });
-      setTimeout(() => {
-        switchMode();
-        setSuccess("");
-      }, 3000);
+      const response = await authApi.register(registerData);
+      if (response.auto_approved && response.access_token) {
+        saveTokens(response.access_token, response.refresh_token);
+        const user = await authApi.getMe();
+        setSuccess(t("auth.successRegisterAuto"));
+        setTimeout(() => {
+          handleClose();
+          setTimeout(() => {
+            if (user.role === "admin") {
+              navigate("/dashboard/admin");
+            } else if (user.role === "teacher") {
+              navigate("/dashboard/teacher");
+            } else {
+              navigate("/dashboard/student");
+            }
+          }, 300);
+        }, 800);
+      } else {
+        setSuccess(t("auth.successRegister"));
+        setRegisterData({
+          username: "",
+          email: "",
+          password: "",
+          first_name: "",
+          last_name: "",
+          message: "",
+          role: "student",
+        });
+        setTimeout(() => {
+          switchMode();
+          setSuccess("");
+        }, 3000);
+      }
     } catch (err) {
       setError(
         err.status === 400
@@ -109,6 +130,14 @@ export default function AuthModal({ isOpen, onClose }) {
       setIsSwitching(false);
     }, 200);
   };
+
+  useEffect(() => {
+    if (isOpen && !isLogin) {
+      authApi.getRegistrationSettings().then((data) => {
+        setAutoRegistrationEnabled(data.auto_registration_enabled);
+      }).catch(() => setAutoRegistrationEnabled(false));
+    }
+  }, [isOpen, isLogin]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -355,6 +384,28 @@ export default function AuthModal({ isOpen, onClose }) {
                       />
                     </div>
                   </div>
+
+                  {autoRegistrationEnabled && (
+                    <div>
+                      <label
+                        htmlFor="reg-role"
+                        className="block text-sm font-medium text-[var(--text)]"
+                      >
+                        {t("auth.role")}
+                      </label>
+                      <select
+                        id="reg-role"
+                        value={registerData.role || "student"}
+                        onChange={(e) =>
+                          setRegisterData({ ...registerData, role: e.target.value })
+                        }
+                        className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)] focus:border-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+                      >
+                        <option value="student">{t("auth.roleStudent")}</option>
+                        <option value="teacher">{t("auth.roleTeacher")}</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div>
                     <label

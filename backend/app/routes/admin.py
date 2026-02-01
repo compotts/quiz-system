@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from schemas import (
     AdminInitRequest, UserResponse, RegistrationRequestResponse,
-    ReviewRegistrationRequest, AdminUpdateUserRequest, GroupResponse
+    ReviewRegistrationRequest, AdminUpdateUserRequest, GroupResponse,
+    AdminSettingsResponse, AdminSettingsUpdate
 )
 from app.database.models.user import User, UserRole
 from app.database.models.group import Group, GroupMember
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
+from app.database.models.system_setting import SystemSetting
 from app.utils.auth import get_password_hash, get_current_admin
 from app.database.database import utc_now
 from config import settings
@@ -46,6 +48,30 @@ async def initialize_admin(data: AdminInitRequest):
     )
     
     return admin
+
+
+@router.get("/settings", response_model=AdminSettingsResponse)
+async def get_settings(current_admin: User = Depends(get_current_admin)):
+    setting = await SystemSetting.objects.get_or_none(key="auto_registration_enabled")
+    enabled = setting is not None and setting.value.lower() == "true"
+    return AdminSettingsResponse(auto_registration_enabled=enabled)
+
+
+@router.patch("/settings", response_model=AdminSettingsResponse)
+async def update_settings(
+    data: AdminSettingsUpdate,
+    current_admin: User = Depends(get_current_admin)
+):
+    if data.auto_registration_enabled is not None:
+        setting = await SystemSetting.objects.get_or_none(key="auto_registration_enabled")
+        value = "true" if data.auto_registration_enabled else "false"
+        if setting:
+            await setting.update(value=value)
+        else:
+            await SystemSetting.objects.create(key="auto_registration_enabled", value=value)
+    setting = await SystemSetting.objects.get_or_none(key="auto_registration_enabled")
+    enabled = setting is not None and setting.value.lower() == "true"
+    return AdminSettingsResponse(auto_registration_enabled=enabled)
 
 
 @router.get("/registration-requests")
@@ -141,7 +167,8 @@ async def review_registration_request(
             last_name=reg_request.last_name,
             hashed_password=reg_request.hashed_password,
             role=review_data.role.value if review_data.role else UserRole.STUDENT.value,
-            is_active=True
+            is_active=True,
+            registration_ip=reg_request.ip_address
         )
         await reg_request.update(
             status=RegistrationStatus.APPROVED.value,

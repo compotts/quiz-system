@@ -48,7 +48,7 @@
     },
     "howToStartTitle": "How to start",
     "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard.",
-    "firstRequestWarning": "Processing your first request may take up to 50 seconds."
+    "firstRequestWarning": "The project is being developed, many functions are temporarily unavailable, you can already register."
   },
   "auth": {
     "login": "Login",
@@ -65,6 +65,9 @@
     "firstName": "First Name",
     "lastName": "Last Name",
     "optional": "Optional",
+    "role": "Registration role",
+    "roleStudent": "Student",
+    "roleTeacher": "Teacher",
     "messageOptional": "Message (optional)",
     "messagePlaceholder": "Additional information for the administrator",
     "submitLogin": "Login",
@@ -78,6 +81,7 @@
     "error403": "Account not activated. Please wait for approval.",
     "errorLogin": "Login error",
     "successRegister": "Registration request sent! Please wait for administrative approval.",
+    "successRegisterAuto": "Registration successful! You are now logged in.",
     "errorAlready": "A user with this name or email already exists or is pending approval",
     "errorRegister": "Registration error",
     "required": " *",
@@ -177,7 +181,10 @@
   "admin": {
     "dashboardTitle": "Admin Panel",
     "welcome": "Welcome, {{name}}",
-    "tabs": { "requests": "Requests", "users": "Users", "messages": "Inquiries" },
+    "tabs": { "requests": "Requests", "users": "Users", "messages": "Inquiries", "settings": "Settings" },
+    "settingsTitle": "System settings",
+    "autoRegistration": "Auto-registration",
+    "autoRegistrationDesc": "When enabled, new users are registered immediately without approval. When disabled, registration requests go to the Requests tab and require approval.",
     "status": { "pending": "Pending", "approved": "Approved", "rejected": "Rejected" },
     "roles": { "admin": "Admin", "teacher": "Teacher", "student": "Student", "teacherShort": "Teacher" },
     "searchFields": { "all": "Everywhere", "username": "Username", "email": "Email", "firstName": "First Name", "lastName": "Last Name" },

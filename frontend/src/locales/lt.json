@@ -48,7 +48,7 @@
     },
     "howToStartTitle": "Kaip pradėti",
     "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą.",
-    "firstRequestWarning": "Pirmojo jūsų užklausos apdorojimas gali užtrukti iki 50 sekundžių."
+    "firstRequestWarning": "Projektas kuriamas, Daugelis funkcijų laikinai nepasiekiamos, jau galite užsiregistruoti"
   },
   "auth": {
     "login": "Prisijungimas",
@@ -65,6 +65,9 @@
     "firstName": "Vardas",
     "lastName": "Pavardė",
     "optional": "Neprivaloma",
+    "role": "Registracijos rolė",
+    "roleStudent": "Studentas",
+    "roleTeacher": "Dėstytojas",
     "messageOptional": "Žinutė (neprivaloma)",
     "messagePlaceholder": "Papildoma informacija administratoriui",
     "submitLogin": "Prisijungti",
@@ -78,6 +81,7 @@
     "error403": "Paskyra neaktyvuota. Palaukite patvirtinimo.",
     "errorLogin": "Prisijungimo klaida",
     "successRegister": "Registracijos paraiška išsiųsta! Palaukite administracijos patvirtinimo.",
+    "successRegisterAuto": "Registracija sėkminga! Dabar esate prisijungę.",
     "errorAlready": "Vartotojas tokiu vardu arba el. paštu jau egzistuoja arba laukia patvirtinimo",
     "errorRegister": "Registracijos klaida",
     "required": " *",
@@ -177,7 +181,10 @@
   "admin": {
     "dashboardTitle": "Administratoriaus skydas",
     "welcome": "Sveiki, {{name}}",
-    "tabs": { "requests": "Paraiškos", "users": "Vartotojai", "messages": "Kreipimaisi" },
+    "tabs": { "requests": "Paraiškos", "users": "Vartotojai", "messages": "Kreipimaisi", "settings": "Nustatymai" },
+    "settingsTitle": "Sistemos nustatymai",
+    "autoRegistration": "Auto-registracija",
+    "autoRegistrationDesc": "Įjungus, nauji vartotojai registruojami iš karto be patvirtinimo. Išjungus, paraiškos patenka į skiltį „Paraiškos“ ir reikalauja patvirtinimo.",
     "status": { "pending": "Svarstoma", "approved": "Patvirtinta", "rejected": "Atmesta" },
     "roles": { "admin": "Admin", "teacher": "Dėstytojas", "student": "Studentas", "teacherShort": "Dėst." },
     "searchFields": { "all": "Visur", "username": "Vart. vardas", "email": "El. paštas", "firstName": "Vardas", "lastName": "Pavardė" },

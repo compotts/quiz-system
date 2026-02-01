@@ -25,6 +25,7 @@ import {
   CheckCheck,
   Monitor,
   Info,
+  Settings,
 } from "lucide-react";
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
 import UserDetailsModal from "../components/UserDetailsModal.jsx";
@@ -33,6 +34,7 @@ const TABS = [
   { id: "requests", icon: ClipboardList },
   { id: "users", icon: Users },
   { id: "messages", icon: MessageSquare },
+  { id: "settings", icon: Settings },
 ];
 
 const STATUS_COLORS = {
@@ -97,6 +99,10 @@ export default function AdminDashboard() {
   const [processingMessage, setProcessingMessage] = useState(null);
   const [expandedMessage, setExpandedMessage] = useState(null);
 
+  const [autoRegistrationEnabled, setAutoRegistrationEnabled] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -109,6 +115,8 @@ export default function AdminDashboard() {
         loadUsers();
       } else if (activeTab === "messages") {
         loadMessages();
+      } else if (activeTab === "settings") {
+        loadSettings();
       }
       loadMessagesCount();
     }
@@ -221,6 +229,34 @@ export default function AdminDashboard() {
       const data = await adminApi.getContactMessagesCount();
       setMessagesCount(data);
     } catch (err) {
+    }
+  };
+
+  const loadSettings = async () => {
+    setSettingsLoading(true);
+    setError("");
+    try {
+      const data = await adminApi.getSettings();
+      setAutoRegistrationEnabled(data.auto_registration_enabled);
+    } catch (err) {
+      setError(err.message || "Ошибка загрузки настроек");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleToggleAutoRegistration = async () => {
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const data = await adminApi.updateSettings({
+        auto_registration_enabled: !autoRegistrationEnabled,
+      });
+      setAutoRegistrationEnabled(data.auto_registration_enabled);
+    } catch (err) {
+      setError(err.message || "Ошибка сохранения настроек");
+    } finally {
+      setSettingsSaving(false);
     }
   };
 
@@ -1104,6 +1140,55 @@ export default function AdminDashboard() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === "settings" && (
+            <div>
+              {settingsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                  <h2 className="mb-4 text-lg font-semibold text-[var(--text)]">
+                    {t("admin.settingsTitle")}
+                  </h2>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-[var(--text)]">
+                        {t("admin.autoRegistration")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t("admin.autoRegistrationDesc")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleAutoRegistration}
+                        disabled={settingsSaving}
+                        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          autoRegistrationEnabled
+                            ? "bg-green-600"
+                            : "bg-[var(--border)]"
+                        }`}
+                        role="switch"
+                        aria-checked={autoRegistrationEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition ${
+                            autoRegistrationEnabled ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                      {settingsSaving && (
+                        <Loader2 className="h-5 w-5 animate-spin text-[var(--text-muted)]" />
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

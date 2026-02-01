@@ -6,7 +6,6 @@ from app.database.models.quiz import QuizType, TimerMode
 
 
 def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
-    """Normalize datetime to naive UTC for PostgreSQL/asyncpg."""
     if dt is None:
         return None
     if dt.tzinfo is not None:
@@ -14,7 +13,6 @@ def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
     return dt
 
 
-# ============ AUTH SCHEMAS ============
 class UserRegisterRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
@@ -22,6 +20,16 @@ class UserRegisterRequest(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     message: Optional[str] = None
+    role: Optional[str] = None
+
+    @field_validator("role")
+    @classmethod
+    def role_only_student_or_teacher(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if v not in ("student", "teacher"):
+            raise ValueError("Role must be student or teacher")
+        return v
 
 
 class UserLogin(BaseModel):
@@ -58,7 +66,6 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
     
 
-# ============ ADMIN SCHEMAS ============
 class AdminInitRequest(BaseModel):
     username: str = Field(..., min_length=3)
     email: EmailStr
@@ -80,12 +87,36 @@ class RegistrationRequestResponse(BaseModel):
     created_at: datetime
 
 
+class RegisterResponse(BaseModel):
+    auto_approved: bool = False
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
+    id: Optional[int] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    message: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    status: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
 class ReviewRegistrationRequest(BaseModel):
     approve: bool
     role: Optional[UserRole] = UserRole.STUDENT
 
 
-# ============ GROUP SCHEMAS ============
+class AdminSettingsResponse(BaseModel):
+    auto_registration_enabled: bool
+
+
+class AdminSettingsUpdate(BaseModel):
+    auto_registration_enabled: Optional[bool] = None
+
+
 class GroupCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     subject: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -111,7 +142,6 @@ class JoinGroupRequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6)
 
 
-# ============ QUIZ SCHEMAS ============
 class QuizCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
@@ -157,7 +187,6 @@ class QuizResponse(BaseModel):
     question_count: Optional[int] = 0
 
 
-# ============ QUESTION SCHEMAS ============
 class OptionCreate(BaseModel):
     text: str
     is_correct: bool = False
@@ -199,14 +228,13 @@ class QuestionResponse(BaseModel):
     options: List[OptionResponse]
 
 
-# ============ ATTEMPT SCHEMAS ============
 class StartQuizAttempt(BaseModel):
     quiz_id: int
 
 
 class SubmitAnswer(BaseModel):
     question_id: int
-    selected_options: List[int]  # IDs выбранных опций
+    selected_options: List[int]
 
 
 class CompleteQuizAttempt(BaseModel):
@@ -231,7 +259,6 @@ class QuizResultResponse(BaseModel):
     percentage: float
 
 
-# ============ CONTACT MESSAGE SCHEMAS ============
 class ContactMessageCreate(BaseModel):
     message: str = Field(..., min_length=1, max_length=5000)
 
@@ -248,7 +275,6 @@ class ContactMessageResponse(BaseModel):
     created_at: datetime
 
 
-# ============ BLOG SCHEMAS ============
 class BlogPostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     content: str = Field(..., min_length=1)
