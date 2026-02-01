@@ -96,7 +96,6 @@ async def get_current_user_optional(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> Optional[User]:
-    """Получить текущего пользователя если токен есть, иначе None"""
     token = None
     auth_header = request.headers.get("Authorization")
     if auth_header and (auth_header.startswith("Bearer ") or auth_header.startswith("bearer ")):

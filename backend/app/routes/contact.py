@@ -9,8 +9,6 @@ router = APIRouter(prefix="/contact", tags=["Contact"])
 
 
 def get_client_ip(request: Request) -> str:
-    """Получить IP-адрес клиента"""
-    # Проверяем заголовки прокси
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -28,9 +26,8 @@ async def send_contact_message(
     request: Request,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Отправить сообщение администрации (доступно всем)"""
     ip_address = get_client_ip(request)
-    user_agent = request.headers.get("User-Agent", "")[:500]  # Ограничиваем длину
+    user_agent = request.headers.get("User-Agent", "")[:500]
     
     message = await ContactMessage.objects.create(
         message=data.message,
@@ -52,7 +49,6 @@ async def get_contact_messages(
     is_read: Optional[bool] = None,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Получить все сообщения (только для админов)"""
     query = ContactMessage.objects
     
     if is_read is not None:
@@ -69,7 +65,6 @@ async def get_contact_messages(
 async def get_unread_count(
     current_admin: User = Depends(get_current_admin)
 ):
-    """Получить количество непрочитанных сообщений"""
     unread = await ContactMessage.objects.filter(is_read=False).count()
     total = await ContactMessage.objects.count()
     
@@ -81,7 +76,6 @@ async def mark_message_read(
     message_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Отметить сообщение как прочитанное"""
     message = await ContactMessage.objects.get_or_none(id=message_id)
     
     if not message:
@@ -98,7 +92,6 @@ async def mark_message_read(
 async def mark_all_read(
     current_admin: User = Depends(get_current_admin)
 ):
-    """Отметить все сообщения как прочитанные"""
     await ContactMessage.objects.filter(is_read=False).update(is_read=True)
     return {"message": "All messages marked as read"}
 
@@ -108,7 +101,6 @@ async def delete_message(
     message_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Удалить сообщение"""
     message = await ContactMessage.objects.get_or_none(id=message_id)
     
     if not message:

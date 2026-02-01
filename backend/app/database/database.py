@@ -13,12 +13,10 @@ database = databases.Database(settings.database_url)
 
 
 def utc_now() -> datetime:
-    """Returns current UTC time as naive datetime (for PostgreSQL compatibility)"""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def to_naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
-    """Convert any datetime to naive UTC for asyncpg/PostgreSQL."""
     if dt is None:
         return None
     if dt.tzinfo is not None:

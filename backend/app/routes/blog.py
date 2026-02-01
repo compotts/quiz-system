@@ -12,7 +12,6 @@ router = APIRouter(prefix="/blog", tags=["Blog"])
 
 
 def format_blog_post(post: BlogPost, author: User = None) -> dict:
-    """Format blog post for response"""
     author_obj = author or post.author
     author_name = None
     if author_obj:
@@ -40,10 +39,8 @@ async def get_blog_posts(
     include_unpublished: bool = False,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get all blog posts. Unpublished posts are only visible to admins."""
     query = BlogPost.objects.select_related("author")
     
-    # Only show unpublished posts to admins
     is_admin = current_user and current_user.role == "admin"
     if not is_admin or not include_unpublished:
         query = query.filter(is_published=True)
@@ -59,7 +56,6 @@ async def get_blog_post(
     post_id: int,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get a single blog post by ID"""
     post = await BlogPost.objects.select_related("author").get_or_none(id=post_id)
     
     if not post:
@@ -68,7 +64,6 @@ async def get_blog_post(
             detail="Blog post not found"
         )
     
-    # Check if user can view unpublished posts
     is_admin = current_user and current_user.role == "admin"
     if not post.is_published and not is_admin:
         raise HTTPException(
@@ -84,7 +79,6 @@ async def create_blog_post(
     data: BlogPostCreate,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Create a new blog post (admin only)"""
     post = await BlogPost.objects.create(
         title=data.title,
         content=data.content,
@@ -101,7 +95,6 @@ async def update_blog_post(
     data: BlogPostUpdate,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Update a blog post (admin only)"""
     post = await BlogPost.objects.select_related("author").get_or_none(id=post_id)
     
     if not post:
@@ -131,7 +124,6 @@ async def delete_blog_post(
     post_id: int,
     current_admin: User = Depends(get_current_admin)
 ):
-    """Delete a blog post (admin only)"""
     post = await BlogPost.objects.get_or_none(id=post_id)
     
     if not post:

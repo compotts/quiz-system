@@ -17,11 +17,8 @@ class RateLimiter:
         max_requests: int = 5,
         period_seconds: int = 60
     ) -> bool:
-        """
-        Проверка rate limit
-        max_requests - максимум запросов
-        period_seconds - период в секундах
-        """
+        # max_requests - максимум запросов
+        # period_seconds - период в секундах
         client_ip = request.client.host
         current_time = datetime.utcnow()
         
@@ -42,7 +39,6 @@ class RateLimiter:
             return True
     
     async def cleanup_old_entries(self, max_age_hours: int = 24):
-        """Периодическая очистка старых записей"""
         cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
         async with self.lock:
             for ip in list(self.requests.keys()):
@@ -58,7 +54,6 @@ rate_limiter = RateLimiter()
 
 
 async def check_login_rate_limit(request: Request):
-    """Middleware для проверки rate limit на логин"""
     from config import settings
     await rate_limiter.check_rate_limit(
         request, 
@@ -68,10 +63,9 @@ async def check_login_rate_limit(request: Request):
 
 
 async def check_registration_rate_limit(request: Request):
-    """Middleware для проверки rate limit на регистрацию"""
     from config import settings
     await rate_limiter.check_rate_limit(
         request, 
         max_requests=settings.rate_limit_login, 
-        period_seconds=settings.rate_limit_period * 5  # 5 минут для регистрации
+        period_seconds=settings.rate_limit_period * 5  # минут для регистрации
     )

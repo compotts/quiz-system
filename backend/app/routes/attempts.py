@@ -21,8 +21,6 @@ async def start_quiz_attempt(
     data: StartQuizAttempt,
     current_user: User = Depends(get_current_student)
 ):
-    """Начало прохождения викторины"""
-    
     quiz = await Quiz.objects.select_related("group").get_or_none(id=data.quiz_id)
     
     if not quiz:
@@ -37,7 +35,6 @@ async def start_quiz_attempt(
             detail="Quiz is not active"
         )
     
-    # Проверка доступа к группе
     is_member = await GroupMember.objects.filter(
         group=quiz.group, user=current_user
     ).exists()
@@ -65,7 +62,6 @@ async def start_quiz_attempt(
     questions = await Question.objects.filter(quiz=quiz).all()
     max_score = sum(q.points for q in questions)
     
-    # Создание новой попытки
     attempt = await QuizAttempt.objects.create(
         quiz=quiz,
         student=current_user,
@@ -87,8 +83,6 @@ async def submit_answer(
     data: SubmitAnswer,
     current_user: User = Depends(get_current_student)
 ):
-    """Отправка ответа на вопрос"""
-    
     question = await Question.objects.select_related("quiz").get_or_none(id=data.question_id)
     
     if not question:
@@ -97,7 +91,6 @@ async def submit_answer(
             detail="Question not found"
         )
     
-    # Получение активной попытки
     attempt = await QuizAttempt.objects.filter(
         quiz=question.quiz,
         student=current_user,
@@ -125,7 +118,6 @@ async def submit_answer(
             detail="Question already answered"
         )
     
-    # Валидация выбранных опций (проверка, что они принадлежат вопросу)
     all_question_options = await Option.objects.filter(question=question).all()
     all_option_ids = set(opt.id for opt in all_question_options)
     selected_ids = set(data.selected_options)
@@ -136,18 +128,15 @@ async def submit_answer(
             detail="Selected options do not belong to this question"
         )
     
-    # Получение правильных ответов
     correct_options = await Option.objects.filter(
         question=question,
         is_correct=True
     ).all()
     correct_ids = set(opt.id for opt in correct_options)
     
-    # Проверка правильности
     is_correct = correct_ids == selected_ids
     points_earned = question.points if is_correct else 0.0
     
-    # Сохранение ответа
     answer = await Answer.objects.create(
         attempt=attempt,
         question=question,
@@ -157,7 +146,6 @@ async def submit_answer(
         answered_at=utc_now()
     )
     
-    # Обновление балла попытки (перезагружаем для актуального значения)
     await attempt.load()
     await attempt.update(score=attempt.score + points_earned)
     
@@ -173,8 +161,6 @@ async def complete_quiz_attempt(
     data: CompleteQuizAttempt,
     current_user: User = Depends(get_current_student)
 ):
-    """Завершение викторины"""
-    
     attempt = await QuizAttempt.objects.get_or_none(
         id=data.attempt_id,
         student=current_user
@@ -192,9 +178,7 @@ async def complete_quiz_attempt(
             detail="Attempt already completed"
         )
     
-    # Вычисление времени
-    now = utc_now()
-    time_spent = int((now - attempt.started_at).total_seconds())
+    time_spent = int((utc_now() - attempt.started_at).total_seconds())
     
     await attempt.update(
         completed_at=now,
@@ -215,8 +199,6 @@ async def get_my_attempts(
     quiz_id: int = None,
     current_user: User = Depends(get_current_student)
 ):
-    """Получение своих попыток"""
-    
     query = QuizAttempt.objects.filter(student=current_user)
     
     if quiz_id:
@@ -239,8 +221,6 @@ async def get_attempt_results(
     attempt_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение результатов попытки"""
-    
     attempt = await QuizAttempt.objects.select_related(["quiz", "student"]).get_or_none(id=attempt_id)
     
     if not attempt:
@@ -249,7 +229,6 @@ async def get_attempt_results(
             detail="Attempt not found"
         )
     
-    # Проверка доступа
     is_student = attempt.student.id == current_user.id
     is_teacher = attempt.quiz.teacher.id == current_user.id
     
@@ -259,9 +238,7 @@ async def get_attempt_results(
             detail="Access denied"
         )
     
-    # Получение ответов
     answers = await Answer.objects.select_related("question").filter(attempt=attempt).all()
-    
     answer_details = []
     for answer in answers:
         question = answer.question
@@ -296,8 +273,6 @@ async def get_quiz_results(
     quiz_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение всех результатов викторины (для учителя)"""
-    
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
     
     if not quiz:
@@ -352,7 +327,6 @@ async def get_current_attempt(
     if not attempt:
         return {"has_attempt": False}
     
-    # Получение уже отвеченных вопросов
     answered_questions = await Answer.objects.filter(attempt=attempt).all()
     answered_ids = [ans.question.id for ans in answered_questions]
     

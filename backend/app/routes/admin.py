@@ -190,14 +190,13 @@ async def get_all_users(
     page: int = 1,
     per_page: int = 10,
     search: str = None,
-    search_field: str = None,  # username, email, first_name, last_name
-    role_filter: str = None,  # admin, teacher, student
-    status_filter: str = None,  # active, inactive
+    search_field: str = None, 
+    role_filter: str = None,
+    status_filter: str = None,
     current_admin: User = Depends(get_current_admin)
 ):
     query = User.objects
     
-    # Поиск
     if search and search_field:
         search_term = search.lower()
         if search_field == "username":
@@ -209,7 +208,6 @@ async def get_all_users(
         elif search_field == "last_name":
             query = query.filter(last_name__icontains=search_term)
         elif search_field == "all":
-            # Поиск по всем полям - ищем в каждом
             all_users = await User.objects.order_by("-created_at").all()
             filtered = [
                 u for u in all_users
@@ -218,7 +216,6 @@ async def get_all_users(
                 or search_term in (u.first_name or "").lower()
                 or search_term in (u.last_name or "").lower()
             ]
-            # Применяем остальные фильтры
             if role_filter and role_filter in [r.value for r in UserRole]:
                 filtered = [u for u in filtered if u.role == role_filter]
             if status_filter == "active":
@@ -239,20 +236,16 @@ async def get_all_users(
                 "total_pages": (total + per_page - 1) // per_page
             }
     
-    # Фильтр по роли
     if role_filter and role_filter in [r.value for r in UserRole]:
         query = query.filter(role=role_filter)
     
-    # Фильтр по статусу
     if status_filter == "active":
         query = query.filter(is_active=True)
     elif status_filter == "inactive":
         query = query.filter(is_active=False)
     
-    # Подсчёт общего количества
     total = await query.count()
     
-    # Пагинация
     offset = (page - 1) * per_page
     users = await query.order_by("-created_at").offset(offset).limit(per_page).all()
     

@@ -23,9 +23,6 @@ async def create_quiz(
     data: QuizCreate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Создание новой викторины"""
-    
-    # Проверка существования группы и прав
     group = await Group.objects.get_or_none(id=data.group_id)
     if not group:
         raise HTTPException(
@@ -64,18 +61,14 @@ async def get_quizzes(
     group_id: int = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение списка викторин"""
-    
     query = Quiz.objects.select_related(["group", "teacher"])
     
     if current_user.role == "teacher" or current_user.role == "admin":
-        # Учитель видит свои викторины
         if group_id:
             query = query.filter(group=group_id, teacher=current_user)
         else:
             query = query.filter(teacher=current_user)
     else:
-        # Ученик видит викторины из своих групп
         memberships = await GroupMember.objects.filter(user=current_user).all()
         group_ids = [m.group.id for m in memberships]
         
@@ -109,8 +102,6 @@ async def get_quiz(
     quiz_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение информации о викторине"""
-    
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
     
     if not quiz:
@@ -119,7 +110,6 @@ async def get_quiz(
             detail="Quiz not found"
         )
     
-    # Проверка доступа
     is_teacher = quiz.teacher.id == current_user.id
     is_member = await GroupMember.objects.filter(
         group=quiz.group, user=current_user
@@ -147,8 +137,6 @@ async def update_quiz(
     data: QuizUpdate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Обновление викторины"""
-    
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
     
     if not quiz:
@@ -165,7 +153,6 @@ async def update_quiz(
     
     update_data = data.dict(exclude_unset=True)
     if update_data:
-        # Конвертация enum в строки
         if "quiz_type" in update_data:
             update_data["quiz_type"] = update_data["quiz_type"].value
         if "timer_mode" in update_data:
@@ -190,8 +177,6 @@ async def delete_quiz(
     quiz_id: int,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Удаление викторины"""
-    
     quiz = await Quiz.objects.select_related("teacher").get_or_none(id=quiz_id)
     
     if not quiz:
@@ -206,19 +191,15 @@ async def delete_quiz(
             detail="Only quiz owner can delete it"
         )
     
-    # Удаление связанных данных в правильном порядке (FK constraints)
-    # 1. Ответы (answers -> attempt, question)
     attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
     for attempt in attempts:
         answers = await Answer.objects.filter(attempt=attempt).all()
         for ans in answers:
             await ans.delete()
     
-    # 2. Попытки (quiz_attempts -> quiz)
     for attempt in attempts:
         await attempt.delete()
     
-    # 3. Варианты ответов и вопросы (options -> question, questions -> quiz)
     questions = await Question.objects.filter(quiz=quiz).all()
     for question in questions:
         options = await Option.objects.filter(question=question).all()
@@ -226,13 +207,10 @@ async def delete_quiz(
             await opt.delete()
         await question.delete()
     
-    # 4. Сам квиз
     await quiz.delete()
     
     return {"message": "Quiz deleted successfully"}
 
-
-# ============ QUESTIONS ============
 
 @router.post("/{quiz_id}/questions", response_model=QuestionResponse)
 async def create_question(
@@ -240,8 +218,6 @@ async def create_question(
     data: QuestionCreate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Добавление вопроса в викторину"""
-    
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
     
     if not quiz:
@@ -256,7 +232,6 @@ async def create_question(
             detail="Access denied"
         )
     
-    # Создание вопроса
     question = await Question.objects.create(
         quiz=quiz,
         question_type=data.question_type.value,
@@ -266,7 +241,6 @@ async def create_question(
         time_limit=data.time_limit
     )
     
-    # Создание вариантов ответа
     options = []
     for opt_data in data.options:
         option = await Option.objects.create(
@@ -289,8 +263,6 @@ async def get_questions(
     quiz_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение всех вопросов викторины"""
-    
     quiz = await Quiz.objects.select_related("group").get_or_none(id=quiz_id)
     
     if not quiz:
@@ -299,7 +271,6 @@ async def get_questions(
             detail="Quiz not found"
         )
     
-    # Проверка доступа
     is_teacher = quiz.teacher.id == current_user.id
     is_member = await GroupMember.objects.filter(
         group=quiz.group, user=current_user
@@ -332,8 +303,6 @@ async def update_question(
     data: QuestionUpdate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Обновление вопроса"""
-    
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
     
     if not quiz:
@@ -371,8 +340,6 @@ async def delete_question(
     question_id: int,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Удаление вопроса"""
-    
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
     
     if not quiz:
@@ -395,14 +362,8 @@ async def delete_question(
             detail="Question not found"
         )
     
-    # Удаление связанных данных
-    # 1. Удаляем ответы пользователей на этот вопрос
     await Answer.objects.filter(question=question).delete()
-    
-    # 2. Удаляем варианты ответа
     await Option.objects.filter(question=question).delete()
-    
-    # 3. Удаляем сам вопрос
     await question.delete()
     
     return {"message": "Question deleted successfully"}

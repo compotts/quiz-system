@@ -11,7 +11,6 @@ router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
 def generate_group_code() -> str:
-    """Генерация уникального 6-значного кода группы"""
     return ''.join(random.choices(string.digits, k=6))
 
 
@@ -20,9 +19,6 @@ async def create_group(
     data: GroupCreate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Создание новой группы (только для учителей)"""
-    
-    # Генерация уникального кода
     code = generate_group_code()
     while await Group.objects.filter(code=code).exists():
         code = generate_group_code()
@@ -34,7 +30,6 @@ async def create_group(
         teacher=current_user
     )
     
-    # Добавление количества участников
     teacher_full_name = f"{current_user.first_name} {current_user.last_name}".strip() if current_user.first_name or current_user.last_name else current_user.username
     return {
         **group.dict(),
@@ -46,10 +41,7 @@ async def create_group(
 
 @router.get("", response_model=List[GroupResponse])
 async def get_my_groups(current_user: User = Depends(get_current_user)):
-    """Получение списка групп пользователя"""
-    
     if current_user.role == "teacher" or current_user.role == "admin":
-        # Учитель видит созданные им группы
         groups = await Group.objects.select_related("teacher").filter(teacher=current_user).all()
         
         result = []
@@ -64,7 +56,6 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
             })
         return result
     else:
-        # Ученик видит группы, в которых он состоит
         memberships = await GroupMember.objects.select_related("group__teacher").filter(
             user=current_user
         ).all()
@@ -88,8 +79,6 @@ async def get_group(
     group_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение информации о группе"""
-    
     group = await Group.objects.select_related("teacher").get_or_none(id=group_id)
     
     if not group:
@@ -98,7 +87,6 @@ async def get_group(
             detail="Group not found"
         )
     
-    # Проверка прав доступа
     is_teacher = group.teacher.id == current_user.id
     is_member = await GroupMember.objects.filter(
         group=group, user=current_user
@@ -127,8 +115,6 @@ async def update_group(
     data: GroupUpdate,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Обновление информации о группе"""
-    
     group = await Group.objects.get_or_none(id=group_id)
     
     if not group:
@@ -161,8 +147,6 @@ async def delete_group(
     group_id: int,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Удаление группы"""
-    
     group = await Group.objects.get_or_none(id=group_id)
     
     if not group:
@@ -187,8 +171,6 @@ async def join_group(
     data: JoinGroupRequest,
     current_user: User = Depends(get_current_student)
 ):
-    """Присоединение к группе по коду"""
-    
     group = await Group.objects.select_related("teacher").get_or_none(code=data.code)
     
     if not group:
@@ -197,7 +179,6 @@ async def join_group(
             detail="Group with this code not found"
         )
     
-    # Проверка существующего членства
     existing_member = await GroupMember.objects.filter(
         group=group, user=current_user
     ).exists()
@@ -208,7 +189,6 @@ async def join_group(
             detail="You are already a member of this group"
         )
     
-    # Добавление в группу
     await GroupMember.objects.create(
         group=group,
         user=current_user
@@ -230,8 +210,6 @@ async def get_group_members(
     group_id: int,
     current_user: User = Depends(get_current_user)
 ):
-    """Получение списка участников группы"""
-    
     group = await Group.objects.get_or_none(id=group_id)
     
     if not group:
@@ -240,7 +218,6 @@ async def get_group_members(
             detail="Group not found"
         )
     
-    # Проверка прав доступа
     if group.teacher.id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -270,8 +247,6 @@ async def remove_member(
     user_id: int,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Удаление участника из группы"""
-    
     group = await Group.objects.get_or_none(id=group_id)
     
     if not group:
@@ -306,8 +281,6 @@ async def leave_group(
     group_id: int,
     current_user: User = Depends(get_current_student)
 ):
-    """Покинуть группу"""
-    
     group = await Group.objects.get_or_none(id=group_id)
     
     if not group:

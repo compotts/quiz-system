@@ -151,7 +151,6 @@ async def update_me(
     data: ProfileUpdate,
     current_user: User = Depends(get_current_user)
 ):
-    """Обновление профиля текущего пользователя."""
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         return current_user
@@ -174,7 +173,6 @@ async def change_password(
     data: ChangePasswordRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Смена пароля текущего пользователя."""
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

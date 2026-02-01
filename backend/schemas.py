@@ -67,7 +67,6 @@ class RefreshTokenRequest(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    """Обновление профиля текущего пользователя (только свои поля)."""
     first_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
     email: Optional[EmailStr] = None
