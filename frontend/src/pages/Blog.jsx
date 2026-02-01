@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, Save, X, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Edit2, Trash2, Eye, EyeOff, Save, X, AlertCircle } from "lucide-react";
 import { blogApi, authApi } from "../services/api.js";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -28,7 +28,7 @@ export default function Blog() {
       setLoading(true);
       const data = await blogApi.getPosts(1, 50, isAdmin);
       setPosts(data);
-    } catch (err) {
+    } catch (err) {   
       setError(err.message);
     } finally {
       setLoading(false);
@@ -258,8 +258,8 @@ export default function Blog() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-[var(--text-muted)]">
-          {t("common.loading")}
+        <div className="flex flex-1 items-center justify-center bg-[var(--bg)]">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
         </div>
       ) : error ? (
         <div className="py-12 text-center text-red-500">{error}</div>

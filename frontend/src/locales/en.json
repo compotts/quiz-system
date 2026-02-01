@@ -47,7 +47,8 @@
       "responsive": { "title": "Responsiveness", "desc": "Conveniently adapted for every device and screen size!" }
     },
     "howToStartTitle": "How to start",
-    "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard."
+    "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard.",
+    "firstRequestWarning": "Processing your first request may take up to 50 seconds."
   },
   "auth": {
     "login": "Login",

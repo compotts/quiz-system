@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 import AuthModal from "../components/AuthModal.jsx";
 
 const FEATURE_KEYS = [
@@ -25,14 +26,19 @@ export default function Home() {
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
         <div className="absolute inset-0 bg-[var(--bg-elevated)]" />
         <div
-          className="absolute inset-0 opacity-[0.4] dark:opacity-20"
+          className="absolute inset-0 opacity-[0.5] dark:opacity-25"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0)`,
+            backgroundImage: `radial-gradient(circle at center, var(--border) 1.5px, transparent 1.5px)`,
             backgroundSize: "24px 24px",
           }}
+          aria-hidden
         />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,var(--bg)_100%)]" />
         <div className="relative mx-auto max-w-3xl text-center">
+          <div className="mb-8 flex items-center justify-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-300">
+            <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
+            <span>{t("home.firstRequestWarning")}</span>
+          </div>
           <h1 className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl lg:tracking-tighter">
             {t("common.appName")}
           </h1>

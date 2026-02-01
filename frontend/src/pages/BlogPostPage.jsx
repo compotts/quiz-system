@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit2, Trash2 } from "lucide-react";
 import { blogApi, authApi } from "../services/api.js";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -67,8 +67,8 @@ export default function BlogPostPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-12 text-center text-[var(--text-muted)]">
-        {t("common.loading")}
+      <div className="flex flex-1 items-center justify-center bg-[var(--bg)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }

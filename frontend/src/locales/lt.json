@@ -47,7 +47,8 @@
       "responsive": { "title": "Adaptyvumas", "desc": "Patogiai pritaikyta kiekvienam įrenginiui ir ekrano dydžiui!" }
     },
     "howToStartTitle": "Kaip pradėti",
-    "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą."
+    "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą.",
+    "firstRequestWarning": "Pirmojo jūsų užklausos apdorojimas gali užtrukti iki 50 sekundžių."
   },
   "auth": {
     "login": "Prisijungimas",
