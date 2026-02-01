@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.database.database import lifespan
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from config import settings
 
+from app.database.models.user import User
 from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
 
 app = FastAPI(
@@ -46,8 +48,10 @@ async def root():
 
 @app.get("/healtz")
 async def health_check():
+    count = await User.objects.count()
     return {
         "status": "ok",
+        "users_count": count,
         "message": "API is running",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now(ZoneInfo("Europe/Vilnius")).isoformat()
     }
