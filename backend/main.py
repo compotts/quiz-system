@@ -41,7 +41,7 @@ app.include_router(blog.router)
 async def root():
     return {
         "message": "Quizz System API",
-        "version": "1.0.1",
+        "version": "1.0.3",
         "docs": "/docs"
     }
 
