@@ -27,7 +27,7 @@ async function request(endpoint, options = {}) {
 
     if (!response.ok) {
       throw new ApiError(
-        data.detail || "Произошла ошибка",
+        data.detail || "ошибка сервера",
         response.status
       );
     }
@@ -37,7 +37,7 @@ async function request(endpoint, options = {}) {
     if (error instanceof ApiError) {
       throw error;
     }
-    throw new ApiError("Ошибка сети", 0);
+    throw new ApiError("ошибка сервера", 0);
   }
 }
 

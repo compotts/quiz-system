@@ -95,7 +95,6 @@ export default function Home() {
         registrationEnabled={siteStatus.registration_enabled}
       />
 
-      {/* Hero */}
       <section className="relative overflow-hidden px-4 pt-16 pb-24 sm:px-6 sm:pt-24 sm:pb-32 lg:px-8">
         <div className="absolute inset-0 bg-[var(--bg-elevated)]" />
         <div
@@ -137,7 +136,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* About — компактный блок */}
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
@@ -150,7 +148,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features — карточки с иконками */}
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
@@ -181,7 +178,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How to start + CTA */}
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">

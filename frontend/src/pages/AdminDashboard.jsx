@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       setRequestsTotalPages(data.total_pages);
       if (pageOverride !== null) setRequestsPage(page);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки заявок");
+      setError(err.message || "ошибка загрузки заявок");
     } finally {
       setLoading(false);
     }
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
       setUsersTotal(data.total);
       setUsersTotalPages(data.total_pages);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки пользователей");
+      setError(err.message || "ошибка загрузки пользователей");
     } finally {
       setLoading(false);
     }
@@ -266,7 +266,7 @@ export default function AdminDashboard() {
       setAuditLogsTotal(data.total);
       setAuditLogsTotalPages(data.total_pages);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки логов");
+      setError(err.message || "ошибка загрузки логов");
     } finally {
       setLoading(false);
     }
@@ -297,7 +297,7 @@ export default function AdminDashboard() {
       setMaintenanceMode(!!data.maintenance_mode);
       setContactEnabled(data.contact_enabled !== false);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки настроек");
+      setError(err.message || "ошибка загрузки настроек");
     } finally {
       setSettingsLoading(false);
     }
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
       });
       setAutoRegistrationEnabled(data.auto_registration_enabled);
     } catch (err) {
-      setError(err.message || "Ошибка сохранения настроек");
+      setError(err.message || "ошибка сохранения настроек");
     } finally {
       setSettingsSaving(false);
     }
@@ -327,7 +327,7 @@ export default function AdminDashboard() {
       });
       setRegistrationEnabled(data.registration_enabled !== false);
     } catch (err) {
-      setError(err.message || "Ошибка сохранения настроек");
+      setError(err.message || "ошибка сохранения настроек");
     } finally {
       setSettingsSaving(false);
     }
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
       });
       setMaintenanceMode(!!data.maintenance_mode);
     } catch (err) {
-      setError(err.message || "Ошибка сохранения настроек");
+      setError(err.message || "ошибка сохранения настроек");
     } finally {
       setSettingsSaving(false);
     }
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
       });
       setContactEnabled(data.contact_enabled !== false);
     } catch (err) {
-      setError(err.message || "Ошибка сохранения настроек");
+      setError(err.message || "ошибка сохранения настроек");
     } finally {
       setSettingsSaving(false);
     }
@@ -370,7 +370,7 @@ export default function AdminDashboard() {
       loadMessages();
       loadMessagesCount();
     } catch (err) {
-      setError(err.message || "Ошибка");
+      setError(err.message || "ошибка");
     } finally {
       setProcessingMessage(null);
     }
@@ -383,7 +383,7 @@ export default function AdminDashboard() {
       loadMessages();
       loadMessagesCount();
     } catch (err) {
-      setError(err.message || "Ошибка");
+      setError(err.message || "ошибка");
     } finally {
       setLoading(false);
     }
@@ -444,7 +444,7 @@ export default function AdminDashboard() {
       setUserRoleSelectOpen(null);
       loadUsers();
     } catch (err) {
-      setError(err.message || "Ошибка изменения роли");
+      setError(err.message || "ошибка изменения роли");
     } finally {
       setProcessingUser(null);
     }
@@ -487,7 +487,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[var(--bg)]">
-      {/* Header */}
       <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -499,7 +498,6 @@ export default function AdminDashboard() {
                 {t("admin.welcome", { name: currentUser.first_name || currentUser.username })}
               </p>
             </div>
-            {/* Tabs: horizontal scroll on mobile, no page overflow */}
             <div className="w-full min-w-0 sm:w-auto sm:shrink-0">
               <div
                 className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
@@ -532,7 +530,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl min-w-0">
           {error && (
@@ -548,7 +545,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Requests Tab */}
           {activeTab === "requests" && (
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -748,12 +744,9 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Users Tab */}
           {activeTab === "users" && (
             <div>
-              {/* Search & Filters */}
               <div className="mb-4 space-y-3">
-                {/* Search */}
                 <form onSubmit={handleUsersSearch} className="flex flex-wrap gap-2">
                   <div className="relative">
                     <button
@@ -935,7 +928,6 @@ export default function AdminDashboard() {
                                 </button>
                             {!isCurrentUser && (
                               <>
-                                {/* Role selector */}
                                 <div className="relative">
                                   <button
                                     onClick={() =>
@@ -973,7 +965,6 @@ export default function AdminDashboard() {
                                   )}
                                 </div>
 
-                                {/* Toggle status */}
                                 <button
                                   onClick={() => handleToggleUserStatus(user.id)}
                                   disabled={processingUser === user.id}
@@ -993,7 +984,6 @@ export default function AdminDashboard() {
                                   )}
                                 </button>
 
-                                {/* Delete */}
                                 {confirmDelete === user.id ? (
                                   <div className="flex items-center gap-1">
                                     <button
@@ -1086,10 +1076,8 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Messages Tab */}
           {activeTab === "messages" && (
             <div>
-              {/* Filters */}
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="text-sm text-[var(--text-muted)]">{t("admin.filter")}</span>
                 {["all", "unread", "read"].map((id) => (
@@ -1159,7 +1147,6 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <div className="flex flex-col gap-3">
-                          {/* Header */}
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="flex items-center gap-2">
                               {msg.is_read ? (
@@ -1187,7 +1174,6 @@ export default function AdminDashboard() {
                             </span>
                           </div>
 
-                          {/* Message */}
                           <div
                             className={`text-[var(--text)] ${
                               !isExpanded && msg.message.length > 200
@@ -1209,7 +1195,6 @@ export default function AdminDashboard() {
                             </button>
                           )}
 
-                          {/* Device info */}
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                             <span className="flex items-center gap-1">
                               <Monitor className="h-3.5 w-3.5" />
@@ -1218,7 +1203,6 @@ export default function AdminDashboard() {
                             <span>IP: {msg.ip_address}</span>
                           </div>
 
-                          {/* Actions */}
                           <div className="flex items-center gap-2 border-t border-[var(--border)] pt-3">
                             {!msg.is_read && (
                               <button
@@ -1256,10 +1240,8 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Audit Logs Tab */}
           {activeTab === "logs" && (
             <div>
-              {/* Search by username / IP */}
               <form onSubmit={handleLogsSearch} className="mb-4 flex flex-wrap gap-2">
                 <div className="relative">
                   <button
@@ -1453,7 +1435,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Settings Tab */}
           {activeTab === "settings" && (
             <div>
               {settingsLoading ? (

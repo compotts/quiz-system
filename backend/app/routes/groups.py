@@ -185,7 +185,6 @@ async def delete_group(
         )
     
     group_name = group.name
-    # Каскадное удаление: квизы (ответы → попытки → варианты → вопросы → квизы), участники, группа
     quizzes = await Quiz.objects.filter(group=group).all()
     for quiz in quizzes:
         attempts = await QuizAttempt.objects.filter(quiz=quiz).all()

@@ -26,7 +26,7 @@ export default function StudentGroupPage() {
   const [loading, setLoading] = useState(true);
 
   const [group, setGroup] = useState(null);
-  const [tab, setTab] = useState("assignments"); // assignments | history
+  const [tab, setTab] = useState("assignments");
 
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -82,7 +82,7 @@ export default function StudentGroupPage() {
       setQuizzes(Array.isArray(q) ? q : []);
       setAttempts(Array.isArray(a) ? a : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки данных");
+      setError(err.message || "ошибка загрузки данных");
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,6 @@ export default function StudentGroupPage() {
   useEffect(() => {
     if (!currentUser || currentUser.role !== "student") return;
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, gid]);
 
   const quizTitleMap = useMemo(() => {

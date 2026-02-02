@@ -103,7 +103,6 @@ body {
   }
 }
 
-/* Markdown content in blog */
 .blog-prose {
   color: var(--text);
   line-height: 1.7;

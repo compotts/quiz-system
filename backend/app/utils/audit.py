@@ -33,7 +33,6 @@ async def log_audit(
     details: Optional[Any] = None,
     request: Optional[Request] = None,
 ) -> None:
-    """Write one audit log entry. details can be dict (will be JSON-serialized) or str."""
     details_str = None
     if details is not None:
         details_str = json.dumps(details, ensure_ascii=False) if isinstance(details, dict) else str(details)
