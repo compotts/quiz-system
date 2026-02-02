@@ -107,17 +107,29 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg)]" />
         <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-300">
+          <div
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-300 home-animate-fade-down"
+            style={{ opacity: 0, animationDelay: "0.1s" }}
+          >
             <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
             <span>{t("home.firstRequestWarning")}</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl">
+          <h1
+            className="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl home-animate-fade-down"
+            style={{ opacity: 0, animationDelay: "0.2s" }}
+          >
             {t("common.appName")}
           </h1>
-          <p className="mt-6 max-w-2xl mx-auto text-lg text-[var(--text-muted)] sm:text-xl leading-relaxed">
+          <p
+            className="mt-6 max-w-2xl mx-auto text-lg text-[var(--text-muted)] sm:text-xl leading-relaxed home-animate-fade-down"
+            style={{ opacity: 0, animationDelay: "0.35s" }}
+          >
             {t("home.tagline")}
           </p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <div
+            className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center home-animate-fade-down"
+            style={{ opacity: 0, animationDelay: "0.5s" }}
+          >
             <button
               onClick={() => setIsAuthModalOpen(true)}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-[var(--bg-elevated)] shadow-[var(--shadow-md)] transition-all hover:opacity-90 hover:scale-[1.02] hover:shadow-lg"
@@ -137,7 +149,7 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-3xl home-animate-fade-down" style={{ opacity: 0, animationDelay: "0.15s" }}>
           <h2 className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
             {t("home.aboutTitle")}
           </h2>
@@ -150,14 +162,18 @@ export default function Home() {
 
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
+          <h2
+            className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl home-animate-fade-down"
+            style={{ opacity: 0, animationDelay: "0.1s" }}
+          >
             {t("home.featuresTitle")}
           </h2>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ key, icon: Icon, color }) => (
+            {FEATURES.map(({ key, icon: Icon, color }, i) => (
               <li
                 key={key}
-                className="group flex gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-sm)] transition-all duration-200 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)]"
+                className="group flex gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5 shadow-[var(--shadow-sm)] transition-all duration-200 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] home-animate-fade-down"
+                style={{ opacity: 0, animationDelay: `${0.2 + i * 0.08}s` }}
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${COLOR_CLASSES[color]}`}
@@ -179,7 +195,7 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto max-w-2xl text-center home-animate-fade-down" style={{ opacity: 0, animationDelay: "0.2s" }}>
           <h2 className="text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
             {t("home.howToStartTitle")}
           </h2>
