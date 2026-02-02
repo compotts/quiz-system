@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     algorithm: str = "HS256"
+    version: str = "1.0.5"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     bcrypt_rounds: int = 12

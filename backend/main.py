@@ -11,7 +11,7 @@ from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
 app = FastAPI(
     title="Quizz System API",
     description="Educational Quiz Platform",
-    version="1.0.0",
+    version=str(settings.version),
     lifespan=lifespan,
     docs_url="/docs" if settings.env == "dev" else None,
     redoc_url="/redoc" if settings.env == "dev" else None,
@@ -38,9 +38,8 @@ app.include_router(blog.router)
 @app.get("/")
 async def root():
     return {
-        "message": "Quizz System API",
-        "version": "1.0.3",
-        "docs": "/docs"
+        "message": "quiz system API",
+        "version": str(settings.version)
     }
 
 

@@ -67,5 +67,5 @@ async def check_registration_rate_limit(request: Request):
     await rate_limiter.check_rate_limit(
         request, 
         max_requests=settings.rate_limit_login, 
-        period_seconds=settings.rate_limit_period * 5  # минут для регистрации
+        period_seconds=settings.rate_limit_period * 5  # минут для регистрации (rate_limit_period это секунды, сейчас в настройках 60 секунд поэтому 60 * 5 = 300 секунд = 5 минут)
     )
