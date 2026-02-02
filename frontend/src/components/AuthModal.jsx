@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X, Eye, EyeOff } from "lucide-react";
@@ -7,6 +7,8 @@ import { authApi, saveTokens } from "../services/api.js";
 export default function AuthModal({ isOpen, onClose, registrationEnabled = true }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const scrollYRef = useRef(0);
+  const modalContentRef = useRef(null);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -157,25 +159,47 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true 
 
   useEffect(() => {
     if (isOpen) {
+      scrollYRef.current = window.scrollY ?? window.pageYOffset;
       document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollYRef.current}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
       setIsAnimating(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setIsAnimating(true);
         });
       });
+      return () => {
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.width = "";
+        window.scrollTo(0, scrollYRef.current);
+      };
     } else {
       document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
       setIsAnimating(false);
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isOpen]);
 
   if (!isOpen && !isClosing) {
     return null;
   }
+
+  const handleOverlayTouchMove = (e) => {
+    if (modalContentRef.current && modalContentRef.current.contains(e.target)) return;
+    e.preventDefault();
+  };
 
   return (
     <div
@@ -185,6 +209,7 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true 
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
+      onTouchMove={handleOverlayTouchMove}
     >
       <div
         className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
@@ -192,7 +217,8 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true 
         }`}
       />
       <div
-        className={`relative w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)] transition-all duration-300 ease-out ${
+        ref={modalContentRef}
+        className={`relative w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)] transition-all duration-300 ease-out overscroll-contain ${
           isClosing
             ? "scale-95 opacity-0"
             : isAnimating
