@@ -26,6 +26,7 @@ import {
   Monitor,
   Info,
   Settings,
+  ScrollText,
 } from "lucide-react";
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
 import UserDetailsModal from "../components/UserDetailsModal.jsx";
@@ -34,6 +35,7 @@ const TABS = [
   { id: "requests", icon: ClipboardList },
   { id: "users", icon: Users },
   { id: "messages", icon: MessageSquare },
+  { id: "logs", icon: ScrollText },
   { id: "settings", icon: Settings },
 ];
 
@@ -50,6 +52,7 @@ const ROLE_ICONS = {
 };
 
 const SEARCH_FIELD_IDS = ["all", "username", "email", "first_name", "last_name"];
+const LOGS_SEARCH_FIELD_IDS = ["username", "ip", "all"];
 
 function formatDate(dateString) {
   return new Date(dateString).toLocaleString("ru-RU", {
@@ -100,8 +103,21 @@ export default function AdminDashboard() {
   const [expandedMessage, setExpandedMessage] = useState(null);
 
   const [autoRegistrationEnabled, setAutoRegistrationEnabled] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [contactEnabled, setContactEnabled] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogsTotal, setAuditLogsTotal] = useState(0);
+  const [auditLogsPage, setAuditLogsPage] = useState(1);
+  const [auditLogsTotalPages, setAuditLogsTotalPages] = useState(1);
+  const [auditLogsActionFilter, setAuditLogsActionFilter] = useState("");
+  const [auditLogsResourceFilter, setAuditLogsResourceFilter] = useState("");
+  const [auditLogsSearch, setAuditLogsSearch] = useState("");
+  const [auditLogsSearchField, setAuditLogsSearchField] = useState("username");
+  const [logsSearchFieldOpen, setLogsSearchFieldOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -115,12 +131,14 @@ export default function AdminDashboard() {
         loadUsers();
       } else if (activeTab === "messages") {
         loadMessages();
+      } else if (activeTab === "logs") {
+        loadAuditLogs();
       } else if (activeTab === "settings") {
         loadSettings();
       }
       loadMessagesCount();
     }
-  }, [activeTab, requestsFilter, requestsPage, currentUser, usersPage, usersRoleFilter, usersStatusFilter, messagesFilter]);
+  }, [activeTab, requestsFilter, requestsPage, currentUser, usersPage, usersRoleFilter, usersStatusFilter, usersSearch, usersSearchField, messagesFilter, auditLogsPage, auditLogsActionFilter, auditLogsResourceFilter]);
 
   const checkAuth = async () => {
     if (!getAccessToken()) {
@@ -232,12 +250,52 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadAuditLogs = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await adminApi.getAuditLogs({
+        page: auditLogsPage,
+        perPage: 50,
+        action: auditLogsActionFilter || null,
+        resourceType: auditLogsResourceFilter || null,
+        search: auditLogsSearch.trim() || null,
+        searchField: auditLogsSearch.trim() ? auditLogsSearchField : null,
+      });
+      setAuditLogs(data.logs);
+      setAuditLogsTotal(data.total);
+      setAuditLogsTotalPages(data.total_pages);
+    } catch (err) {
+      setError(err.message || "Ошибка загрузки логов");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogsSearch = (e) => {
+    e?.preventDefault();
+    setAuditLogsPage(1);
+    loadAuditLogs();
+  };
+
+  const resetLogsFilters = () => {
+    setAuditLogsSearch("");
+    setAuditLogsSearchField("username");
+    setAuditLogsActionFilter("");
+    setAuditLogsResourceFilter("");
+    setAuditLogsPage(1);
+    loadAuditLogs();
+  };
+
   const loadSettings = async () => {
     setSettingsLoading(true);
     setError("");
     try {
       const data = await adminApi.getSettings();
       setAutoRegistrationEnabled(data.auto_registration_enabled);
+      setRegistrationEnabled(data.registration_enabled !== false);
+      setMaintenanceMode(!!data.maintenance_mode);
+      setContactEnabled(data.contact_enabled !== false);
     } catch (err) {
       setError(err.message || "Ошибка загрузки настроек");
     } finally {
@@ -253,6 +311,51 @@ export default function AdminDashboard() {
         auto_registration_enabled: !autoRegistrationEnabled,
       });
       setAutoRegistrationEnabled(data.auto_registration_enabled);
+    } catch (err) {
+      setError(err.message || "Ошибка сохранения настроек");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleToggleRegistrationEnabled = async () => {
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const data = await adminApi.updateSettings({
+        registration_enabled: !registrationEnabled,
+      });
+      setRegistrationEnabled(data.registration_enabled !== false);
+    } catch (err) {
+      setError(err.message || "Ошибка сохранения настроек");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleToggleMaintenanceMode = async () => {
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const data = await adminApi.updateSettings({
+        maintenance_mode: !maintenanceMode,
+      });
+      setMaintenanceMode(!!data.maintenance_mode);
+    } catch (err) {
+      setError(err.message || "Ошибка сохранения настроек");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleToggleContactEnabled = async () => {
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const data = await adminApi.updateSettings({
+        contact_enabled: !contactEnabled,
+      });
+      setContactEnabled(data.contact_enabled !== false);
     } catch (err) {
       setError(err.message || "Ошибка сохранения настроек");
     } finally {
@@ -383,47 +486,55 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[var(--bg)]">
+    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[var(--bg)]">
       {/* Header */}
       <div className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+            <div className="min-w-0 shrink-0">
               <h1 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
                 {t("admin.dashboardTitle")}
               </h1>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
+              <p className="mt-1 truncate text-sm text-[var(--text-muted)]">
                 {t("admin.welcome", { name: currentUser.first_name || currentUser.username })}
               </p>
             </div>
-            <div className="flex gap-2">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
-                      : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {t(`admin.tabs.${tab.id}`)}
-                  {tab.id === "messages" && messagesCount.unread > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
-                      {messagesCount.unread > 99 ? "99+" : messagesCount.unread}
-                    </span>
-                  )}
-                </button>
-              ))}
+            {/* Tabs: horizontal scroll on mobile, no page overflow */}
+            <div className="w-full min-w-0 sm:w-auto sm:shrink-0">
+              <div
+                className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                <div className="flex gap-2 py-1">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`relative flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                          : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                      }`}
+                    >
+                      <tab.icon className="h-4 w-4 shrink-0" />
+                      {t(`admin.tabs.${tab.id}`)}
+                      {tab.id === "messages" && messagesCount.unread > 0 && (
+                        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
+                          {messagesCount.unread > 99 ? "99+" : messagesCount.unread}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+      <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl min-w-0">
           {error && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -1145,6 +1256,203 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Audit Logs Tab */}
+          {activeTab === "logs" && (
+            <div>
+              {/* Search by username / IP */}
+              <form onSubmit={handleLogsSearch} className="mb-4 flex flex-wrap gap-2">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setLogsSearchFieldOpen(!logsSearchFieldOpen)}
+                    className="flex h-10 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)]"
+                  >
+                    {t(`admin.logsSearchFields.${auditLogsSearchField}`)}
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  {logsSearchFieldOpen && (
+                    <div className="absolute left-0 top-full z-10 mt-1 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-md)]">
+                      {LOGS_SEARCH_FIELD_IDS.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            setAuditLogsSearchField(id);
+                            setLogsSearchFieldOpen(false);
+                          }}
+                          className={`flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--border)] ${
+                            auditLogsSearchField === id
+                              ? "text-[var(--text)] font-medium"
+                              : "text-[var(--text-muted)]"
+                          }`}
+                        >
+                          {t(`admin.logsSearchFields.${id}`)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    value={auditLogsSearch}
+                    onChange={(e) => setAuditLogsSearch(e.target.value)}
+                    placeholder={t("admin.logs.searchPlaceholder")}
+                    className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--text-muted)] focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="h-10 rounded-lg bg-[var(--accent)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90"
+                >
+                  {t("common.find")}
+                </button>
+                {(auditLogsSearch || auditLogsActionFilter || auditLogsResourceFilter) && (
+                  <button
+                    type="button"
+                    onClick={resetLogsFilters}
+                    className="h-10 rounded-lg px-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+                  >
+                    {t("common.reset")}
+                  </button>
+                )}
+              </form>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-[var(--text-muted)]">{t("admin.filter")}</span>
+                <select
+                  value={auditLogsActionFilter}
+                  onChange={(e) => { setAuditLogsActionFilter(e.target.value); setAuditLogsPage(1); }}
+                  className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-sm text-[var(--text)]"
+                >
+                  <option value="">{t("admin.logs.allActions")}</option>
+                  <option value="login_success">{t("admin.logs.login_success")}</option>
+                  <option value="login_failed">{t("admin.logs.login_failed")}</option>
+                  <option value="password_changed">{t("admin.logs.password_changed")}</option>
+                  <option value="register_auto">{t("admin.logs.register_auto")}</option>
+                  <option value="register_request">{t("admin.logs.register_request")}</option>
+                  <option value="settings_updated">{t("admin.logs.settings_updated")}</option>
+                  <option value="registration_approved">{t("admin.logs.registration_approved")}</option>
+                  <option value="registration_rejected">{t("admin.logs.registration_rejected")}</option>
+                  <option value="registration_approve_all">{t("admin.logs.registration_approve_all")}</option>
+                  <option value="user_updated">{t("admin.logs.user_updated")}</option>
+                  <option value="user_role_changed">{t("admin.logs.user_role_changed")}</option>
+                  <option value="user_status_toggled">{t("admin.logs.user_status_toggled")}</option>
+                  <option value="user_deleted">{t("admin.logs.user_deleted")}</option>
+                  <option value="quiz_created">{t("admin.logs.quiz_created")}</option>
+                  <option value="quiz_updated">{t("admin.logs.quiz_updated")}</option>
+                  <option value="quiz_deleted">{t("admin.logs.quiz_deleted")}</option>
+                  <option value="question_created">{t("admin.logs.question_created")}</option>
+                  <option value="question_updated">{t("admin.logs.question_updated")}</option>
+                  <option value="question_deleted">{t("admin.logs.question_deleted")}</option>
+                  <option value="group_created">{t("admin.logs.group_created")}</option>
+                  <option value="group_updated">{t("admin.logs.group_updated")}</option>
+                  <option value="group_deleted">{t("admin.logs.group_deleted")}</option>
+                  <option value="group_joined">{t("admin.logs.group_joined")}</option>
+                  <option value="group_left">{t("admin.logs.group_left")}</option>
+                  <option value="member_removed">{t("admin.logs.member_removed")}</option>
+                  <option value="admin_init">{t("admin.logs.admin_init")}</option>
+                  <option value="attempt_started">{t("admin.logs.attempt_started")}</option>
+                  <option value="attempt_completed">{t("admin.logs.attempt_completed")}</option>
+                  <option value="blog_post_created">{t("admin.logs.blog_post_created")}</option>
+                  <option value="blog_post_updated">{t("admin.logs.blog_post_updated")}</option>
+                  <option value="blog_post_deleted">{t("admin.logs.blog_post_deleted")}</option>
+                  <option value="contact_message_sent">{t("admin.logs.contact_message_sent")}</option>
+                  <option value="contact_message_read">{t("admin.logs.contact_message_read")}</option>
+                  <option value="contact_messages_read_all">{t("admin.logs.contact_messages_read_all")}</option>
+                  <option value="contact_message_deleted">{t("admin.logs.contact_message_deleted")}</option>
+                </select>
+                <select
+                  value={auditLogsResourceFilter}
+                  onChange={(e) => { setAuditLogsResourceFilter(e.target.value); setAuditLogsPage(1); }}
+                  className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-sm text-[var(--text)]"
+                >
+                  <option value="">{t("admin.logs.allResources")}</option>
+                  <option value="auth">auth</option>
+                  <option value="settings">settings</option>
+                  <option value="registration">registration</option>
+                  <option value="user">user</option>
+                  <option value="quiz">quiz</option>
+                  <option value="question">question</option>
+                  <option value="group">group</option>
+                  <option value="attempt">attempt</option>
+                  <option value="blog">blog</option>
+                  <option value="contact">contact</option>
+                </select>
+                <button
+                  onClick={loadAuditLogs}
+                  disabled={loading}
+                  className="ml-auto rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
+                  title={t("common.refresh")}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+              <div className="mb-4 text-sm text-[var(--text-muted)]">
+                {t("admin.total")}: {auditLogsTotal}
+              </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+                  <ScrollText className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                  <p className="mt-4 text-[var(--text-muted)]">{t("admin.logs.noLogs")}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {auditLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="text-[var(--text-muted)] shrink-0">{formatDate(log.created_at)}</span>
+                        <span className="font-medium text-[var(--text)]">{log.username ?? "—"}</span>
+                        <span className="rounded bg-[var(--border)] px-1.5 py-0.5 text-[var(--text)]">{log.action}</span>
+                        {(log.resource_type || log.resource_id) && (
+                          <span className="text-[var(--text-muted)]">
+                            {log.resource_type}{log.resource_id ? ` #${log.resource_id}` : ""}
+                          </span>
+                        )}
+                        {log.ip_address && (
+                          <span className="text-xs text-[var(--text-muted)]">IP: {log.ip_address}</span>
+                        )}
+                      </div>
+                      {log.details && (
+                        <p className="mt-1.5 truncate text-xs text-[var(--text-muted)]" title={log.details}>
+                          {log.details}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {auditLogsTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setAuditLogsPage((p) => Math.max(1, p - 1))}
+                    disabled={auditLogsPage === 1 || loading}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm text-[var(--text-muted)]">
+                    {t("admin.page")} {auditLogsPage} {t("admin.of")} {auditLogsTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setAuditLogsPage((p) => Math.min(auditLogsTotalPages, p + 1))}
+                    disabled={auditLogsPage === auditLogsTotalPages || loading}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Settings Tab */}
           {activeTab === "settings" && (
             <div>
@@ -1153,10 +1461,11 @@ export default function AdminDashboard() {
                   <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
                 </div>
               ) : (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h2 className="mb-4 text-lg font-semibold text-[var(--text)]">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 space-y-6">
+                  <h2 className="text-lg font-semibold text-[var(--text)]">
                     {t("admin.settingsTitle")}
                   </h2>
+
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium text-[var(--text)]">
@@ -1187,6 +1496,96 @@ export default function AdminDashboard() {
                       {settingsSaving && (
                         <Loader2 className="h-5 w-5 animate-spin text-[var(--text-muted)]" />
                       )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-[var(--text)]">
+                        {t("admin.registrationEnabled")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t("admin.registrationEnabledDesc")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleRegistrationEnabled}
+                        disabled={settingsSaving}
+                        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          registrationEnabled
+                            ? "bg-green-600"
+                            : "bg-[var(--border)]"
+                        }`}
+                        role="switch"
+                        aria-checked={registrationEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition ${
+                            registrationEnabled ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-[var(--text)]">
+                        {t("admin.maintenanceMode")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t("admin.maintenanceModeDesc")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleMaintenanceMode}
+                        disabled={settingsSaving}
+                        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          maintenanceMode
+                            ? "bg-amber-600"
+                            : "bg-[var(--border)]"
+                        }`}
+                        role="switch"
+                        aria-checked={maintenanceMode}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition ${
+                            maintenanceMode ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-[var(--text)]">
+                        {t("admin.contactEnabled")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t("admin.contactEnabledDesc")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleContactEnabled}
+                        disabled={settingsSaving}
+                        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          contactEnabled
+                            ? "bg-green-600"
+                            : "bg-[var(--border)]"
+                        }`}
+                        role="switch"
+                        aria-checked={contactEnabled}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition ${
+                            contactEnabled ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>

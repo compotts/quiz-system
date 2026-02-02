@@ -1,10 +1,11 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List, Optional
 from schemas import BlogPostCreate, BlogPostUpdate, BlogPostResponse
 from app.database.models.blog_post import BlogPost
 from app.database.models.user import User
 from app.utils.auth import get_current_admin, get_current_user_optional
+from app.utils.audit import log_audit
 from app.database.database import utc_now
 
 
@@ -77,6 +78,7 @@ async def get_blog_post(
 @router.post("/posts", response_model=BlogPostResponse)
 async def create_blog_post(
     data: BlogPostCreate,
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     post = await BlogPost.objects.create(
@@ -85,7 +87,15 @@ async def create_blog_post(
         author=current_admin,
         is_published=data.is_published
     )
-    
+    await log_audit(
+        "blog_post_created",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="blog",
+        resource_id=str(post.id),
+        details={"title": post.title, "is_published": post.is_published},
+        request=request,
+    )
     return format_blog_post(post, current_admin)
 
 
@@ -93,6 +103,7 @@ async def create_blog_post(
 async def update_blog_post(
     post_id: int,
     data: BlogPostUpdate,
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     post = await BlogPost.objects.select_related("author").get_or_none(id=post_id)
@@ -115,6 +126,15 @@ async def update_blog_post(
         update_fields["updated_at"] = utc_now()
         await post.update(**update_fields)
         post = await BlogPost.objects.select_related("author").get_or_none(id=post_id)
+        await log_audit(
+            "blog_post_updated",
+            user_id=current_admin.id,
+            username=current_admin.username,
+            resource_type="blog",
+            resource_id=str(post_id),
+            details={"title": post.title, "fields": list(update_fields.keys())},
+            request=request,
+        )
     
     return format_blog_post(post)
 
@@ -122,6 +142,7 @@ async def update_blog_post(
 @router.delete("/posts/{post_id}")
 async def delete_blog_post(
     post_id: int,
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     post = await BlogPost.objects.get_or_none(id=post_id)
@@ -132,6 +153,15 @@ async def delete_blog_post(
             detail="Blog post not found"
         )
     
+    title = post.title
     await post.delete()
-    
+    await log_audit(
+        "blog_post_deleted",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="blog",
+        resource_id=str(post_id),
+        details={"title": title},
+        request=request,
+    )
     return {"message": "Blog post deleted successfully"}

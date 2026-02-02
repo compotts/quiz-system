@@ -122,10 +122,32 @@ class ReviewRegistrationRequest(BaseModel):
 
 class AdminSettingsResponse(BaseModel):
     auto_registration_enabled: bool
+    registration_enabled: bool = True
+    maintenance_mode: bool = False
+    contact_enabled: bool = True
 
 
 class AdminSettingsUpdate(BaseModel):
     auto_registration_enabled: Optional[bool] = None
+    registration_enabled: Optional[bool] = None
+    maintenance_mode: Optional[bool] = None
+    contact_enabled: Optional[bool] = None
+
+
+class AuditLogResponse(BaseModel):
+    id: int
+    created_at: datetime
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    action: str
+    resource_type: Optional[str] = None
+    resource_id: Optional[str] = None
+    details: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class GroupCreate(BaseModel):

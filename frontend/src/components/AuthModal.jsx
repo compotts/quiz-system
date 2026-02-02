@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { X, Eye, EyeOff } from "lucide-react";
 import { authApi, saveTokens } from "../services/api.js";
 
-export default function AuthModal({ isOpen, onClose }) {
+export default function AuthModal({ isOpen, onClose, registrationEnabled = true }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -61,6 +61,8 @@ export default function AuthModal({ isOpen, onClose }) {
           ? t("auth.error401")
           : err.status === 403
           ? t("auth.error403")
+          : err.status === 503
+          ? t("auth.error503")
           : err.message || t("auth.errorLogin")
       );
     } finally {
@@ -132,12 +134,18 @@ export default function AuthModal({ isOpen, onClose }) {
   };
 
   useEffect(() => {
-    if (isOpen && !isLogin) {
+    if (isOpen && !isLogin && registrationEnabled) {
       authApi.getRegistrationSettings().then((data) => {
         setAutoRegistrationEnabled(data.auto_registration_enabled);
       }).catch(() => setAutoRegistrationEnabled(false));
     }
-  }, [isOpen, isLogin]);
+  }, [isOpen, isLogin, registrationEnabled]);
+
+  useEffect(() => {
+    if (isOpen && !registrationEnabled && !isLogin) {
+      setIsLogin(true);
+    }
+  }, [isOpen, registrationEnabled, isLogin]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -459,19 +467,21 @@ export default function AuthModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          <div
-            className={`mt-6 border-t border-[var(--border)] pt-4 text-center transition-opacity duration-200 ${
-              isSwitching ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={switchMode}
-              className="text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)] hover:underline"
+          {registrationEnabled && (
+            <div
+              className={`mt-6 border-t border-[var(--border)] pt-4 text-center transition-opacity duration-200 ${
+                isSwitching ? "opacity-0" : "opacity-100"
+              }`}
             >
-              {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={switchMode}
+                className="text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)] hover:underline"
+              >
+                {isLogin ? t("auth.noAccount") : t("auth.haveAccount")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

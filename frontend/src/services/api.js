@@ -126,6 +126,20 @@ export const adminApi = {
     return request("/admin/settings");
   },
 
+  async getAuditLogs({ page = 1, perPage = 50, action = null, resourceType = null, userId = null, search = null, searchField = null } = {}) {
+    const params = new URLSearchParams();
+    params.append("page", page);
+    params.append("per_page", perPage);
+    if (action) params.append("action", action);
+    if (resourceType) params.append("resource_type", resourceType);
+    if (userId != null) params.append("user_id", userId);
+    if (search) {
+      params.append("search", search);
+      if (searchField) params.append("search_field", searchField);
+    }
+    return request(`/admin/audit-logs?${params.toString()}`);
+  },
+
   async updateSettings(data) {
     return request("/admin/settings", {
       method: "PATCH",

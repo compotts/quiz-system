@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from schemas import (
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
@@ -9,6 +9,7 @@ from app.database.models.group import GroupMember
 from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.user import User
 from app.utils.auth import get_current_student, get_current_user
+from app.utils.audit import log_audit
 from app.database.database import utc_now
 from datetime import datetime
 import json
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/attempts", tags=["Quiz Attempts"])
 @router.post("/start", response_model=QuizAttemptResponse)
 async def start_quiz_attempt(
     data: StartQuizAttempt,
+    request: Request,
     current_user: User = Depends(get_current_student)
 ):
     quiz = await Quiz.objects.select_related("group").get_or_none(id=data.quiz_id)
@@ -70,7 +72,15 @@ async def start_quiz_attempt(
         started_at=utc_now(),
         is_completed=False
     )
-    
+    await log_audit(
+        "attempt_started",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="attempt",
+        resource_id=str(attempt.id),
+        details={"quiz_id": quiz.id, "quiz_title": quiz.title},
+        request=request,
+    )
     return {
         **attempt.dict(),
         "quiz_id": quiz.id,
@@ -159,9 +169,10 @@ async def submit_answer(
 @router.post("/complete")
 async def complete_quiz_attempt(
     data: CompleteQuizAttempt,
+    request: Request,
     current_user: User = Depends(get_current_student)
 ):
-    attempt = await QuizAttempt.objects.get_or_none(
+    attempt = await QuizAttempt.objects.select_related("quiz").get_or_none(
         id=data.attempt_id,
         student=current_user
     )
@@ -181,11 +192,24 @@ async def complete_quiz_attempt(
     time_spent = int((utc_now() - attempt.started_at).total_seconds())
     
     await attempt.update(
-        completed_at=now,
+        completed_at=utc_now(),
         time_spent=time_spent,
         is_completed=True
     )
-    
+    await log_audit(
+        "attempt_completed",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="attempt",
+        resource_id=str(attempt.id),
+        details={
+            "quiz_id": attempt.quiz.id,
+            "quiz_title": attempt.quiz.title,
+            "score": attempt.score,
+            "max_score": attempt.max_score,
+        },
+        request=request,
+    )
     return {
         "message": "Quiz completed",
         "score": attempt.score,

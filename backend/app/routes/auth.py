@@ -11,20 +11,45 @@ from app.utils.auth import (
     create_refresh_token, get_current_user
 )
 from app.utils.rate_limiter import check_login_rate_limit, check_registration_rate_limit
+from app.utils.audit import log_audit
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+async def _get_setting(key: str, default: str) -> bool:
+    setting = await SystemSetting.objects.get_or_none(key=key)
+    return setting is not None and setting.value.lower() == "true" if setting else default == "true"
+
+
 async def is_auto_registration_enabled() -> bool:
-    setting = await SystemSetting.objects.get_or_none(key="auto_registration_enabled")
-    return setting is not None and setting.value.lower() == "true"
+    return await _get_setting("auto_registration_enabled", "false")
+
+
+async def is_registration_enabled() -> bool:
+    return await _get_setting("registration_enabled", "true")
+
+
+async def is_maintenance_mode() -> bool:
+    return await _get_setting("maintenance_mode", "false")
+
+
+async def is_contact_enabled() -> bool:
+    return await _get_setting("contact_enabled", "true")
 
 
 @router.get("/registration-settings")
 async def get_registration_settings():
-    enabled = await is_auto_registration_enabled()
-    return {"auto_registration_enabled": enabled}
+    auto_enabled = await is_auto_registration_enabled()
+    reg_enabled = await is_registration_enabled()
+    maintenance = await is_maintenance_mode()
+    contact = await is_contact_enabled()
+    return {
+        "auto_registration_enabled": auto_enabled,
+        "registration_enabled": reg_enabled,
+        "maintenance_mode": maintenance,
+        "contact_enabled": contact,
+    }
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -33,6 +58,11 @@ async def register(
     request: Request,
     _: None = Depends(check_registration_rate_limit)
 ):
+    if not await is_registration_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is currently disabled"
+        )
     existing_user = await User.objects.get_or_none(username=data.username)
     if existing_user:
         raise HTTPException(
@@ -53,6 +83,12 @@ async def register(
         role = UserRole.STUDENT.value
         if data.role in (UserRole.STUDENT.value, UserRole.TEACHER.value):
             role = data.role
+
+        await log_audit(
+            "register_auto",
+            details={"username": data.username, "email": data.email, "role": role},
+            request=request,
+        )
         user = await User.objects.create(
             username=data.username,
             email=data.email,
@@ -96,6 +132,11 @@ async def register(
             user_agent=request.headers.get("user-agent"),
             status=RegistrationStatus.PENDING.value
         )
+        await log_audit(
+            "register_request",
+            details={"username": data.username, "email": data.email},
+            request=request,
+        )
         return RegisterResponse(
             auto_approved=False,
             id=reg.id,
@@ -114,26 +155,58 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     data: UserLogin,
+    request: Request,
     _: None = Depends(check_login_rate_limit)
 ):
     user = await User.objects.get_or_none(username=data.username)
-    
+
     if not user or not verify_password(data.password, user.hashed_password):
+        await log_audit(
+            "login_failed",
+            details={"username": data.username},
+            request=request,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
+        await log_audit(
+            "login_failed",
+            username=user.username,
+            details={"reason": "account_inactive"},
+            request=request,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is not active. Please wait for approval."
         )
-    
+
+    if await is_maintenance_mode() and user.role != UserRole.ADMIN.value:
+        await log_audit(
+            "login_failed",
+            username=user.username,
+            details={"reason": "maintenance_mode"},
+            request=request,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Site is under maintenance. Only administrators can log in."
+        )
+
     access_token = create_access_token(data={"sub": str(user.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
-    
+
+    await log_audit(
+        "login_success",
+        user_id=user.id,
+        username=user.username,
+        resource_type="auth",
+        request=request,
+    )
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -171,6 +244,7 @@ async def update_me(
 @router.post("/change-password")
 async def change_password(
     data: ChangePasswordRequest,
+    request: Request,
     current_user: User = Depends(get_current_user)
 ):
     if not verify_password(data.current_password, current_user.hashed_password):
@@ -180,6 +254,13 @@ async def change_password(
         )
     await current_user.update(
         hashed_password=get_password_hash(data.new_password)
+    )
+    await log_audit(
+        "password_changed",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="auth",
+        request=request,
     )
     return {"message": "Password updated successfully"}
 

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Wrench } from "lucide-react";
 import AuthModal from "../components/AuthModal.jsx";
+import { authApi } from "../services/api.js";
 
 const FEATURE_KEYS = [
   "quizzes",
@@ -16,12 +17,60 @@ const FEATURE_KEYS = [
 export default function Home() {
   const { t } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [siteStatus, setSiteStatus] = useState({ maintenance_mode: false, registration_enabled: true });
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  useEffect(() => {
+    authApi.getRegistrationSettings().then((data) => {
+      setSiteStatus({
+        maintenance_mode: !!data.maintenance_mode,
+        registration_enabled: data.registration_enabled !== false,
+      });
+    }).catch(() => {}).finally(() => setStatusLoading(false));
+  }, []);
+
+  const maintenanceMode = siteStatus.maintenance_mode;
+
+  if (!statusLoading && maintenanceMode) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} registrationEnabled={false} />
+        <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-lg text-center">
+            <div className="mb-6 flex justify-center">
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 dark:border-amber-400/30 dark:bg-amber-500/15">
+                <Wrench className="h-12 w-12 text-amber-600 dark:text-amber-400" aria-hidden />
+              </div>
+            </div>
+            <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
+              {t("home.maintenanceTitle")}
+            </h1>
+            <p className="mt-4 text-[var(--text-muted)]">
+              {t("home.maintenanceMessage")}
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {t("home.maintenanceAdminHint")}
+            </p>
+            <div className="mt-8">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90 hover:scale-105"
+              >
+                {t("home.login")}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col">
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        registrationEnabled={siteStatus.registration_enabled}
       />
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
         <div className="absolute inset-0 bg-[var(--bg-elevated)]" />

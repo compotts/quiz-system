@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from schemas import (
     QuizCreate, QuizUpdate, QuizResponse,
@@ -11,6 +11,7 @@ from app.database.models.group import Group, GroupMember
 from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.user import User
 from app.utils.auth import get_current_teacher, get_current_user, get_current_student
+from app.utils.audit import log_audit
 from app.database.database import to_naive_utc
 from datetime import datetime
 import json
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
 @router.post("", response_model=QuizResponse)
 async def create_quiz(
     data: QuizCreate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     group = await Group.objects.get_or_none(id=data.group_id)
@@ -47,7 +49,15 @@ async def create_quiz(
         available_until=to_naive_utc(data.available_until),
         is_active=True
     )
-    
+    await log_audit(
+        "quiz_created",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="quiz",
+        resource_id=str(quiz.id),
+        details={"title": quiz.title, "group_id": group.id},
+        request=request,
+    )
     return {
         **quiz.dict(),
         "group_id": group.id,
@@ -135,6 +145,7 @@ async def get_quiz(
 async def update_quiz(
     quiz_id: int,
     data: QuizUpdate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
@@ -161,6 +172,15 @@ async def update_quiz(
             update_data["available_until"] = to_naive_utc(update_data["available_until"])
         
         await quiz.update(**update_data)
+        await log_audit(
+            "quiz_updated",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="quiz",
+            resource_id=str(quiz_id),
+            details={"title": quiz.title},
+            request=request,
+        )
     
     question_count = await Question.objects.filter(quiz=quiz).count()
     
@@ -175,9 +195,10 @@ async def update_quiz(
 @router.delete("/{quiz_id}")
 async def delete_quiz(
     quiz_id: int,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
-    quiz = await Quiz.objects.select_related("teacher").get_or_none(id=quiz_id)
+    quiz = await Quiz.objects.select_related("teacher", "group").get_or_none(id=quiz_id)
     
     if not quiz:
         raise HTTPException(
@@ -191,6 +212,9 @@ async def delete_quiz(
             detail="Only quiz owner can delete it"
         )
     
+    quiz_title = quiz.title
+    group_id = quiz.group.id
+
     attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
     for attempt in attempts:
         answers = await Answer.objects.filter(attempt=attempt).all()
@@ -208,6 +232,16 @@ async def delete_quiz(
         await question.delete()
     
     await quiz.delete()
+
+    await log_audit(
+        "quiz_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="quiz",
+        resource_id=str(quiz_id),
+        details={"title": quiz_title, "group_id": group_id},
+        request=request,
+    )
     
     return {"message": "Quiz deleted successfully"}
 
@@ -216,6 +250,7 @@ async def delete_quiz(
 async def create_question(
     quiz_id: int,
     data: QuestionCreate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
@@ -250,6 +285,16 @@ async def create_question(
             order=opt_data.order
         )
         options.append(option)
+
+    await log_audit(
+        "question_created",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="question",
+        resource_id=str(question.id),
+        details={"quiz_id": quiz_id},
+        request=request,
+    )
     
     return {
         **question.dict(),
@@ -301,6 +346,7 @@ async def update_question(
     quiz_id: int,
     question_id: int,
     data: QuestionUpdate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
@@ -330,6 +376,15 @@ async def update_question(
         if "question_type" in update_data:
             update_data["question_type"] = update_data["question_type"].value
         await question.update(**update_data)
+        await log_audit(
+            "question_updated",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="question",
+            resource_id=str(question_id),
+            details={"quiz_id": quiz_id},
+            request=request,
+        )
     
     return {"message": "Question updated successfully"}
 
@@ -338,6 +393,7 @@ async def update_question(
 async def delete_question(
     quiz_id: int,
     question_id: int,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     quiz = await Quiz.objects.get_or_none(id=quiz_id)
@@ -365,5 +421,15 @@ async def delete_question(
     await Answer.objects.filter(question=question).delete()
     await Option.objects.filter(question=question).delete()
     await question.delete()
+
+    await log_audit(
+        "question_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="question",
+        resource_id=str(question_id),
+        details={"quiz_id": quiz_id},
+        request=request,
+    )
     
     return {"message": "Question deleted successfully"}

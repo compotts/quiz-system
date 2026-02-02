@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from config import settings
 
 from app.database.models.user import User
+from app.database.models.audit_log import AuditLog  # noqa: F401 - register table
 from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
 
 app = FastAPI(

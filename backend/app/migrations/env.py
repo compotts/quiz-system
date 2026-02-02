@@ -16,6 +16,9 @@ from app.database.models.contact_message import ContactMessage
 from app.database.models.blog_post import BlogPost
 from app.database.models.system_setting import SystemSetting
 from app.database.database import base_ormar_config
+from app.database.models.system_setting import SystemSetting
+from app.database.models.audit_log import AuditLog
+
 
 print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest, ContactMessage, BlogPost, SystemSetting]]}")  # debug
 

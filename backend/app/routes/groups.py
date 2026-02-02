@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 import random
 import string
 from schemas import GroupCreate, GroupUpdate, GroupResponse, JoinGroupRequest
 from app.database.models.group import Group, GroupMember
 from app.database.models.user import User
+from app.database.models.quiz import Quiz, Question, Option
+from app.database.models.attempt import QuizAttempt, Answer
 from app.utils.auth import get_current_teacher, get_current_user, get_current_student
+from app.utils.audit import log_audit
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
@@ -17,6 +20,7 @@ def generate_group_code() -> str:
 @router.post("", response_model=GroupResponse)
 async def create_group(
     data: GroupCreate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     code = generate_group_code()
@@ -29,7 +33,15 @@ async def create_group(
         code=code,
         teacher=current_user
     )
-    
+    await log_audit(
+        "group_created",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="group",
+        resource_id=str(group.id),
+        details={"name": group.name, "code": code},
+        request=request,
+    )
     teacher_full_name = f"{current_user.first_name} {current_user.last_name}".strip() if current_user.first_name or current_user.last_name else current_user.username
     return {
         **group.dict(),
@@ -113,6 +125,7 @@ async def get_group(
 async def update_group(
     group_id: int,
     data: GroupUpdate,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     group = await Group.objects.get_or_none(id=group_id)
@@ -132,6 +145,15 @@ async def update_group(
     update_data = data.dict(exclude_unset=True)
     if update_data:
         await group.update(**update_data)
+        await log_audit(
+            "group_updated",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="group",
+            resource_id=str(group_id),
+            details={"name": group.name, "fields": list(update_data.keys())},
+            request=request,
+        )
     
     member_count = await GroupMember.objects.filter(group=group).count()
     
@@ -145,6 +167,7 @@ async def update_group(
 @router.delete("/{group_id}")
 async def delete_group(
     group_id: int,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     group = await Group.objects.get_or_none(id=group_id)
@@ -161,7 +184,31 @@ async def delete_group(
             detail="Only group owner can delete it"
         )
     
+    group_name = group.name
+    # Каскадное удаление: квизы (ответы → попытки → варианты → вопросы → квизы), участники, группа
+    quizzes = await Quiz.objects.filter(group=group).all()
+    for quiz in quizzes:
+        attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
+        for attempt in attempts:
+            await Answer.objects.filter(attempt=attempt).delete()
+        await QuizAttempt.objects.filter(quiz=quiz).delete()
+        questions = await Question.objects.filter(quiz=quiz).all()
+        for question in questions:
+            await Option.objects.filter(question=question).delete()
+        await Question.objects.filter(quiz=quiz).delete()
+    await Quiz.objects.filter(group=group).delete()
+    await GroupMember.objects.filter(group=group).delete()
     await group.delete()
+
+    await log_audit(
+        "group_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="group",
+        resource_id=str(group_id),
+        details={"name": group_name},
+        request=request,
+    )
     
     return {"message": "Group deleted successfully"}
 
@@ -169,6 +216,7 @@ async def delete_group(
 @router.post("/join", response_model=GroupResponse)
 async def join_group(
     data: JoinGroupRequest,
+    request: Request,
     current_user: User = Depends(get_current_student)
 ):
     group = await Group.objects.select_related("teacher").get_or_none(code=data.code)
@@ -193,7 +241,15 @@ async def join_group(
         group=group,
         user=current_user
     )
-    
+    await log_audit(
+        "group_joined",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="group",
+        resource_id=str(group.id),
+        details={"group_name": group.name},
+        request=request,
+    )
     member_count = await GroupMember.objects.filter(group=group).count()
     teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
     
@@ -245,6 +301,7 @@ async def get_group_members(
 async def remove_member(
     group_id: int,
     user_id: int,
+    request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
     group = await Group.objects.get_or_none(id=group_id)
@@ -261,7 +318,7 @@ async def remove_member(
             detail="Only group owner can remove members"
         )
     
-    member = await GroupMember.objects.filter(
+    member = await GroupMember.objects.select_related("user").filter(
         group=group, user=user_id
     ).first()
     
@@ -271,7 +328,18 @@ async def remove_member(
             detail="Member not found in this group"
         )
     
+    removed_username = member.user.username
     await member.delete()
+
+    await log_audit(
+        "member_removed",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="group",
+        resource_id=str(group_id),
+        details={"group_name": group.name, "removed_user_id": user_id, "removed_username": removed_username},
+        request=request,
+    )
     
     return {"message": "Member removed from group"}
 
@@ -279,6 +347,7 @@ async def remove_member(
 @router.post("/{group_id}/leave")
 async def leave_group(
     group_id: int,
+    request: Request,
     current_user: User = Depends(get_current_student)
 ):
     group = await Group.objects.get_or_none(id=group_id)
@@ -300,5 +369,14 @@ async def leave_group(
         )
     
     await member.delete()
+    await log_audit(
+        "group_left",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="group",
+        resource_id=str(group_id),
+        details={"group_name": group.name},
+        request=request,
+    )
     
     return {"message": "Successfully left the group"}

@@ -4,8 +4,15 @@ from schemas import ContactMessageCreate, ContactMessageResponse
 from app.database.models.contact_message import ContactMessage
 from app.database.models.user import User
 from app.utils.auth import get_current_user_optional, get_current_admin
+from app.utils.audit import log_audit
 
 router = APIRouter(prefix="/contact", tags=["Contact"])
+
+
+async def _is_contact_enabled() -> bool:
+    from app.database.models.system_setting import SystemSetting
+    s = await SystemSetting.objects.get_or_none(key="contact_enabled")
+    return s is None or (s.value and s.value.lower() == "true")
 
 
 def get_client_ip(request: Request) -> str:
@@ -26,6 +33,11 @@ async def send_contact_message(
     request: Request,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
+    if not await _is_contact_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sending messages to administration is currently disabled"
+        )
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("User-Agent", "")[:500]
     
@@ -38,7 +50,15 @@ async def send_contact_message(
         user_agent=user_agent,
         is_read=False
     )
-    
+    await log_audit(
+        "contact_message_sent",
+        user_id=current_user.id if current_user else None,
+        username=current_user.username if current_user else None,
+        resource_type="contact",
+        resource_id=str(message.id),
+        details={"email": current_user.email if current_user else None},
+        request=request,
+    )
     return message
 
 
@@ -74,6 +94,7 @@ async def get_unread_count(
 @router.patch("/messages/{message_id}/read")
 async def mark_message_read(
     message_id: int,
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     message = await ContactMessage.objects.get_or_none(id=message_id)
@@ -85,20 +106,38 @@ async def mark_message_read(
         )
     
     await message.update(is_read=True)
+    await log_audit(
+        "contact_message_read",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="contact",
+        resource_id=str(message_id),
+        request=request,
+    )
     return {"message": "Marked as read"}
 
 
 @router.patch("/messages/read-all")
 async def mark_all_read(
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     await ContactMessage.objects.filter(is_read=False).update(is_read=True)
+    await log_audit(
+        "contact_messages_read_all",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="contact",
+        details={"action": "mark_all_read"},
+        request=request,
+    )
     return {"message": "All messages marked as read"}
 
 
 @router.delete("/messages/{message_id}")
 async def delete_message(
     message_id: int,
+    request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
     message = await ContactMessage.objects.get_or_none(id=message_id)
@@ -110,4 +149,12 @@ async def delete_message(
         )
     
     await message.delete()
+    await log_audit(
+        "contact_message_deleted",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="contact",
+        resource_id=str(message_id),
+        request=request,
+    )
     return {"message": "Message deleted"}
