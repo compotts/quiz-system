@@ -27,11 +27,16 @@ import {
   Info,
   Settings,
   ScrollText,
+  LayoutDashboard,
+  Layers,
+  FileQuestion,
+  ArrowRight,
 } from "lucide-react";
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
 import UserDetailsModal from "../components/UserDetailsModal.jsx";
 
 const TABS = [
+  { id: "overview", icon: LayoutDashboard },
   { id: "requests", icon: ClipboardList },
   { id: "users", icon: Users },
   { id: "messages", icon: MessageSquare },
@@ -67,10 +72,13 @@ function formatDate(dateString) {
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("requests");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const [requests, setRequests] = useState([]);
   const [requestsTotal, setRequestsTotal] = useState(0);
@@ -125,7 +133,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (currentUser) {
-      if (activeTab === "requests") {
+      if (activeTab === "overview") {
+        loadStats();
+      } else if (activeTab === "requests") {
         loadRequests();
       } else if (activeTab === "users") {
         loadUsers();
@@ -154,6 +164,19 @@ export default function AdminDashboard() {
       setCurrentUser(user);
     } catch (err) {
       navigate("/");
+    }
+  };
+
+  const loadStats = async () => {
+    setStatsLoading(true);
+    setError("");
+    try {
+      const data = await adminApi.getStats();
+      setStats(data);
+    } catch (err) {
+      setError(err.message || "ошибка загрузки обзора");
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -542,6 +565,110 @@ export default function AdminDashboard() {
               >
                 <X className="h-4 w-4" />
               </button>
+            </div>
+          )}
+
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              {statsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : stats ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("users")}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition-colors hover:border-[var(--text-muted)]/30 hover:bg-[var(--bg-card)]"
+                    >
+                      <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                        <Users className="h-5 w-5" />
+                        <span className="text-sm font-medium">{t("admin.overview.users")}</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.users_total}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        {t("admin.roles.admin")}: {stats.users_admin} · {t("admin.roles.teacherShort")}: {stats.users_teacher} · {t("admin.roles.student")}: {stats.users_student}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("requests")}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition-colors hover:border-[var(--text-muted)]/30 hover:bg-[var(--bg-card)]"
+                    >
+                      <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                        <ClipboardList className="h-5 w-5" />
+                        <span className="text-sm font-medium">{t("admin.overview.requests")}</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.pending_requests_count}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{t("admin.overview.pendingRequests")}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("messages")}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition-colors hover:border-[var(--text-muted)]/30 hover:bg-[var(--bg-card)]"
+                    >
+                      <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                        <MessageSquare className="h-5 w-5" />
+                        <span className="text-sm font-medium">{t("admin.overview.messages")}</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.unread_messages_count}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        {t("admin.overview.unreadOf")} {stats.total_messages_count}
+                      </p>
+                    </button>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                      <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                        <Layers className="h-5 w-5" />
+                        <span className="text-sm font-medium">{t("admin.overview.groups")}</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.groups_count}</p>
+                    </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                      <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                        <FileQuestion className="h-5 w-5" />
+                        <span className="text-sm font-medium">{t("admin.overview.quizzes")}</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.quizzes_count}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-[var(--text)]">{t("admin.overview.recentActivity")}</h2>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("logs")}
+                        className="flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
+                      >
+                        {t("admin.overview.viewAllLogs")}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {stats.recent_logs && stats.recent_logs.length > 0 ? (
+                      <div className="space-y-2">
+                        {stats.recent_logs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm"
+                          >
+                            <span className="text-[var(--text-muted)] shrink-0">{formatDate(log.created_at)}</span>
+                            <span className="font-medium text-[var(--text)]">{log.username ?? "—"}</span>
+                            <span className="rounded bg-[var(--border)] px-1.5 py-0.5 text-[var(--text)]">{log.action}</span>
+                            {(log.resource_type || log.resource_id) && (
+                              <span className="text-[var(--text-muted)]">
+                                {log.resource_type}{log.resource_id ? ` #${log.resource_id}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--text-muted)]">{t("admin.logs.noLogs")}</p>
+                    )}
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
 

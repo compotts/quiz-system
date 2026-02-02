@@ -217,7 +217,18 @@
   "admin": {
     "dashboardTitle": "Admin Panel",
     "welcome": "Welcome, {{name}}",
-    "tabs": { "requests": "Requests", "users": "Users", "messages": "Inquiries", "logs": "Logs", "settings": "Settings" },
+    "tabs": { "overview": "Overview", "requests": "Requests", "users": "Users", "messages": "Inquiries", "logs": "Logs", "settings": "Settings" },
+    "overview": {
+      "users": "Users",
+      "requests": "Requests",
+      "pendingRequests": "pending",
+      "messages": "Inquiries",
+      "unreadOf": "unread of",
+      "groups": "Groups",
+      "quizzes": "Quizzes",
+      "recentActivity": "Recent activity",
+      "viewAllLogs": "All logs"
+    },
     "settingsTitle": "System settings",
     "autoRegistration": "Auto-registration",
     "autoRegistrationDesc": "When enabled, new users are registered immediately without approval. When disabled, registration requests go to the Requests tab and require approval.",

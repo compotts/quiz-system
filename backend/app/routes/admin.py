@@ -3,12 +3,14 @@ from typing import List
 from schemas import (
     AdminInitRequest, UserResponse, RegistrationRequestResponse,
     ReviewRegistrationRequest, AdminUpdateUserRequest, GroupResponse,
-    AdminSettingsResponse, AdminSettingsUpdate, AuditLogResponse
+    AdminSettingsResponse, AdminSettingsUpdate, AdminStatsResponse, AuditLogResponse
 )
 from app.database.models.user import User, UserRole
 from app.database.models.audit_log import AuditLog
 from app.database.models.group import Group, GroupMember
+from app.database.models.quiz import Quiz
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
+from app.database.models.contact_message import ContactMessage
 from app.database.models.system_setting import SystemSetting
 from app.utils.auth import get_password_hash, get_current_admin
 from app.database.database import utc_now
@@ -127,6 +129,34 @@ async def update_settings(
         registration_enabled=reg_enabled,
         maintenance_mode=maintenance,
         contact_enabled=contact,
+    )
+
+
+@router.get("/stats", response_model=AdminStatsResponse)
+async def get_admin_stats(current_admin: User = Depends(get_current_admin)):
+    users_total = await User.objects.count()
+    users_admin = await User.objects.filter(role=UserRole.ADMIN.value).count()
+    users_teacher = await User.objects.filter(role=UserRole.TEACHER.value).count()
+    users_student = await User.objects.filter(role=UserRole.STUDENT.value).count()
+    groups_count = await Group.objects.count()
+    quizzes_count = await Quiz.objects.count()
+    pending_requests_count = await RegistrationRequest.objects.filter(
+        status=RegistrationStatus.PENDING.value
+    ).count()
+    unread_messages_count = await ContactMessage.objects.filter(is_read=False).count()
+    total_messages_count = await ContactMessage.objects.count()
+    recent_logs = await AuditLog.objects.order_by("-created_at").limit(10).all()
+    return AdminStatsResponse(
+        users_total=users_total,
+        users_admin=users_admin,
+        users_teacher=users_teacher,
+        users_student=users_student,
+        groups_count=groups_count,
+        quizzes_count=quizzes_count,
+        pending_requests_count=pending_requests_count,
+        unread_messages_count=unread_messages_count,
+        total_messages_count=total_messages_count,
+        recent_logs=[AuditLogResponse.model_validate(log) for log in recent_logs],
     )
 
 

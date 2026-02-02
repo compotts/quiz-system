@@ -217,7 +217,18 @@
   "admin": {
     "dashboardTitle": "Administratoriaus skydas",
     "welcome": "Sveiki, {{name}}",
-    "tabs": { "requests": "Paraiškos", "users": "Vartotojai", "messages": "Kreipimaisi", "logs": "Žurnalas", "settings": "Nustatymai" },
+    "tabs": { "overview": "Apžvalga", "requests": "Paraiškos", "users": "Vartotojai", "messages": "Kreipimaisi", "logs": "Žurnalas", "settings": "Nustatymai" },
+    "overview": {
+      "users": "Vartotojai",
+      "requests": "Paraiškos",
+      "pendingRequests": "laukia",
+      "messages": "Kreipimaisi",
+      "unreadOf": "neperskaitytų iš",
+      "groups": "Grupės",
+      "quizzes": "Viktorinos",
+      "recentActivity": "Paskutiniai veiksmai",
+      "viewAllLogs": "Visas žurnalas"
+    },
     "settingsTitle": "Sistemos nustatymai",
     "autoRegistration": "Auto-registracija",
     "autoRegistrationDesc": "Įjungus, nauji vartotojai registruojami iš karto be patvirtinimo. Išjungus, paraiškos patenka į skiltį „Paraiškos“ ir reikalauja patvirtinimo.",

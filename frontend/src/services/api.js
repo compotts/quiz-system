@@ -126,6 +126,10 @@ export const adminApi = {
     return request("/admin/settings");
   },
 
+  async getStats() {
+    return request("/admin/stats");
+  },
+
   async getAuditLogs({ page = 1, perPage = 50, action = null, resourceType = null, userId = null, search = null, searchField = null } = {}) {
     const params = new URLSearchParams();
     params.append("page", page);

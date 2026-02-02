@@ -201,7 +201,18 @@
   "admin": {
     "dashboardTitle": "Панель администратора",
     "welcome": "Добро пожаловать, {{name}}",
-    "tabs": { "requests": "Заявки", "users": "Пользователи", "messages": "Обращения", "logs": "Логи", "settings": "Настройки" },
+    "tabs": { "overview": "Обзор", "requests": "Заявки", "users": "Пользователи", "messages": "Обращения", "logs": "Логи", "settings": "Настройки" },
+    "overview": {
+      "users": "Пользователи",
+      "requests": "Заявки",
+      "pendingRequests": "на рассмотрении",
+      "messages": "Обращения",
+      "unreadOf": "непрочитанных из",
+      "groups": "Группы",
+      "quizzes": "Викторины",
+      "recentActivity": "Последние действия",
+      "viewAllLogs": "Все логи"
+    },
     "settingsTitle": "Настройки системы",
     "autoRegistration": "Авто-регистрация",
     "autoRegistrationDesc": "Если включено, новые пользователи регистрируются сразу без одобрения. Если выключено — заявки попадают в раздел «Заявки» и требуют одобрения.",

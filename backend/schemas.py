@@ -134,6 +134,19 @@ class AdminSettingsUpdate(BaseModel):
     contact_enabled: Optional[bool] = None
 
 
+class AdminStatsResponse(BaseModel):
+    users_total: int = 0
+    users_admin: int = 0
+    users_teacher: int = 0
+    users_student: int = 0
+    groups_count: int = 0
+    quizzes_count: int = 0
+    pending_requests_count: int = 0
+    unread_messages_count: int = 0
+    total_messages_count: int = 0
+    recent_logs: List["AuditLogResponse"] = []
+
+
 class AuditLogResponse(BaseModel):
     id: int
     created_at: datetime
@@ -148,6 +161,9 @@ class AuditLogResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+AdminStatsResponse.model_rebuild()
 
 
 class GroupCreate(BaseModel):
