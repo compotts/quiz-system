@@ -125,6 +125,8 @@ class AdminSettingsResponse(BaseModel):
     registration_enabled: bool = True
     maintenance_mode: bool = False
     contact_enabled: bool = True
+    home_banner_text: Optional[str] = None
+    home_banner_style: Optional[str] = None
 
 
 class AdminSettingsUpdate(BaseModel):
@@ -132,6 +134,8 @@ class AdminSettingsUpdate(BaseModel):
     registration_enabled: Optional[bool] = None
     maintenance_mode: Optional[bool] = None
     contact_enabled: Optional[bool] = None
+    home_banner_text: Optional[str] = None
+    home_banner_style: Optional[str] = None
 
 
 class AdminStatsResponse(BaseModel):

@@ -114,6 +114,8 @@ export default function AdminDashboard() {
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [contactEnabled, setContactEnabled] = useState(true);
+  const [homeBannerText, setHomeBannerText] = useState("");
+  const [homeBannerStyle, setHomeBannerStyle] = useState("warning");
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
@@ -319,6 +321,8 @@ export default function AdminDashboard() {
       setRegistrationEnabled(data.registration_enabled !== false);
       setMaintenanceMode(!!data.maintenance_mode);
       setContactEnabled(data.contact_enabled !== false);
+      setHomeBannerText(data.home_banner_text ?? "");
+      setHomeBannerStyle(data.home_banner_style ?? "warning");
     } catch (err) {
       setError(err.message || "ошибка загрузки настроек");
     } finally {
@@ -381,6 +385,23 @@ export default function AdminDashboard() {
       setContactEnabled(data.contact_enabled !== false);
     } catch (err) {
       setError(err.message || "ошибка сохранения настроек");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleSaveHomeBanner = async () => {
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const data = await adminApi.updateSettings({
+        home_banner_text: homeBannerText.trim() || null,
+        home_banner_style: homeBannerStyle,
+      });
+      setHomeBannerText(data.home_banner_text ?? "");
+      setHomeBannerStyle(data.home_banner_style ?? "warning");
+    } catch (err) {
+      setError(err.message || "ошибка сохранения баннера");
     } finally {
       setSettingsSaving(false);
     }
@@ -1695,6 +1716,54 @@ export default function AdminDashboard() {
                         />
                       </button>
                     </div>
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-4 space-y-3">
+                    <div>
+                      <p className="font-medium text-[var(--text)]">
+                        {t("admin.homeBannerTitle")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t("admin.homeBannerDesc")}
+                      </p>
+                    </div>
+                    <textarea
+                      value={homeBannerText}
+                      onChange={(e) => setHomeBannerText(e.target.value)}
+                      placeholder={t("admin.homeBannerPlaceholder")}
+                      rows={3}
+                      maxLength={500}
+                      className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                        <span className="text-[var(--text-muted)]">{t("admin.homeBannerStyle")}</span>
+                        <select
+                          value={homeBannerStyle}
+                          onChange={(e) => setHomeBannerStyle(e.target.value)}
+                          className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                        >
+                          <option value="warning">{t("admin.homeBannerStyleWarning")}</option>
+                          <option value="info">{t("admin.homeBannerStyleInfo")}</option>
+                          <option value="success">{t("admin.homeBannerStyleSuccess")}</option>
+                          <option value="neutral">{t("admin.homeBannerStyleNeutral")}</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleSaveHomeBanner}
+                        disabled={settingsSaving}
+                        className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] transition-colors hover:opacity-90 disabled:opacity-60"
+                      >
+                        {settingsSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {t("admin.homeBannerSave")}
+                      </button>
+                    </div>
+                    {homeBannerText.trim() && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {homeBannerText.length}/500
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

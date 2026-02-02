@@ -35,10 +35,25 @@ const COLOR_CLASSES = {
   cyan: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
 };
 
+const BANNER_STYLE_CLASSES = {
+  warning:
+    "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200",
+  info: "border-blue-500/30 bg-blue-500/10 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-200",
+  success:
+    "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200",
+  neutral:
+    "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+};
+
 export default function Home() {
   const { t } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [siteStatus, setSiteStatus] = useState({ maintenance_mode: false, registration_enabled: true });
+  const [siteStatus, setSiteStatus] = useState({
+    maintenance_mode: false,
+    registration_enabled: true,
+    home_banner_text: "",
+    home_banner_style: "warning",
+  });
   const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +63,8 @@ export default function Home() {
         setSiteStatus({
           maintenance_mode: !!data.maintenance_mode,
           registration_enabled: data.registration_enabled !== false,
+          home_banner_text: data.home_banner_text || "",
+          home_banner_style: data.home_banner_style || "warning",
         });
       })
       .catch(() => {})
@@ -57,9 +74,19 @@ export default function Home() {
   const maintenanceMode = siteStatus.maintenance_mode;
 
   if (!statusLoading && maintenanceMode) {
+    const bannerStyle = BANNER_STYLE_CLASSES[siteStatus.home_banner_style] || BANNER_STYLE_CLASSES.warning;
+    const showBannerInMaintenance = siteStatus.home_banner_text?.trim();
     return (
       <div className="flex flex-1 flex-col">
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} registrationEnabled={false} />
+        {showBannerInMaintenance && (
+          <div
+            className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
+            role="alert"
+          >
+            {siteStatus.home_banner_text}
+          </div>
+        )}
         <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-lg text-center">
             <div className="mb-6 flex justify-center">
@@ -87,6 +114,9 @@ export default function Home() {
     );
   }
 
+  const bannerStyle = BANNER_STYLE_CLASSES[siteStatus.home_banner_style] || BANNER_STYLE_CLASSES.warning;
+  const showBanner = !maintenanceMode && siteStatus.home_banner_text?.trim();
+
   return (
     <div className="flex flex-1 flex-col">
       <AuthModal
@@ -94,6 +124,15 @@ export default function Home() {
         onClose={() => setIsAuthModalOpen(false)}
         registrationEnabled={siteStatus.registration_enabled}
       />
+
+      {showBanner && (
+        <div
+          className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
+          role="alert"
+        >
+          {siteStatus.home_banner_text}
+        </div>
+      )}
 
       <section className="relative overflow-hidden px-4 pt-16 pb-24 sm:px-6 sm:pt-24 sm:pb-32 lg:px-8">
         <div className="absolute inset-0 bg-[var(--bg-elevated)]" />

@@ -38,17 +38,26 @@ async def is_contact_enabled() -> bool:
     return await _get_setting("contact_enabled", "true")
 
 
+async def _get_str_setting(key: str) -> str | None:
+    s = await SystemSetting.objects.get_or_none(key=key)
+    return s.value if s and s.value else None
+
+
 @router.get("/registration-settings")
 async def get_registration_settings():
     auto_enabled = await is_auto_registration_enabled()
     reg_enabled = await is_registration_enabled()
     maintenance = await is_maintenance_mode()
     contact = await is_contact_enabled()
+    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_style = await _get_str_setting("home_banner_style")
     return {
         "auto_registration_enabled": auto_enabled,
         "registration_enabled": reg_enabled,
         "maintenance_mode": maintenance,
         "contact_enabled": contact,
+        "home_banner_text": home_banner_text or "",
+        "home_banner_style": home_banner_style or "warning",
     }
 
 

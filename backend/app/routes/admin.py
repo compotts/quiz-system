@@ -79,17 +79,35 @@ async def _set_bool_setting(key: str, value: bool):
         await SystemSetting.objects.create(key=key, value=v)
 
 
+async def _get_str_setting(key: str, default: str | None = None) -> str | None:
+    s = await SystemSetting.objects.get_or_none(key=key)
+    return (s.value if s and s.value else None) or default
+
+
+async def _set_str_setting(key: str, value: str | None):
+    v = (value or "").strip() or ""
+    s = await SystemSetting.objects.get_or_none(key=key)
+    if s:
+        await s.update(value=v)
+    else:
+        await SystemSetting.objects.create(key=key, value=v)
+
+
 @router.get("/settings", response_model=AdminSettingsResponse)
 async def get_settings(current_admin: User = Depends(get_current_admin)):
     auto_reg = await _get_bool_setting("auto_registration_enabled", False)
     reg_enabled = await _get_bool_setting("registration_enabled", True)
     maintenance = await _get_bool_setting("maintenance_mode", False)
     contact = await _get_bool_setting("contact_enabled", True)
+    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_style = await _get_str_setting("home_banner_style")
     return AdminSettingsResponse(
         auto_registration_enabled=auto_reg,
         registration_enabled=reg_enabled,
         maintenance_mode=maintenance,
         contact_enabled=contact,
+        home_banner_text=home_banner_text or None,
+        home_banner_style=home_banner_style or None,
     )
 
 
@@ -107,10 +125,16 @@ async def update_settings(
         await _set_bool_setting("maintenance_mode", data.maintenance_mode)
     if data.contact_enabled is not None:
         await _set_bool_setting("contact_enabled", data.contact_enabled)
+    if data.home_banner_text is not None:
+        await _set_str_setting("home_banner_text", data.home_banner_text)
+    if data.home_banner_style is not None:
+        await _set_str_setting("home_banner_style", data.home_banner_style)
     auto_reg = await _get_bool_setting("auto_registration_enabled", False)
     reg_enabled = await _get_bool_setting("registration_enabled", True)
     maintenance = await _get_bool_setting("maintenance_mode", False)
     contact = await _get_bool_setting("contact_enabled", True)
+    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_style = await _get_str_setting("home_banner_style")
     await log_audit(
         "settings_updated",
         user_id=current_admin.id,
@@ -129,6 +153,8 @@ async def update_settings(
         registration_enabled=reg_enabled,
         maintenance_mode=maintenance,
         contact_enabled=contact,
+        home_banner_text=home_banner_text or None,
+        home_banner_style=home_banner_style or None,
     )
 
 
