@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import lifespan
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from config import settings
+from fastapi.responses import HTMLResponse
 
+from config import settings
 from app.database.models.user import User
 from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
+
 
 app = FastAPI(
     title="Quizz System API",
@@ -37,18 +37,9 @@ app.include_router(blog.router)
 
 @app.get("/")
 async def root():
-    return {
-        "message": "quiz system API",
-        "version": str(settings.version)
-    }
+    return {f"{settings.version}"}
 
 
-@app.get("/healtz")
+@app.get("/health")
 async def health_check():
-    count = await User.objects.count()
-    return {
-        "status": "ok",
-        "users_count": count,
-        "message": "API is running",
-        "timestamp": datetime.now(ZoneInfo("Europe/Vilnius")).isoformat()
-    }
+    return {"ok": True}
