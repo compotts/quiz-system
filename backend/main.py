@@ -1,10 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import lifespan
-from fastapi.responses import HTMLResponse
 
 from config import settings
-from app.database.models.user import User
 from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
 
 
