@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Wrench, LogIn } from "lucide-react";
+import { Wrench, LogIn, Moon, Sun } from "lucide-react";
 import AuthModal from "../components/AuthModal.jsx";
+import { useTheme } from "../hooks/useTheme.js";
+import { useLanguage } from "../hooks/useLanguage.js";
 
 const BANNER_STYLE_CLASSES = {
   warning:
@@ -15,12 +17,45 @@ const BANNER_STYLE_CLASSES = {
 export default function MaintenancePage({ siteStatus, backendUnavailable, onLoginSuccess }) {
   const { t } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { isDark, toggle } = useTheme();
+  const { lang, setLang, langs } = useLanguage();
   const bannerStyle =
     BANNER_STYLE_CLASSES[siteStatus?.home_banner_style] || BANNER_STYLE_CLASSES.warning;
   const showBanner = !backendUnavailable && siteStatus?.home_banner_text?.trim();
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg)]">
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        <div
+          className="flex rounded-xl border border-[var(--border)] bg-[var(--surface)] p-0.5"
+          role="group"
+          aria-label={t("header.lang")}
+        >
+          {langs.map((l) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => setLang(l.code)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 ${
+                lang === l.code
+                  ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+          aria-label={isDark ? t("header.themeLight") : t("header.themeDark")}
+        >
+          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+      </div>
+
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
