@@ -25,16 +25,9 @@ import {
 } from "lucide-react";
 import { authApi, groupsApi, quizzesApi, attemptsApi } from "../services/api.js";
 
-const TABS = [
-  { id: "assignments", icon: ClipboardList, label: "Задания" },
-  { id: "grading", icon: BarChart3, label: "Оценивание" },
-  { id: "members", icon: Users, label: "Участники" },
-  { id: "settings", icon: Settings, label: "Настройки" },
-];
-
-function formatDate(dateString) {
+function formatDate(dateString, locale = "ru-RU") {
   if (!dateString) return "—";
-  return new Date(dateString).toLocaleString("ru-RU", {
+  return new Date(dateString).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -44,7 +37,16 @@ function formatDate(dateString) {
 }
 
 export default function TeacherGroupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  
+  const TABS = [
+    { id: "assignments", icon: ClipboardList, label: t("teacher.groupPage.tabs.assignments") },
+    { id: "grading", icon: BarChart3, label: t("teacher.groupPage.tabs.grading") },
+    { id: "members", icon: Users, label: t("teacher.groupPage.tabs.members") },
+    { id: "settings", icon: Settings, label: t("teacher.groupPage.tabs.settings") },
+  ];
+  
+  const locale = i18n.language === "lt" ? "lt-LT" : i18n.language === "en" ? "en-US" : "ru-RU";
   const navigate = useNavigate();
   const { groupId } = useParams();
   const gid = Number(groupId);
@@ -95,7 +97,7 @@ export default function TeacherGroupPage() {
       setGroup(g);
       setSettingsForm({ name: g.name, subject: g.subject || "", color: g.color || "#6366f1" });
     } catch (err) {
-      setError(err.message || "Ошибка загрузки группы");
+      setError(err.message || t("common.errorGeneric"));
     }
   };
 
@@ -104,7 +106,7 @@ export default function TeacherGroupPage() {
       const data = await quizzesApi.getQuizzes(gid);
       setQuizzes(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки заданий");
+      setError(err.message || t("teacher.quizzes.errorLoad"));
     }
   };
 
@@ -113,7 +115,7 @@ export default function TeacherGroupPage() {
       const data = await groupsApi.getMembers(gid);
       setMembers(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки участников");
+      setError(err.message || t("teacher.groups.errorMembers"));
     }
   };
 
@@ -144,7 +146,7 @@ export default function TeacherGroupPage() {
       await groupsApi.removeMember(gid, userId);
       await loadMembers();
     } catch (err) {
-      setError(err.message || "Ошибка удаления участника");
+      setError(err.message || t("teacher.groups.errorRemoveMember"));
     } finally {
       setProcessingMember(null);
     }
@@ -162,7 +164,7 @@ export default function TeacherGroupPage() {
       await loadGroup();
       setError("");
     } catch (err) {
-      setError(err.message || "Ошибка сохранения");
+      setError(err.message || t("teacher.groups.errorUpdate"));
     } finally {
       setSavingSettings(false);
     }
@@ -174,7 +176,7 @@ export default function TeacherGroupPage() {
       await groupsApi.deleteGroup(gid);
       navigate("/dashboard/teacher");
     } catch (err) {
-      setError(err.message || "Ошибка удаления группы");
+      setError(err.message || t("teacher.groups.errorDelete"));
       setDeleting(false);
     }
   };
@@ -206,7 +208,7 @@ export default function TeacherGroupPage() {
       });
       await loadQuizzes();
     } catch (err) {
-      setError(err.message || "Ошибка создания задания");
+      setError(err.message || t("teacher.quizzes.errorCreate"));
     } finally {
       setCreatingQuiz(false);
     }
@@ -236,7 +238,7 @@ export default function TeacherGroupPage() {
                 className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Назад к группам
+                {t("teacher.groupPage.backToGroups")}
               </button>
               <div className="mt-2 flex items-center gap-3">
                 <div
@@ -248,14 +250,14 @@ export default function TeacherGroupPage() {
                 </h1>
               </div>
               <div className="mt-1 flex items-center gap-2 text-sm text-[var(--text-muted)]">
-                <span>Предмет: {group?.subject || "—"}</span>
+                <span>{t("teacher.groupPage.groupSubject")}: {group?.subject || "—"}</span>
                 <span>·</span>
-                <span>Код: {group?.code}</span>
-                <button onClick={copyCode} className="rounded p-1 hover:bg-[var(--border)]" title="Скопировать код">
+                <span>{t("teacher.groups.code")}: {group?.code}</span>
+                <button onClick={copyCode} className="rounded p-1 hover:bg-[var(--border)]" title={t("teacher.groups.copyCode")}>
                   <Copy className="h-3.5 w-3.5" />
                 </button>
                 <span>·</span>
-                <span>Участников: {group?.member_count ?? 0}</span>
+                <span>{t("teacher.groups.members")}: {group?.member_count ?? 0}</span>
               </div>
             </div>
             <button
@@ -312,21 +314,21 @@ export default function TeacherGroupPage() {
                       onChange={(e) => setAssignmentFilter(e.target.value)}
                       className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
                     >
-                      <option value="active">Активные</option>
-                      <option value="expired">Просроченные</option>
+                      <option value="active">{t("teacher.groupPage.filter.active")}</option>
+                      <option value="expired">{t("teacher.groupPage.filter.overdue")}</option>
                     </select>
                     <button
                       onClick={() => setShowQuizModal(true)}
                       className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
                     >
                       <Plus className="h-4 w-4" />
-                      Создать задание
+                      {t("teacher.groupPage.createQuiz")}
                     </button>
                   </div>
 
                   {filteredQuizzes.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      {assignmentFilter === "active" ? "Нет активных заданий" : "Нет просроченных заданий"}
+                      {t("teacher.groupPage.noAssignments")}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -340,15 +342,15 @@ export default function TeacherGroupPage() {
                             <div>
                               <div className="font-medium text-[var(--text)]">{q.title}</div>
                               <div className="mt-1 text-sm text-[var(--text-muted)]">
-                                Вопросов: {q.question_count ?? 0}
+                                {t("teacher.quizzes.questions")}: {q.question_count ?? 0}
                                 {" · "}
-                                {q.manual_close ? "Пока не завершит учитель" : `Доступно до: ${formatDate(q.available_until)}`}
+                                {q.manual_close ? t("teacher.groupPage.manualClose") : `${t("teacher.groupPage.availableUntil")}: ${formatDate(q.available_until, locale)}`}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               {q.is_expired && (
                                 <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                  Истекло
+                                  {t("teacher.groupPage.expired")}
                                 </span>
                               )}
                             </div>
@@ -364,7 +366,7 @@ export default function TeacherGroupPage() {
                 <div>
                   {members.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      В группе нет участников
+                      {t("teacher.groupPage.noMembers")}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -385,7 +387,7 @@ export default function TeacherGroupPage() {
                             onClick={() => handleRemoveMember(m.id)}
                             disabled={processingMember === m.id}
                             className="rounded p-1.5 text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
-                            title="Удалить из группы"
+                            title={t("teacher.groupPage.removeMember")}
                           >
                             {processingMember === m.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -402,7 +404,7 @@ export default function TeacherGroupPage() {
 
               {activeTab === "grading" && (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                  Выберите задание для просмотра оценок
+                  {t("teacher.results.selectQuiz")}
                   <div className="mt-4 space-y-2">
                     {quizzes.map((q) => (
                       <button
@@ -420,10 +422,10 @@ export default function TeacherGroupPage() {
               {activeTab === "settings" && (
                 <div className="space-y-6">
                   <form onSubmit={handleSaveSettings} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                    <h3 className="text-lg font-medium text-[var(--text)]">Настройки группы</h3>
+                    <h3 className="text-lg font-medium text-[var(--text)]">{t("teacher.groupPage.tabs.settings")}</h3>
                     <div className="mt-4 space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-[var(--text)]">Название</label>
+                        <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.groupName")}</label>
                         <input
                           type="text"
                           value={settingsForm.name}
@@ -433,7 +435,7 @@ export default function TeacherGroupPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-[var(--text)]">Предмет</label>
+                        <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.groupSubject")}</label>
                         <input
                           type="text"
                           value={settingsForm.subject}
@@ -442,7 +444,7 @@ export default function TeacherGroupPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-[var(--text)]">Цвет</label>
+                        <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.groupColor")}</label>
                         <div className="mt-1 flex items-center gap-3">
                           <input
                             type="color"
@@ -466,21 +468,21 @@ export default function TeacherGroupPage() {
                       className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                     >
                       {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      Сохранить
+                      {t("teacher.groupPage.saveChanges")}
                     </button>
                   </form>
 
                   <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-                    <h3 className="text-lg font-medium text-red-600 dark:text-red-400">Опасная зона</h3>
+                    <h3 className="text-lg font-medium text-red-600 dark:text-red-400">{t("teacher.groupPage.deleteGroup")}</h3>
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
-                      Удаление группы удалит все задания, вопросы и результаты. Это действие нельзя отменить.
+                      {t("teacher.groupPage.confirmDeleteGroup")}
                     </p>
                     {!confirmDelete ? (
                       <button
                         onClick={() => setConfirmDelete(true)}
                         className="mt-4 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 dark:text-red-400"
                       >
-                        Удалить группу
+                        {t("teacher.groupPage.deleteGroup")}
                       </button>
                     ) : (
                       <div className="mt-4 flex items-center gap-2">
@@ -490,13 +492,13 @@ export default function TeacherGroupPage() {
                           className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                         >
                           {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                          Да, удалить
+                          {t("common.yes")}, {t("common.delete")}
                         </button>
                         <button
                           onClick={() => setConfirmDelete(false)}
                           className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                         >
-                          Отмена
+                          {t("common.cancel")}
                         </button>
                       </div>
                     )}
@@ -512,14 +514,14 @@ export default function TeacherGroupPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Создать задание</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.groupPage.createQuiz")}</h2>
               <button onClick={() => setShowQuizModal(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreateQuiz} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Название</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.quizTitle")}</label>
                 <input
                   type="text"
                   value={quizForm.title}
@@ -529,7 +531,7 @@ export default function TeacherGroupPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Описание</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.quizDescription")}</label>
                 <textarea
                   value={quizForm.description}
                   onChange={(e) => setQuizForm((f) => ({ ...f, description: e.target.value }))}
@@ -544,12 +546,12 @@ export default function TeacherGroupPage() {
                     checked={quizForm.manual_close}
                     onChange={(e) => setQuizForm((f) => ({ ...f, manual_close: e.target.checked }))}
                   />
-                  Пока не завершу (вместо даты)
+                  {t("teacher.groupPage.manualClose")}
                 </label>
               </div>
               {!quizForm.manual_close && (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)]">Доступно до</label>
+                  <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groupPage.availableUntil")}</label>
                   <input
                     type="datetime-local"
                     value={quizForm.available_until}
@@ -565,7 +567,7 @@ export default function TeacherGroupPage() {
                     checked={quizForm.has_quiz_time_limit}
                     onChange={(e) => setQuizForm((f) => ({ ...f, has_quiz_time_limit: e.target.checked }))}
                   />
-                  Лимит времени на квиз
+                  {t("teacher.groupPage.quizTimeLimit")}
                 </label>
                 {quizForm.has_quiz_time_limit && (
                   <input
@@ -573,7 +575,6 @@ export default function TeacherGroupPage() {
                     min={1}
                     value={quizForm.time_limit ?? ""}
                     onChange={(e) => setQuizForm((f) => ({ ...f, time_limit: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Минуты"
                     className="mt-2 w-24 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text)]"
                   />
                 )}
@@ -585,7 +586,7 @@ export default function TeacherGroupPage() {
                     checked={quizForm.allow_show_answers}
                     onChange={(e) => setQuizForm((f) => ({ ...f, allow_show_answers: e.target.checked }))}
                   />
-                  Разрешить показ правильных ответов ученикам
+                  {t("teacher.groupPage.allowShowAnswers")}
                 </label>
               </div>
               <div className="flex gap-2 pt-2">
@@ -595,14 +596,14 @@ export default function TeacherGroupPage() {
                   className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                 >
                   {creatingQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Создать
+                  {t("teacher.groupPage.create")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowQuizModal(false)}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
               </div>
             </form>

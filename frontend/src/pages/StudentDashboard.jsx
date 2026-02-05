@@ -127,7 +127,7 @@ export default function StudentDashboard() {
                 className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)]/50 p-8 text-[var(--text-muted)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/5"
               >
                 <Plus className="h-8 w-8" />
-                <span className="text-sm font-medium">Вступить в группу</span>
+                <span className="text-sm font-medium">{t("student.groups.join")}</span>
               </button>
 
               {groups.map((g) => (
@@ -149,12 +149,12 @@ export default function StudentDashboard() {
                     
                     <div className="mt-2 flex items-center gap-2 text-sm text-[var(--text-muted)]">
                       <User className="h-4 w-4" />
-                      {g.teacher_name || `Учитель #${g.teacher_id}`}
+                      {g.teacher_name || `#${g.teacher_id}`}
                     </div>
                     
                     <div className="mt-1 flex items-center gap-2 text-sm text-[var(--text-muted)]">
                       <BookOpen className="h-4 w-4" />
-                      {g.subject || "Без предмета"}
+                      {g.subject || "—"}
                     </div>
                     
                     <div className="my-3 border-t border-[var(--border)]" />
@@ -163,11 +163,11 @@ export default function StudentDashboard() {
                       <span className="text-sm text-[var(--text-muted)]">
                         {g.incomplete_assignments > 0 ? (
                           <span className="text-yellow-600 dark:text-yellow-400 font-medium">
-                            Невыполненных заданий: {g.incomplete_assignments}
+                            {t("student.groups.incompleteAssignments")}: {g.incomplete_assignments}
                           </span>
                         ) : (
                           <span className="text-green-600 dark:text-green-400">
-                            Нет невыполненных заданий
+                            {t("student.groups.noIncomplete")}
                           </span>
                         )}
                       </span>
@@ -185,7 +185,7 @@ export default function StudentDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Вступить в группу</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.groups.join")}</h2>
               <button
                 onClick={() => setShowJoinModal(false)}
                 className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]"
@@ -196,7 +196,7 @@ export default function StudentDashboard() {
             
             <form onSubmit={handleJoin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Код группы</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groups.code")}</label>
                 <input
                   type="text"
                   value={joinCode}
@@ -207,7 +207,7 @@ export default function StudentDashboard() {
                   autoFocus
                 />
                 <p className="mt-2 text-xs text-[var(--text-muted)]">
-                  Введите 6-значный код, который дал вам учитель
+                  {t("student.groups.joinPlaceholder")}
                 </p>
               </div>
               
@@ -217,14 +217,14 @@ export default function StudentDashboard() {
                   disabled={joining || joinCode.replace(/\D/g, "").length !== 6}
                   className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                 >
-                  {joining ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Вступить"}
+                  {joining ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("student.groups.joinSubmit")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowJoinModal(false)}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
               </div>
             </form>

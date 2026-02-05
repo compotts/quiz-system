@@ -4,14 +4,9 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, Send, X } from "lucide-react";
 import { authApi, attemptsApi, groupsApi, quizzesApi } from "../services/api.js";
 
-const TABS = [
-  { id: "assignments", icon: ClipboardList, label: "Задания" },
-  { id: "grades", icon: BarChart3, label: "Оценивание" },
-];
-
-function formatDate(dateString) {
+function formatDate(dateString, locale = "ru-RU") {
   if (!dateString) return "—";
-  return new Date(dateString).toLocaleString("ru-RU", {
+  return new Date(dateString).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -21,10 +16,15 @@ function formatDate(dateString) {
 }
 
 export default function StudentGroupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { groupId } = useParams();
   const gid = Number(groupId);
+
+  const TABS = [
+    { id: "assignments", icon: ClipboardList, label: t("student.groupPage.tabs.assignments") },
+    { id: "grades", icon: BarChart3, label: t("student.groupPage.tabs.grades") },
+  ];
 
   const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState("");
@@ -32,18 +32,18 @@ export default function StudentGroupPage() {
 
   const [group, setGroup] = useState(null);
   const [tab, setTab] = useState("assignments");
-  const [assignmentFilter, setAssignmentFilter] = useState("incomplete"); 
+  const [assignmentFilter, setAssignmentFilter] = useState("incomplete");
 
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
 
-  const [runState, setRunState] = useState(null); 
+  const [runState, setRunState] = useState(null);
   const [runQuiz, setRunQuiz] = useState(null);
   const [runAttemptId, setRunAttemptId] = useState(null);
   const [runQuestions, setRunQuestions] = useState([]);
   const [runQuestionsOrder, setRunQuestionsOrder] = useState([]);
   const [runAnswered, setRunAnswered] = useState([]);
-  const [runAnswers, setRunAnswers] = useState({}); 
+  const [runAnswers, setRunAnswers] = useState({});
   const [runSubmitting, setRunSubmitting] = useState({});
   const [runCompleting, setRunCompleting] = useState(false);
   const [runResults, setRunResults] = useState(null);
@@ -86,7 +86,7 @@ export default function StudentGroupPage() {
       setQuizzes(Array.isArray(q) ? q : []);
       setAttempts(Array.isArray(a) ? a : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки данных");
+      setError(err.message || t("common.errorGeneric"));
     } finally {
       setLoading(false);
     }
@@ -258,6 +258,8 @@ export default function StudentGroupPage() {
     );
   }
 
+  const locale = i18n.language === "lt" ? "lt-LT" : i18n.language === "en" ? "en-US" : "ru-RU";
+
   return (
     <div className="flex flex-1 flex-col bg-[var(--bg)]">
       {!showQuizRun && (
@@ -271,7 +273,7 @@ export default function StudentGroupPage() {
                   className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Назад к группам
+                  {t("student.groups.backToGroups")}
                 </button>
                 <div className="mt-2 flex items-center gap-3">
                   <div
@@ -279,13 +281,13 @@ export default function StudentGroupPage() {
                     style={{ backgroundColor: group?.color || "#6366f1" }}
                   />
                   <h1 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
-                    {group?.name || "Группа"}
+                    {group?.name || t("teacher.groups.create")}
                   </h1>
                 </div>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Преподаватель: {group?.teacher_name || (group?.teacher_id ? `#${group.teacher_id}` : "—")}
+                  {t("student.groups.teacher")}: {group?.teacher_name || (group?.teacher_id ? `#${group.teacher_id}` : "—")}
                   {" · "}
-                  Предмет: {group?.subject || "—"}
+                  {t("student.groups.subject")}: {group?.subject || "—"}
                 </p>
               </div>
               <button
@@ -300,18 +302,18 @@ export default function StudentGroupPage() {
             </div>
 
             <div className="mt-4 flex gap-2">
-              {TABS.map((t) => (
+              {TABS.map((tabItem) => (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={tabItem.id}
+                  onClick={() => setTab(tabItem.id)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
-                    tab === t.id
+                    tab === tabItem.id
                       ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
                       : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                   }`}
                 >
-                  <t.icon className="h-4 w-4" />
-                  {t.label}
+                  <tabItem.icon className="h-4 w-4" />
+                  {tabItem.label}
                 </button>
               ))}
             </div>
@@ -337,7 +339,7 @@ export default function StudentGroupPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--text)]">{runQuiz?.title}</h2>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    Отвечено: {runAnswered.length} / {runQuestions.length}
+                    {t("student.groupPage.answered")}: {runAnswered.length} / {runQuestions.length}
                   </p>
                 </div>
                 <button
@@ -345,13 +347,13 @@ export default function StudentGroupPage() {
                   onClick={exitQuizRun}
                   className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                 >
-                  {runState === "results" ? "Закрыть" : "Выйти"}
+                  {runState === "results" ? t("student.groupPage.close") : t("student.groupPage.exit")}
                 </button>
               </div>
 
               {runState === "results" && runResults && (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text)]">Результаты</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h3>
                   <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
                     {runResults.attempt?.score} / {runResults.attempt?.max_score}
                     <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
@@ -368,7 +370,7 @@ export default function StudentGroupPage() {
                           }`}
                         >
                           {a.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                          {a.points_earned} / {a.max_points} баллов
+                          {a.points_earned} / {a.max_points} {t("student.groupPage.points")}
                         </p>
                       </div>
                     ))}
@@ -403,16 +405,16 @@ export default function StudentGroupPage() {
                               <span className="font-medium text-[var(--text)]">{q.text}</span>
                             </div>
                             <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                              <span>{q.points} баллов</span>
+                              <span>{q.points} {t("student.groupPage.points")}</span>
                               {inputType === "select" && isMultiple && (
                                 <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5">
-                                  Несколько вариантов ответа
+                                  {t("student.groupPage.multipleChoice")}
                                 </span>
                               )}
                               {q.has_time_limit && (
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {q.time_limit}с
+                                  {q.time_limit}s
                                 </span>
                               )}
                             </div>
@@ -464,7 +466,7 @@ export default function StudentGroupPage() {
                                 type={inputType === "number" ? "number" : "text"}
                                 value={answer.text || ""}
                                 onChange={(e) => handleAnswerChange(q.id, e.target.value, true)}
-                                placeholder={inputType === "number" ? "Введите число" : "Введите ответ"}
+                                placeholder={inputType === "number" ? t("student.groupPage.enterNumber") : t("student.groupPage.enterAnswer")}
                                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-[var(--text)]"
                               />
                             )}
@@ -479,7 +481,7 @@ export default function StudentGroupPage() {
                               ) : (
                                 <Send className="h-4 w-4" />
                               )}
-                              Ответить
+                              {t("student.groupPage.answer")}
                             </button>
                           </div>
                         )}
@@ -498,7 +500,7 @@ export default function StudentGroupPage() {
                       ) : (
                         <CheckCircle className="h-4 w-4" />
                       )}
-                      Завершить задание
+                      {t("student.groupPage.completeAssignment")}
                     </button>
                   </div>
                 </div>
@@ -518,14 +520,14 @@ export default function StudentGroupPage() {
                       onChange={(e) => setAssignmentFilter(e.target.value)}
                       className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
                     >
-                      <option value="incomplete">Невыполненные</option>
-                      <option value="completed">Выполненные</option>
+                      <option value="incomplete">{t("student.groupPage.filter.incomplete")}</option>
+                      <option value="completed">{t("student.groupPage.filter.completed")}</option>
                     </select>
                   </div>
 
                   {filteredQuizzes.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      {assignmentFilter === "incomplete" ? "Нет активных заданий" : "Нет выполненных заданий"}
+                      {assignmentFilter === "incomplete" ? t("student.groupPage.noActiveAssignments") : t("student.groupPage.noCompletedAssignments")}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -538,15 +540,15 @@ export default function StudentGroupPage() {
                             <div className="font-medium text-[var(--text)]">{q.title}</div>
                             <div className="mt-1 text-sm text-[var(--text-muted)]">
                               {q.manual_close ? (
-                                "Пока не завершит учитель"
+                                t("student.groupPage.untilTeacherCloses")
                               ) : (
-                                <>Доступно до: {formatDate(q.available_until)}</>
+                                <>{t("student.groupPage.availableUntil")}: {formatDate(q.available_until, locale)}</>
                               )}
                             </div>
                           </div>
                           {q._completed ? (
                             <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-600 dark:text-green-400">
-                              Выполнено
+                              {t("student.groupPage.completed")}
                             </span>
                           ) : (
                             <button
@@ -554,7 +556,7 @@ export default function StudentGroupPage() {
                               onClick={() => startOrContinueQuiz(q)}
                               className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
                             >
-                              Начать
+                              {t("student.groupPage.start")}
                               <ChevronRight className="h-4 w-4" />
                             </button>
                           )}
@@ -567,7 +569,7 @@ export default function StudentGroupPage() {
                 <div>
                   {attemptsInGroup.filter((a) => a.is_completed).length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      Нет завершённых заданий
+                      {t("student.groupPage.noCompletedAttempts")}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -580,10 +582,10 @@ export default function StudentGroupPage() {
                           >
                             <div>
                               <div className="font-medium text-[var(--text)]">
-                                {quizTitleMap[a.quiz_id] ?? `Задание #${a.quiz_id}`}
+                                {quizTitleMap[a.quiz_id] ?? `#${a.quiz_id}`}
                               </div>
                               <div className="mt-1 text-sm text-[var(--text-muted)]">
-                                {formatDate(a.completed_at)}
+                                {formatDate(a.completed_at, locale)}
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -598,7 +600,7 @@ export default function StudentGroupPage() {
                                 onClick={() => loadAttemptDetail(a.id)}
                                 className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                               >
-                                Подробнее
+                                {t("student.groupPage.details")}
                               </button>
                             </div>
                           </div>
@@ -613,7 +615,7 @@ export default function StudentGroupPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
                   <div className="my-8 w-full max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-[var(--text)]">Результаты</h2>
+                      <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h2>
                       <button
                         onClick={() => {
                           setAttemptDetailId(null);
@@ -629,7 +631,7 @@ export default function StudentGroupPage() {
                     ) : (
                       <div className="space-y-4">
                         <p className="text-sm text-[var(--text-muted)]">
-                          Оценка: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
+                          {t("student.groupPage.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
                           {Math.round(attemptDetail.percentage ?? 0)}%)
                         </p>
                         {(attemptDetail.answers || []).map((ans, i) => (
@@ -641,7 +643,7 @@ export default function StudentGroupPage() {
                               }`}
                             >
                               {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                              {ans.points_earned} / {ans.max_points} баллов
+                              {ans.points_earned} / {ans.max_points} {t("student.groupPage.points")}
                             </p>
                           </div>
                         ))}

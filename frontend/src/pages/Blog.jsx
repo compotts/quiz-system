@@ -130,7 +130,7 @@ export default function Blog() {
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-sm text-yellow-600 dark:text-yellow-400">
         <AlertCircle className="h-5 w-5 shrink-0" />
-        <p>Рекомендуется обновить страницу через несколько секунд после входа для корректного отображения черновиков</p>
+        <p>{t("blog.refreshDraftsHint")}</p>
       </div>
 
       <div className="mb-8 flex items-center justify-between">

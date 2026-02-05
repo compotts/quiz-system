@@ -23,20 +23,6 @@ import {
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
-const TABS = [
-  { id: "questions", icon: HelpCircle, label: "Вопросы" },
-  { id: "grading", icon: BarChart3, label: "Оценивание" },
-  { id: "settings", icon: Settings, label: "Настройки" },
-];
-
-const STATUS_LABELS = {
-  not_opened: { label: "Не открыт", color: "text-gray-500" },
-  opened: { label: "Открыт, не начат", color: "text-yellow-600 dark:text-yellow-400" },
-  in_progress: { label: "Выполняется", color: "text-blue-600 dark:text-blue-400" },
-  completed: { label: "Выполнено", color: "text-green-600 dark:text-green-400" },
-  expired: { label: "Не выполнено", color: "text-red-600 dark:text-red-400" },
-};
-
 function formatTime(seconds) {
   if (seconds == null) return "—";
   const m = Math.floor(seconds / 60);
@@ -46,6 +32,20 @@ function formatTime(seconds) {
 
 export default function TeacherQuizPage() {
   const { t } = useTranslation();
+  
+  const TABS = [
+    { id: "questions", icon: HelpCircle, label: t("teacher.quizPage.tabs.questions") },
+    { id: "grading", icon: BarChart3, label: t("teacher.quizPage.tabs.grading") },
+    { id: "settings", icon: Settings, label: t("teacher.quizPage.tabs.settings") },
+  ];
+
+  const STATUS_LABELS = {
+    not_opened: { label: t("teacher.quizPage.statusNotOpened"), color: "text-gray-500" },
+    opened: { label: t("teacher.quizPage.statusOpened"), color: "text-yellow-600 dark:text-yellow-400" },
+    in_progress: { label: t("teacher.quizPage.statusInProgress"), color: "text-blue-600 dark:text-blue-400" },
+    completed: { label: t("teacher.quizPage.statusCompleted"), color: "text-green-600 dark:text-green-400" },
+    expired: { label: t("teacher.quizPage.statusExpired"), color: "text-red-600 dark:text-red-400" },
+  };
   const navigate = useNavigate();
   const { quizId } = useParams();
   const qid = Number(quizId);
@@ -106,7 +106,7 @@ export default function TeacherQuizPage() {
         available_until: q.available_until ? new Date(q.available_until).toISOString().slice(0, 16) : "",
       });
     } catch (err) {
-      setError(err.message || "Ошибка загрузки задания");
+      setError(err.message || t("teacher.quizzes.errorLoad"));
     }
   };
 
@@ -115,7 +115,7 @@ export default function TeacherQuizPage() {
       const data = await quizzesApi.getQuestions(qid);
       setQuestions(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки вопросов");
+      setError(err.message || t("teacher.quizzes.errorQuestions"));
     }
   };
 
@@ -124,7 +124,7 @@ export default function TeacherQuizPage() {
       const data = await quizzesApi.getStudentStatuses(qid);
       setStudentStatuses(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Ошибка загрузки статусов");
+      setError(err.message || t("teacher.results.errorLoad"));
     }
   };
 
@@ -151,7 +151,7 @@ export default function TeacherQuizPage() {
       });
       await loadQuiz();
     } catch (err) {
-      setError(err.message || "Ошибка сохранения");
+      setError(err.message || t("teacher.quizzes.errorUpdate"));
     } finally {
       setSavingSettings(false);
     }
@@ -163,7 +163,7 @@ export default function TeacherQuizPage() {
       await quizzesApi.closeQuizEarly(qid);
       await loadQuiz();
     } catch (err) {
-      setError(err.message || "Ошибка закрытия задания");
+      setError(err.message || t("common.errorGeneric"));
     } finally {
       setClosingQuiz(false);
     }
@@ -179,7 +179,7 @@ export default function TeacherQuizPage() {
       setReissueDate("");
       await loadStudentStatuses();
     } catch (err) {
-      setError(err.message || "Ошибка перевыпуска");
+      setError(err.message || t("common.errorGeneric"));
     } finally {
       setReissuing(false);
     }
@@ -248,7 +248,7 @@ export default function TeacherQuizPage() {
       });
       await loadQuestions();
     } catch (err) {
-      setError(err.message || "Ошибка создания вопроса");
+      setError(err.message || t("teacher.quizzes.errorQuestionCreate"));
     } finally {
       setCreatingQuestion(false);
     }
@@ -261,7 +261,7 @@ export default function TeacherQuizPage() {
       setConfirmDeleteQuestion(null);
       await loadQuestions();
     } catch (err) {
-      setError(err.message || "Ошибка удаления вопроса");
+      setError(err.message || t("teacher.quizzes.errorQuestionDelete"));
     }
   };
 
@@ -291,7 +291,7 @@ export default function TeacherQuizPage() {
                 className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Назад к группе
+                {t("teacher.quizPage.backToGroup")}
               </button>
               <h1 className="mt-2 text-xl font-semibold text-[var(--text)] sm:text-2xl">
                 {quiz?.title || "Задание"}
@@ -355,7 +355,7 @@ export default function TeacherQuizPage() {
                       className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
                     >
                       <Plus className="h-4 w-4" />
-                      Добавить вопрос
+                      {t("teacher.quizPage.addQuestion")}
                     </button>
                     <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                       <input
@@ -363,13 +363,13 @@ export default function TeacherQuizPage() {
                         checked={showCorrectAnswers}
                         onChange={(e) => setShowCorrectAnswers(e.target.checked)}
                       />
-                      Показать правильные ответы
+                      {t("teacher.quizPage.showCorrectAnswers")}
                     </label>
                   </div>
 
                   {questions.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      Вопросов пока нет
+                      {t("teacher.quizPage.noQuestions")}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -384,10 +384,10 @@ export default function TeacherQuizPage() {
                                 <span className="font-medium text-[var(--text)]">{q.text}</span>
                               </div>
                               <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-muted)]">
-                                <span>Баллов: {q.points}</span>
+                                <span>{t("teacher.quizPage.points")}: {q.points}</span>
                                 <span>·</span>
-                                <span>Тип: {q.input_type === "select" ? (q.is_multiple_choice ? "Несколько ответов" : "Один ответ") : q.input_type === "text" ? "Текст" : "Число"}</span>
-                                {q.has_time_limit && <><span>·</span><span>Лимит: {q.time_limit}с</span></>}
+                                <span>{t("teacher.quizPage.inputType")}: {q.input_type === "select" ? (q.is_multiple_choice ? t("teacher.quizzes.quizTypeMultiple") : t("teacher.quizzes.quizTypeSingle")) : q.input_type === "text" ? t("teacher.quizPage.inputTypeText") : t("teacher.quizPage.inputTypeNumber")}</span>
+                                {q.has_time_limit && <><span>·</span><span>{q.time_limit}s</span></>}
                               </div>
                               {q.input_type === "select" && q.options?.length > 0 && (
                                 <ul className="mt-3 space-y-1">
@@ -408,7 +408,7 @@ export default function TeacherQuizPage() {
                               )}
                               {showCorrectAnswers && q.input_type !== "select" && q.correct_text_answer && (
                                 <div className="mt-2 text-sm text-green-600 dark:text-green-400">
-                                  Правильный ответ: {q.correct_text_answer}
+                                  {t("teacher.quizPage.correctAnswer")}: {q.correct_text_answer}
                                 </div>
                               )}
                             </div>
@@ -434,24 +434,24 @@ export default function TeacherQuizPage() {
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                     >
                       <RotateCcw className="h-4 w-4" />
-                      Перевыпустить
+                      {t("teacher.quizPage.reissue")}
                     </button>
                   </div>
 
                   {studentStatuses.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                      Нет участников
+                      {t("teacher.quizPage.noStudents")}
                     </div>
                   ) : (
                     <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
-                            <th className="p-3">Ученик</th>
-                            <th className="p-3">Статус</th>
-                            <th className="p-3">Оценка</th>
-                            <th className="p-3">Ответов</th>
-                            <th className="p-3">Ср. время</th>
+                            <th className="p-3">{t("teacher.quizPage.studentName")}</th>
+                            <th className="p-3">{t("teacher.quizPage.status")}</th>
+                            <th className="p-3">{t("teacher.quizPage.score")}</th>
+                            <th className="p-3">{t("teacher.quizPage.progress")}</th>
+                            <th className="p-3">{t("teacher.quizPage.avgTime")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -479,7 +479,7 @@ export default function TeacherQuizPage() {
               {activeTab === "settings" && (
                 <div className="space-y-6">
                   <form onSubmit={handleSaveSettings} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                    <h3 className="text-lg font-medium text-[var(--text)]">Настройки задания</h3>
+                    <h3 className="text-lg font-medium text-[var(--text)]">{t("teacher.quizPage.tabs.settings")}</h3>
                     <div className="mt-4 space-y-4">
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <input
@@ -487,7 +487,7 @@ export default function TeacherQuizPage() {
                           checked={settingsForm.allow_show_answers}
                           onChange={(e) => setSettingsForm((f) => ({ ...f, allow_show_answers: e.target.checked }))}
                         />
-                        Разрешить показ правильных ответов ученикам после выполнения
+                        {t("teacher.quizPage.settingsAllowShowAnswers")}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <input
@@ -495,11 +495,11 @@ export default function TeacherQuizPage() {
                           checked={settingsForm.manual_close}
                           onChange={(e) => setSettingsForm((f) => ({ ...f, manual_close: e.target.checked }))}
                         />
-                        Пока не завершу (вместо даты)
+                        {t("teacher.quizPage.settingsManualClose")}
                       </label>
                       {!settingsForm.manual_close && (
                         <div>
-                          <label className="block text-sm font-medium text-[var(--text)]">Доступно до</label>
+                          <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.settingsAvailableUntil")}</label>
                           <input
                             type="datetime-local"
                             value={settingsForm.available_until}
@@ -515,14 +515,14 @@ export default function TeacherQuizPage() {
                       className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                     >
                       {savingSettings && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
-                      Сохранить
+                      {t("teacher.quizPage.updateSettings")}
                     </button>
                   </form>
 
                   <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-6">
-                    <h3 className="text-lg font-medium text-yellow-600 dark:text-yellow-400">Досрочное завершение</h3>
+                    <h3 className="text-lg font-medium text-yellow-600 dark:text-yellow-400">{t("teacher.quizPage.closeEarly")}</h3>
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
-                      Досрочно завершить задание для всех. Ученики больше не смогут отвечать.
+                      {t("teacher.quizPage.closeEarlyConfirm")}
                     </p>
                     <button
                       onClick={handleCloseQuiz}
@@ -531,7 +531,7 @@ export default function TeacherQuizPage() {
                     >
                       {closingQuiz && <Loader2 className="h-4 w-4 animate-spin" />}
                       <Square className="h-4 w-4" />
-                      Завершить задание
+                      {t("teacher.quizPage.closeEarly")}
                     </button>
                   </div>
                 </div>
@@ -545,14 +545,14 @@ export default function TeacherQuizPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Добавить вопрос</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.addQuestion")}</h2>
               <button onClick={() => setShowQuestionForm(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreateQuestion} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Текст вопроса</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.questionText")}</label>
                 <textarea
                   value={questionForm.text}
                   onChange={(e) => setQuestionForm((f) => ({ ...f, text: e.target.value }))}
@@ -563,7 +563,7 @@ export default function TeacherQuizPage() {
               </div>
               <div className="flex gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)]">Баллы</label>
+                  <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.points")}</label>
                   <input
                     type="number"
                     min={0}
@@ -574,15 +574,15 @@ export default function TeacherQuizPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)]">Тип ответа</label>
+                  <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.inputType")}</label>
                   <select
                     value={questionForm.input_type}
                     onChange={(e) => setQuestionForm((f) => ({ ...f, input_type: e.target.value }))}
                     className="mt-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                   >
-                    <option value="select">Варианты ответов</option>
-                    <option value="text">Текстовый ввод</option>
-                    <option value="number">Числовой ввод</option>
+                    <option value="select">{t("teacher.quizPage.inputTypeSelect")}</option>
+                    <option value="text">{t("teacher.quizPage.inputTypeText")}</option>
+                    <option value="number">{t("teacher.quizPage.inputTypeNumber")}</option>
                   </select>
                 </div>
               </div>
@@ -593,7 +593,7 @@ export default function TeacherQuizPage() {
                     checked={questionForm.has_time_limit}
                     onChange={(e) => setQuestionForm((f) => ({ ...f, has_time_limit: e.target.checked }))}
                   />
-                  Лимит времени на вопрос
+                  {t("teacher.quizPage.questionTimeLimit")}
                 </label>
                 {questionForm.has_time_limit && (
                   <input
@@ -610,14 +610,11 @@ export default function TeacherQuizPage() {
               {questionForm.input_type === "select" ? (
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium text-[var(--text)]">Варианты ответов</label>
+                    <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.options")}</label>
                     <button type="button" onClick={addOption} className="text-sm text-[var(--accent)] hover:underline">
-                      + Добавить
+                      + {t("teacher.quizPage.addOption")}
                     </button>
                   </div>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    Отметьте правильные ответы. Если отмечено несколько — будет множественный выбор.
-                  </p>
                   <div className="mt-2 space-y-2">
                     {questionForm.options.map((opt, idx) => (
                       <div key={idx} className="flex items-center gap-2">
@@ -625,7 +622,7 @@ export default function TeacherQuizPage() {
                           type="text"
                           value={opt.text}
                           onChange={(e) => updateOption(idx, { text: e.target.value })}
-                          placeholder={`Вариант ${idx + 1}`}
+                          placeholder={t("teacher.quizPage.optionPlaceholder")}
                           className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                         />
                         <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
@@ -634,7 +631,7 @@ export default function TeacherQuizPage() {
                             checked={!!opt.is_correct}
                             onChange={(e) => updateOption(idx, { is_correct: e.target.checked })}
                           />
-                          Верно
+                          {t("teacher.quizPage.correct")}
                         </label>
                         <button
                           type="button"
@@ -649,7 +646,7 @@ export default function TeacherQuizPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text)]">Правильный ответ</label>
+                  <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.correctAnswer")}</label>
                   <input
                     type={questionForm.input_type === "number" ? "number" : "text"}
                     value={questionForm.correct_text_answer}
@@ -666,14 +663,14 @@ export default function TeacherQuizPage() {
                   className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                 >
                   {creatingQuestion && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
-                  Добавить
+                  {t("teacher.quizPage.save")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowQuestionForm(false)}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
               </div>
             </form>
@@ -684,19 +681,19 @@ export default function TeacherQuizPage() {
       {confirmDeleteQuestion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <p className="text-[var(--text)]">Удалить вопрос?</p>
+            <p className="text-[var(--text)]">{t("teacher.quizPage.confirmDeleteQuestion")}</p>
             <div className="mt-4 flex gap-2">
               <button
                 onClick={handleDeleteQuestion}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
-                Да, удалить
+                {t("common.yes")}, {t("common.delete")}
               </button>
               <button
                 onClick={() => setConfirmDeleteQuestion(null)}
                 className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
               >
-                Отмена
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -707,13 +704,13 @@ export default function TeacherQuizPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
           <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Перевыпустить задание</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.reissueTitle")}</h2>
               <button onClick={() => setShowReissueModal(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-sm text-[var(--text-muted)] mb-4">
-              Выберите учеников для перевыпуска. Их предыдущие результаты будут удалены.
+              {t("teacher.quizPage.reissueDesc")}
             </p>
             <div className="max-h-60 overflow-y-auto space-y-2 mb-4">
               {studentStatuses.map((s) => (
@@ -731,7 +728,7 @@ export default function TeacherQuizPage() {
               ))}
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[var(--text)]">Новая дата окончания (опционально)</label>
+              <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.newDeadline")}</label>
               <input
                 type="datetime-local"
                 value={reissueDate}
@@ -746,13 +743,13 @@ export default function TeacherQuizPage() {
                 className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
               >
                 {reissuing && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
-                Перевыпустить
+                {t("teacher.quizPage.reissueSubmit")}
               </button>
               <button
                 onClick={() => setShowReissueModal(false)}
                 className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
               >
-                Отмена
+                {t("common.cancel")}
               </button>
             </div>
           </div>

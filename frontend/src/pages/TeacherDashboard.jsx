@@ -151,7 +151,7 @@ export default function TeacherDashboard() {
                       <button
                         onClick={(e) => copyCode(g.code, e)}
                         className="rounded p-1 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 hover:bg-[var(--border)] transition-opacity"
-                        title="Скопировать код"
+                        title={t("teacher.groups.copyCode")}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
@@ -180,7 +180,7 @@ export default function TeacherDashboard() {
                 className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)]/50 p-8 text-[var(--text-muted)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/5"
               >
                 <Plus className="h-8 w-8" />
-                <span className="text-sm font-medium">Создать группу</span>
+                <span className="text-sm font-medium">{t("teacher.groups.createGroup")}</span>
               </button>
             </div>
           )}
@@ -191,7 +191,7 @@ export default function TeacherDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--text)]">Создать группу</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.groups.createGroup")}</h2>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]"
@@ -202,12 +202,12 @@ export default function TeacherDashboard() {
             
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Название</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groups.createPlaceholder")}</label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Например: 10-А класс"
+                  placeholder={t("teacher.groups.createPlaceholder")}
                   className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                   required
                   autoFocus
@@ -215,18 +215,18 @@ export default function TeacherDashboard() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Предмет</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groups.subject")}</label>
                 <input
                   type="text"
                   value={formSubject}
                   onChange={(e) => setFormSubject(e.target.value)}
-                  placeholder="Например: Математика"
+                  placeholder={t("teacher.groups.subjectPlaceholder")}
                   className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[var(--text)]">Цвет</label>
+                <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.groups.color")}</label>
                 <div className="mt-2 flex items-center gap-3">
                   <input
                     type="color"
@@ -256,14 +256,14 @@ export default function TeacherDashboard() {
                   disabled={creating}
                   className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                 >
-                  {creating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Создать"}
+                  {creating ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : t("teacher.groups.create")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
               </div>
             </form>
