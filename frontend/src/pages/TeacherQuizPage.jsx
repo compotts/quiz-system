@@ -20,6 +20,8 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  Download,
+  Upload,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
@@ -85,6 +87,98 @@ export default function TeacherQuizPage() {
   });
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(null);
+  const [importingQuestions, setImportingQuestions] = useState(false);
+
+  const handleExportQuestions = () => {
+    if (!questions.length) return;
+    
+    const exportData = {
+      quiz_title: quiz?.title || "Untitled",
+      exported_at: new Date().toISOString(),
+      questions: questions.map((q) => ({
+        text: q.text,
+        points: q.points,
+        input_type: q.input_type,
+        has_time_limit: q.has_time_limit,
+        time_limit: q.time_limit,
+        correct_text_answer: q.correct_text_answer,
+        options: q.options?.map((o) => ({
+          text: o.text,
+          is_correct: o.is_correct,
+        })) || [],
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `questions_${quiz?.title?.replace(/[^a-zA-Z0-9]/g, "_") || "export"}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportQuestions = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportingQuestions(true);
+    setError("");
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      const importedQuestions = data.questions || data;
+      if (!Array.isArray(importedQuestions) || importedQuestions.length === 0) {
+        throw new Error(t("teacher.quizPage.importInvalidFormat"));
+      }
+
+      let successCount = 0;
+      for (let i = 0; i < importedQuestions.length; i++) {
+        const q = importedQuestions[i];
+        const questionData = {
+          text: q.text?.trim() || `Question ${i + 1}`,
+          order: questions.length + i,
+          points: q.points ?? 1,
+          input_type: q.input_type || "select",
+          has_time_limit: q.has_time_limit || false,
+          time_limit: q.has_time_limit ? q.time_limit : null,
+        };
+
+        if (questionData.input_type === "select") {
+          const opts = (q.options || []).filter((o) => o.text?.trim()).map((o, idx) => ({
+            text: o.text.trim(),
+            is_correct: !!o.is_correct,
+            order: idx,
+          }));
+          if (opts.length === 0) continue;
+          questionData.options = opts;
+        } else {
+          questionData.correct_text_answer = q.correct_text_answer?.trim() || null;
+        }
+
+        try {
+          await quizzesApi.createQuestion(qid, questionData);
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to import question ${i + 1}:`, err);
+        }
+      }
+
+      await loadQuestions();
+      if (successCount > 0) {
+        setError("");
+      }
+    } catch (err) {
+      setError(err.message || t("teacher.quizPage.importError"));
+    } finally {
+      setImportingQuestions(false);
+      event.target.value = "";
+    }
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -357,6 +451,33 @@ export default function TeacherQuizPage() {
                       <Plus className="h-4 w-4" />
                       {t("teacher.quizPage.addQuestion")}
                     </button>
+                    
+                    <button
+                      onClick={handleExportQuestions}
+                      disabled={questions.length === 0}
+                      className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
+                      title={t("teacher.quizPage.exportQuestions")}
+                    >
+                      <Download className="h-4 w-4" />
+                      {t("teacher.quizPage.export")}
+                    </button>
+                    
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]">
+                      {importingQuestions ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {t("teacher.quizPage.import")}
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportQuestions}
+                        disabled={importingQuestions}
+                        className="hidden"
+                      />
+                    </label>
+                    
                     <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                       <input
                         type="checkbox"

@@ -487,7 +487,13 @@
       "closeEarlyConfirm": "Close assignment for all students?",
       "closing": "Closing...",
       "updateSettings": "Save settings",
-      "updating": "Saving..."
+      "updating": "Saving...",
+      "export": "Export",
+      "import": "Import",
+      "exportQuestions": "Export questions to JSON",
+      "importQuestions": "Import questions from JSON",
+      "importError": "Error importing questions",
+      "importInvalidFormat": "Invalid file format"
     }
   },
   "student": {

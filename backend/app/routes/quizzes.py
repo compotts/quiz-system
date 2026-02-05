@@ -497,7 +497,11 @@ async def get_student_statuses(
     for member in members:
         student = member.user
         student_name = f"{student.first_name or ''} {student.last_name or ''}".strip() or student.username
-        attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
+        attempt = None
+        try:
+            attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
+        except:
+            pass
         
         if not attempt:
             status = "expired" if is_expired else "not_opened"

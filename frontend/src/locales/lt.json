@@ -487,7 +487,13 @@
       "closeEarlyConfirm": "Uždaryti užduotį visiems studentams?",
       "closing": "Uždaroma...",
       "updateSettings": "Išsaugoti nustatymus",
-      "updating": "Išsaugoma..."
+      "updating": "Išsaugoma...",
+      "export": "Eksportuoti",
+      "import": "Importuoti",
+      "exportQuestions": "Eksportuoti klausimus į JSON",
+      "importQuestions": "Importuoti klausimus iš JSON",
+      "importError": "Klaida importuojant klausimus",
+      "importInvalidFormat": "Neteisingas failo formatas"
     }
   },
   "student": {

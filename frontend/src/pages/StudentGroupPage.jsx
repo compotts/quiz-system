@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, Send, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { authApi, attemptsApi, groupsApi, quizzesApi } from "../services/api.js";
 
 function formatDate(dateString, locale = "ru-RU") {
@@ -44,7 +44,6 @@ export default function StudentGroupPage() {
   const [runQuestionsOrder, setRunQuestionsOrder] = useState([]);
   const [runAnswered, setRunAnswered] = useState([]);
   const [runAnswers, setRunAnswers] = useState({});
-  const [runSubmitting, setRunSubmitting] = useState({});
   const [runCompleting, setRunCompleting] = useState(false);
   const [runResults, setRunResults] = useState(null);
 
@@ -182,39 +181,35 @@ export default function StudentGroupPage() {
     }));
   };
 
-  const submitAnswer = async (question) => {
-    const answer = runAnswers[question.id];
-    if (!answer) return;
-
-    const inputType = question.input_type || "select";
-    let selectedOptions = [];
-    let textAnswer = null;
-
-    if (inputType === "select") {
-      selectedOptions = answer.selected || [];
-      if (!selectedOptions.length) return;
-    } else {
-      textAnswer = answer.text;
-      if (!textAnswer?.trim()) return;
-    }
-
-    setRunSubmitting((prev) => ({ ...prev, [question.id]: true }));
-    setError("");
-
-    try {
-      await attemptsApi.submitAnswer(question.id, selectedOptions, textAnswer);
-      setRunAnswered((prev) => [...prev, question.id]);
-    } catch (err) {
-      setError(err.message || t("student.quizzes.errorSubmit"));
-    } finally {
-      setRunSubmitting((prev) => ({ ...prev, [question.id]: false }));
-    }
-  };
-
   const completeQuiz = async () => {
     setRunCompleting(true);
     setError("");
     try {
+      for (const question of runQuestions) {
+        if (runAnswered.includes(question.id)) continue;
+        
+        const answer = runAnswers[question.id];
+        if (!answer) continue;
+
+        const inputType = question.input_type || "select";
+        let selectedOptions = [];
+        let textAnswer = null;
+
+        if (inputType === "select") {
+          selectedOptions = answer.selected || [];
+          if (!selectedOptions.length) continue;
+        } else {
+          textAnswer = answer.text;
+          if (!textAnswer?.trim()) continue;
+        }
+
+        try {
+          await attemptsApi.submitAnswer(question.id, selectedOptions, textAnswer);
+        } catch (err) {
+          console.error(`Failed to submit answer for question ${question.id}:`, err);
+        }
+      }
+
       await attemptsApi.completeAttempt(runAttemptId);
       const res = await attemptsApi.getAttemptResults(runAttemptId);
       setRunResults(res);
@@ -382,7 +377,6 @@ export default function StudentGroupPage() {
                 <div className="space-y-4">
                   {runQuestions.map((q, idx) => {
                     const isAnswered = runAnswered.includes(q.id);
-                    const isSubmitting = runSubmitting[q.id];
                     const answer = runAnswers[q.id] || {};
                     const inputType = q.input_type || "select";
                     const isMultiple = q.is_multiple_choice;
@@ -470,19 +464,6 @@ export default function StudentGroupPage() {
                                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-[var(--text)]"
                               />
                             )}
-
-                            <button
-                              onClick={() => submitAnswer(q)}
-                              disabled={isSubmitting || (inputType === "select" ? !(answer.selected?.length) : !answer.text?.trim())}
-                              className="mt-4 flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
-                            >
-                              {isSubmitting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Send className="h-4 w-4" />
-                              )}
-                              {t("student.groupPage.answer")}
-                            </button>
                           </div>
                         )}
                       </div>
@@ -612,9 +593,9 @@ export default function StudentGroupPage() {
               )}
 
               {attemptDetailId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-                  <div className="my-8 w-full max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                    <div className="mb-4 flex items-center justify-between">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+                    <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] p-4">
                       <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h2>
                       <button
                         onClick={() => {
@@ -626,29 +607,31 @@ export default function StudentGroupPage() {
                         <X className="h-5 w-5" />
                       </button>
                     </div>
-                    {!attemptDetail ? (
-                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--text-muted)]" />
-                    ) : (
-                      <div className="space-y-4">
-                        <p className="text-sm text-[var(--text-muted)]">
-                          {t("student.groupPage.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
-                          {Math.round(attemptDetail.percentage ?? 0)}%)
-                        </p>
-                        {(attemptDetail.answers || []).map((ans, i) => (
-                          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
-                            <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
-                            <p
-                              className={`mt-2 flex items-center gap-2 text-sm ${
-                                ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                              }`}
-                            >
-                              {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                              {ans.points_earned} / {ans.max_points} {t("student.groupPage.points")}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex-1 overflow-y-auto p-4">
+                      {!attemptDetail ? (
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-sm text-[var(--text-muted)]">
+                            {t("student.groupPage.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
+                            {Math.round(attemptDetail.percentage ?? 0)}%)
+                          </p>
+                          {(attemptDetail.answers || []).map((ans, i) => (
+                            <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
+                              <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
+                              <p
+                                className={`mt-2 flex items-center gap-2 text-sm ${
+                                  ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                }`}
+                              >
+                                {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                                {ans.points_earned} / {ans.max_points} {t("student.groupPage.points")}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

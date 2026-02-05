@@ -467,7 +467,13 @@
       "closeEarlyConfirm": "Завершить задание для всех студентов?",
       "closing": "Завершение...",
       "updateSettings": "Сохранить настройки",
-      "updating": "Сохранение..."
+      "updating": "Сохранение...",
+      "export": "Экспорт",
+      "import": "Импорт",
+      "exportQuestions": "Экспортировать вопросы в JSON",
+      "importQuestions": "Импортировать вопросы из JSON",
+      "importError": "Ошибка импорта вопросов",
+      "importInvalidFormat": "Неверный формат файла"
     }
   },
   "blog": {
