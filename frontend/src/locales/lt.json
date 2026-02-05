@@ -51,7 +51,9 @@
     "firstRequestWarning": "Projektas kuriamas, Daugelis funkcijų laikinai nepasiekiamos, jau galite užsiregistruoti",
     "maintenanceTitle": "Svetainė techninėje priežiūroje",
     "maintenanceMessage": "Svetainė laikinai nepasiekiama. Atliekame techninius darbus.",
-    "maintenanceAdminHint": "Jei esate administratorius — prisijunkite."
+    "maintenanceAdminHint": "Jei esate administratorius — prisijunkite.",
+    "unavailableTitle": "Paslauga laikinai nepasiekiama",
+    "unavailableMessage": "Nepavyko prisijungti prie serverio. Bandykite vėliau."
   },
   "auth": {
     "login": "Prisijungimas",

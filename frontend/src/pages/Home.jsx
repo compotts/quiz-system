@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
-  Wrench,
   LogIn,
   BookOpen,
   ClipboardList,
@@ -71,51 +70,8 @@ export default function Home() {
       .finally(() => setStatusLoading(false));
   }, []);
 
-  const maintenanceMode = siteStatus.maintenance_mode;
-
-  if (!statusLoading && maintenanceMode) {
-    const bannerStyle = BANNER_STYLE_CLASSES[siteStatus.home_banner_style] || BANNER_STYLE_CLASSES.warning;
-    const showBannerInMaintenance = siteStatus.home_banner_text?.trim();
-    return (
-      <div className="flex flex-1 flex-col">
-        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} registrationEnabled={false} />
-        {showBannerInMaintenance && (
-          <div
-            className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
-            role="alert"
-          >
-            {siteStatus.home_banner_text}
-          </div>
-        )}
-        <section className="relative flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-lg text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 dark:border-amber-400/30 dark:bg-amber-500/15">
-                <Wrench className="h-12 w-12 text-amber-600 dark:text-amber-400" aria-hidden />
-              </div>
-            </div>
-            <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
-              {t("home.maintenanceTitle")}
-            </h1>
-            <p className="mt-4 text-[var(--text-muted)]">{t("home.maintenanceMessage")}</p>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">{t("home.maintenanceAdminHint")}</p>
-            <div className="mt-8">
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--accent)] px-6 py-3 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90 hover:scale-[1.02]"
-              >
-                <LogIn className="h-4 w-4" />
-                {t("home.login")}
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
   const bannerStyle = BANNER_STYLE_CLASSES[siteStatus.home_banner_style] || BANNER_STYLE_CLASSES.warning;
-  const showBanner = !maintenanceMode && siteStatus.home_banner_text?.trim();
+  const showBanner = siteStatus.home_banner_text?.trim();
 
   return (
     <div className="flex flex-1 flex-col">

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { X, Eye, EyeOff } from "lucide-react";
 import { authApi, saveTokens } from "../services/api.js";
 
-export default function AuthModal({ isOpen, onClose, registrationEnabled = true }) {
+export default function AuthModal({ isOpen, onClose, registrationEnabled = true, onLoginSuccess }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scrollYRef = useRef(0);
@@ -44,7 +44,7 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true 
       
       const user = await authApi.getMe();
       setSuccess(t("auth.successLogin"));
-      
+      onLoginSuccess?.(user);
       setTimeout(() => {
         handleClose();
         setTimeout(() => {

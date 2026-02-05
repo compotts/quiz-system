@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.database import lifespan
+from app.middleware.maintenance import MaintenanceMiddleware
 
 from config import settings
 from app.routes import auth, admin, groups, quizzes, attempts, contact, blog
@@ -23,6 +24,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MaintenanceMiddleware, cache_seconds=5.0)
 
 app.include_router(auth.router)
 app.include_router(admin.router)

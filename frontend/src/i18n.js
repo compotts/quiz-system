@@ -7,9 +7,9 @@ import lt from "./locales/lt.json";
 export const STORAGE_KEY = "quizz-lang";
 
 function getInitialLang() {
-  if (typeof window === "undefined") return "ru";
+  if (typeof window === "undefined") return "lt";
   const saved = localStorage.getItem(STORAGE_KEY);
-  return saved && ["ru", "lt", "en"].includes(saved) ? saved : "ru";
+  return saved && ["ru", "lt", "en"].includes(saved) ? saved : "lt";
 }
 
 i18n.use(initReactI18next).init({
@@ -19,7 +19,7 @@ i18n.use(initReactI18next).init({
     lt: { translation: lt },
   },
   lng: getInitialLang(),
-  fallbackLng: "ru",
+  fallbackLng: "lt",
   supportedLngs: ["ru", "lt", "en"],
   interpolation: { escapeValue: false },
 });

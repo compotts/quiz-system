@@ -395,7 +395,7 @@ export default function AdminDashboard() {
     setError("");
     try {
       const data = await adminApi.updateSettings({
-        home_banner_text: homeBannerText.trim() || null,
+        home_banner_text: homeBannerText.trim() || "",
         home_banner_style: homeBannerStyle,
       });
       setHomeBannerText(data.home_banner_text ?? "");

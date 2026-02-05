@@ -125,10 +125,11 @@ async def update_settings(
         await _set_bool_setting("maintenance_mode", data.maintenance_mode)
     if data.contact_enabled is not None:
         await _set_bool_setting("contact_enabled", data.contact_enabled)
-    if data.home_banner_text is not None:
-        await _set_str_setting("home_banner_text", data.home_banner_text)
-    if data.home_banner_style is not None:
-        await _set_str_setting("home_banner_style", data.home_banner_style)
+    payload = data.model_dump(exclude_unset=True)
+    if "home_banner_text" in payload:
+        await _set_str_setting("home_banner_text", payload["home_banner_text"] or "")
+    if "home_banner_style" in payload:
+        await _set_str_setting("home_banner_style", payload["home_banner_style"] or "warning")
     auto_reg = await _get_bool_setting("auto_registration_enabled", False)
     reg_enabled = await _get_bool_setting("registration_enabled", True)
     maintenance = await _get_bool_setting("maintenance_mode", False)

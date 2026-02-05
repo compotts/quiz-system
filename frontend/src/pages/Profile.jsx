@@ -1,13 +1,41 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { User, ArrowLeft, LayoutDashboard, Eye, EyeOff } from "lucide-react";
+import {
+  User,
+  ArrowLeft,
+  LayoutDashboard,
+  Eye,
+  EyeOff,
+  Mail,
+  AtSign,
+  Shield,
+  Calendar,
+  KeyRound,
+  Save,
+  Loader2,
+  PenLine,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { authApi } from "../services/api.js";
 
 const inputClass =
-  "mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)] placeholder:text-[var(--text-muted)] transition-all focus:border-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]";
+  "mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-[var(--text)] placeholder:text-[var(--text-muted)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:ring-offset-2 focus:ring-offset-[var(--surface)]";
 
 const labelClass = "block text-sm font-medium text-[var(--text)]";
+
+const ROLE_STYLES = {
+  admin: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/25",
+  teacher: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/25",
+  student: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
+};
+
+const AVATAR_STYLES = {
+  admin: "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  teacher: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30",
+  student: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+};
 
 function formatDate(isoString) {
   if (!isoString) return "—";
@@ -17,6 +45,13 @@ function formatDate(isoString) {
     month: "long",
     day: "numeric",
   });
+}
+
+function getDisplayName(user) {
+  const first = (user.first_name || "").trim();
+  const last = (user.last_name || "").trim();
+  if (first || last) return [first, last].filter(Boolean).join(" ");
+  return user.username;
 }
 
 export default function Profile() {
@@ -110,22 +145,28 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="flex flex-1 items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+      <div className="flex flex-1 items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">{t("common.loading")}</p>
+        </div>
       </div>
     );
   }
 
   if (!user) return null;
 
+  const roleStyle = ROLE_STYLES[user.role] || ROLE_STYLES.student;
+  const avatarStyle = AVATAR_STYLES[user.role] || AVATAR_STYLES.student;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <div className="mb-8 flex flex-wrap items-center gap-4">
+    <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+      {/* Navigation */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] shadow-[var(--shadow-sm)] transition-all hover:border-[var(--text-muted)]/40 hover:bg-[var(--bg-card)]"
         >
           <ArrowLeft className="h-4 w-4" />
           {t("profile.backToHome")}
@@ -133,62 +174,106 @@ export default function Profile() {
         <button
           type="button"
           onClick={goDashboard}
-          className="flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--bg-elevated)] shadow-[var(--shadow-sm)] transition-all hover:opacity-90"
         >
           <LayoutDashboard className="h-4 w-4" />
           {t("profile.goToDashboard")}
         </button>
       </div>
 
-      <div className="mb-8 flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--border)] text-[var(--text-muted)]">
-          <User className="h-7 w-7" />
+      {/* Profile header */}
+      <header className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-md)] sm:p-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--border)]/30 via-transparent to-transparent" aria-hidden />
+        <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
+          <div
+            className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-2 ${avatarStyle}`}
+          >
+            <User className="h-10 w-10" strokeWidth={1.5} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">
+              {getDisplayName(user)}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">@{user.username}</p>
+            <span
+              className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${roleStyle}`}
+            >
+              <Shield className="h-3.5 w-3.5" />
+              {t(`profile.roles.${user.role}`)}
+            </span>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--text)]">{t("profile.title")}</h1>
-          <p className="text-sm text-[var(--text-muted)]">{t("profile.subtitle")}</p>
-        </div>
-      </div>
+      </header>
 
-      <section className="mb-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
-        <h2 className="mb-4 text-lg font-medium text-[var(--text)]">{t("profile.info")}</h2>
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t("profile.username")}
-            </dt>
-            <dd className="mt-0.5 font-medium text-[var(--text)]">{user.username}</dd>
+      {/* Info card */}
+      <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">
+            <User className="h-4 w-4" />
           </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t("profile.role")}
-            </dt>
-            <dd className="mt-0.5 font-medium text-[var(--text)]">{t(`profile.roles.${user.role}`)}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {t("profile.memberSince")}
-            </dt>
-            <dd className="mt-0.5 text-[var(--text)]">{formatDate(user.created_at)}</dd>
-          </div>
-        </dl>
+          {t("profile.info")}
+        </h2>
+        <ul className="space-y-4">
+          <li className="flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 px-4 py-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--border)]/40 text-[var(--text-muted)]">
+              <AtSign className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                {t("profile.username")}
+              </p>
+              <p className="font-medium text-[var(--text)]">{user.username}</p>
+            </div>
+          </li>
+          <li className="flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 px-4 py-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--border)]/40 text-[var(--text-muted)]">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                {t("profile.role")}
+              </p>
+              <p className="font-medium text-[var(--text)]">{t(`profile.roles.${user.role}`)}</p>
+            </div>
+          </li>
+          <li className="flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/50 px-4 py-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--border)]/40 text-[var(--text-muted)]">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                {t("profile.memberSince")}
+              </p>
+              <p className="font-medium text-[var(--text)]">{formatDate(user.created_at)}</p>
+            </div>
+          </li>
+        </ul>
       </section>
 
-      <section className="mb-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
-        <h2 className="mb-4 text-lg font-medium text-[var(--text)]">{t("profile.editProfile")}</h2>
+      {/* Edit profile */}
+      <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">
+            <PenLine className="h-4 w-4" />
+          </div>
+          {t("profile.editProfile")}
+        </h2>
         {profileError && (
-          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+            <AlertCircle className="h-5 w-5 shrink-0" />
             {profileError}
           </div>
         )}
         {profileSuccess && (
-          <div className="mb-4 rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
             {profileSuccess}
           </div>
         )}
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <div>
-            <label htmlFor="profile-first" className={labelClass}>
+            <label htmlFor="profile-first" className={`${labelClass} flex items-center gap-2`}>
+              <User className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.firstName")}
             </label>
             <input
@@ -201,7 +286,8 @@ export default function Profile() {
             />
           </div>
           <div>
-            <label htmlFor="profile-last" className={labelClass}>
+            <label htmlFor="profile-last" className={`${labelClass} flex items-center gap-2`}>
+              <User className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.lastName")}
             </label>
             <input
@@ -214,7 +300,8 @@ export default function Profile() {
             />
           </div>
           <div>
-            <label htmlFor="profile-email" className={labelClass}>
+            <label htmlFor="profile-email" className={`${labelClass} flex items-center gap-2`}>
+              <Mail className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.email")}
             </label>
             <input
@@ -229,28 +316,42 @@ export default function Profile() {
           <button
             type="submit"
             disabled={profileSaving}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-[var(--bg-elevated)] shadow-[var(--shadow-sm)] transition-all hover:opacity-90 disabled:opacity-50"
           >
+            {profileSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             {profileSaving ? t("profile.savingProfile") : t("profile.saveProfile")}
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
-        <h2 className="mb-4 text-lg font-medium text-[var(--text)]">{t("profile.changePassword")}</h2>
+      {/* Change password */}
+      <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">
+            <KeyRound className="h-4 w-4" />
+          </div>
+          {t("profile.changePassword")}
+        </h2>
         {passwordError && (
-          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+            <AlertCircle className="h-5 w-5 shrink-0" />
             {passwordError}
           </div>
         )}
         {passwordSuccess && (
-          <div className="mb-4 rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
             {passwordSuccess}
           </div>
         )}
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label htmlFor="profile-current-pw" className={labelClass}>
+            <label htmlFor="profile-current-pw" className={`${labelClass} flex items-center gap-2`}>
+              <KeyRound className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.currentPassword")}
             </label>
             <div className="relative">
@@ -259,13 +360,13 @@ export default function Profile() {
                 type={showCurrentPw ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className={`${inputClass} pr-10`}
+                className={`${inputClass} pr-11`}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPw(!showCurrentPw)}
-                className="absolute right-2 top-1/2 mt-0.5 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text)]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)]/50 hover:text-[var(--text)]"
                 aria-label={showCurrentPw ? t("auth.hidePassword") : t("auth.showPassword")}
               >
                 {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -273,7 +374,8 @@ export default function Profile() {
             </div>
           </div>
           <div>
-            <label htmlFor="profile-new-pw" className={labelClass}>
+            <label htmlFor="profile-new-pw" className={`${labelClass} flex items-center gap-2`}>
+              <KeyRound className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.newPassword")}
             </label>
             <div className="relative">
@@ -282,14 +384,14 @@ export default function Profile() {
                 type={showNewPw ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className={`${inputClass} pr-10`}
+                className={`${inputClass} pr-11`}
                 minLength={6}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowNewPw(!showNewPw)}
-                className="absolute right-2 top-1/2 mt-0.5 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text)]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)]/50 hover:text-[var(--text)]"
                 aria-label={showNewPw ? t("auth.hidePassword") : t("auth.showPassword")}
               >
                 {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -297,7 +399,8 @@ export default function Profile() {
             </div>
           </div>
           <div>
-            <label htmlFor="profile-confirm-pw" className={labelClass}>
+            <label htmlFor="profile-confirm-pw" className={`${labelClass} flex items-center gap-2`}>
+              <KeyRound className="h-4 w-4 text-[var(--text-muted)]" />
               {t("profile.confirmPassword")}
             </label>
             <input
@@ -313,8 +416,13 @@ export default function Profile() {
           <button
             type="submit"
             disabled={passwordSaving}
-            className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-[var(--bg-elevated)] transition-all hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-[var(--bg-elevated)] shadow-[var(--shadow-sm)] transition-all hover:opacity-90 disabled:opacity-50"
           >
+            {passwordSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="h-4 w-4" />
+            )}
             {passwordSaving ? t("profile.submittingPassword") : t("profile.submitPassword")}
           </button>
         </form>
