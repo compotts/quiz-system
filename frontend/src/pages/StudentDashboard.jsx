@@ -8,6 +8,8 @@ import {
   RefreshCw,
   X,
   ChevronRight,
+  BookOpen,
+  User,
 } from "lucide-react";
 import { authApi, groupsApi } from "../services/api.js";
 
@@ -19,8 +21,10 @@ export default function StudentDashboard() {
   const [currentUser, setCurrentUser] = useState(null);
 
   const [groups, setGroups] = useState([]);
+  
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const [joinLoading, setJoinLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -52,16 +56,17 @@ export default function StudentDashboard() {
     e.preventDefault();
     const code = String(joinCode).trim().replace(/\D/g, "").slice(0, 6);
     if (code.length !== 6) return;
-    setJoinLoading(true);
+    setJoining(true);
     setError("");
     try {
       await groupsApi.joinGroup(code);
       setJoinCode("");
-      loadGroups();
+      setShowJoinModal(false);
+      await loadGroups();
     } catch (err) {
       setError(err.message || t("student.groups.errorJoin"));
     } finally {
-      setJoinLoading(false);
+      setJoining(false);
     }
   };
 
@@ -86,6 +91,14 @@ export default function StudentDashboard() {
                 {t("student.welcome", { name: currentUser.first_name || currentUser.username })}
               </p>
             </div>
+            <button
+              onClick={loadGroups}
+              disabled={loading}
+              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
+              title={t("common.refresh")}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </div>
       </div>
@@ -102,64 +115,64 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          <form onSubmit={handleJoin} className="mb-6 flex flex-wrap gap-2">
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder={t("student.groups.joinPlaceholder")}
-              className="w-40 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
-              maxLength={6}
-            />
-            <button
-              type="submit"
-              disabled={joinLoading || String(joinCode).replace(/\D/g, "").length !== 6}
-              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
-            >
-              {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {t("student.groups.joinSubmit")}
-            </button>
-          </form>
-
-          <div className="mb-4 flex gap-2">
-            <button
-              onClick={loadGroups}
-              disabled={loading}
-              className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50"
-              title={t("common.refresh")}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
             </div>
-          ) : groups.length === 0 ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-              {t("student.groups.noGroups")}
-            </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => setShowJoinModal(true)}
+                className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)]/50 p-8 text-[var(--text-muted)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/5"
+              >
+                <Plus className="h-8 w-8" />
+                <span className="text-sm font-medium">Вступить в группу</span>
+              </button>
+
               {groups.map((g) => (
                 <button
                   key={g.id}
                   type="button"
                   onClick={() => navigate(`/dashboard/student/groups/${g.id}`)}
-                  className="group text-left rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:bg-[var(--bg-card)]"
+                  className="group relative text-left rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden transition-all hover:shadow-md hover:border-[var(--accent)]/30"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-[var(--text)]">{g.name}</div>
-                      <div className="mt-1 text-sm text-[var(--text-muted)]">
-                        Преподаватель: {g.teacher_name || `#${g.teacher_id}`}
-                      </div>
-                      <div className="text-sm text-[var(--text-muted)]">
-                        Предмет: {g.subject || "—"}
-                      </div>
+                  <div
+                    className="h-1.5"
+                    style={{ backgroundColor: g.color || "#6366f1" }}
+                  />
+                  
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-[var(--text)] group-hover:text-[var(--accent)]">
+                      {g.name}
+                    </h3>
+                    
+                    <div className="mt-2 flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                      <User className="h-4 w-4" />
+                      {g.teacher_name || `Учитель #${g.teacher_id}`}
                     </div>
-                    <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-[var(--text-muted)] group-hover:text-[var(--text)]" />
+                    
+                    <div className="mt-1 flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                      <BookOpen className="h-4 w-4" />
+                      {g.subject || "Без предмета"}
+                    </div>
+                    
+                    <div className="my-3 border-t border-[var(--border)]" />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--text-muted)]">
+                        {g.incomplete_assignments > 0 ? (
+                          <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+                            Невыполненных заданий: {g.incomplete_assignments}
+                          </span>
+                        ) : (
+                          <span className="text-green-600 dark:text-green-400">
+                            Нет невыполненных заданий
+                          </span>
+                        )}
+                      </span>
+                      <ChevronRight className="h-5 w-5 text-[var(--text-muted)] group-hover:text-[var(--accent)]" />
+                    </div>
                   </div>
                 </button>
               ))}
@@ -167,6 +180,57 @@ export default function StudentDashboard() {
           )}
         </div>
       </div>
+
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-[var(--text)]">Вступить в группу</h2>
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleJoin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)]">Код группы</label>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-3 text-center text-2xl font-mono tracking-widest text-[var(--text)]"
+                  maxLength={6}
+                  autoFocus
+                />
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  Введите 6-значный код, который дал вам учитель
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={joining || joinCode.replace(/\D/g, "").length !== 6}
+                  className="flex-1 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
+                >
+                  {joining ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Вступить"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(false)}
+                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

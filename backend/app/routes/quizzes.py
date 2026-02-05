@@ -43,10 +43,11 @@ async def create_quiz(
         description=data.description,
         group=group,
         teacher=current_user,
-        quiz_type=data.quiz_type.value,
-        timer_mode=data.timer_mode.value,
+        has_quiz_time_limit=data.has_quiz_time_limit,
         time_limit=data.time_limit,
-        available_until=to_naive_utc(data.available_until),
+        available_until=to_naive_utc(data.available_until) if not data.manual_close else None,
+        manual_close=data.manual_close,
+        allow_show_answers=data.allow_show_answers,
         is_active=True
     )
     await log_audit(
@@ -58,11 +59,14 @@ async def create_quiz(
         details={"title": quiz.title, "group_id": group.id},
         request=request,
     )
+    now = datetime.utcnow()
+    is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
     return {
         **quiz.dict(),
         "group_id": group.id,
         "teacher_id": current_user.id,
-        "question_count": 0
+        "question_count": 0,
+        "is_expired": is_expired
     }
 
 
@@ -71,6 +75,7 @@ async def get_quizzes(
     group_id: int = None,
     current_user: User = Depends(get_current_user)
 ):
+    now = datetime.utcnow()
     query = Quiz.objects.select_related(["group", "teacher"])
     
     if current_user.role == "teacher" or current_user.role == "admin":
@@ -97,11 +102,13 @@ async def get_quizzes(
     result = []
     for quiz in quizzes:
         question_count = await Question.objects.filter(quiz=quiz).count()
+        is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
         result.append({
             **quiz.dict(),
             "group_id": quiz.group.id,
             "teacher_id": quiz.teacher.id,
-            "question_count": question_count
+            "question_count": question_count,
+            "is_expired": is_expired
         })
     
     return result
@@ -112,6 +119,7 @@ async def get_quiz(
     quiz_id: int,
     current_user: User = Depends(get_current_user)
 ):
+    now = datetime.utcnow()
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
     
     if not quiz:
@@ -132,12 +140,14 @@ async def get_quiz(
         )
     
     question_count = await Question.objects.filter(quiz=quiz).count()
+    is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
     
     return {
         **quiz.dict(),
         "group_id": quiz.group.id,
         "teacher_id": quiz.teacher.id,
-        "question_count": question_count
+        "question_count": question_count,
+        "is_expired": is_expired
     }
 
 
@@ -148,6 +158,7 @@ async def update_quiz(
     request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
+    now = datetime.utcnow()
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
     
     if not quiz:
@@ -164,10 +175,6 @@ async def update_quiz(
     
     update_data = data.dict(exclude_unset=True)
     if update_data:
-        if "quiz_type" in update_data:
-            update_data["quiz_type"] = update_data["quiz_type"].value
-        if "timer_mode" in update_data:
-            update_data["timer_mode"] = update_data["timer_mode"].value
         if "available_until" in update_data:
             update_data["available_until"] = to_naive_utc(update_data["available_until"])
         
@@ -183,12 +190,14 @@ async def update_quiz(
         )
     
     question_count = await Question.objects.filter(quiz=quiz).count()
+    is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
     
     return {
         **quiz.dict(),
         "group_id": quiz.group.id,
         "teacher_id": quiz.teacher.id,
-        "question_count": question_count
+        "question_count": question_count,
+        "is_expired": is_expired
     }
 
 
@@ -269,22 +278,26 @@ async def create_question(
     
     question = await Question.objects.create(
         quiz=quiz,
-        question_type=data.question_type.value,
+        question_type="single_choice",
+        input_type=data.input_type,
         text=data.text,
         order=data.order,
         points=data.points,
-        time_limit=data.time_limit
+        has_time_limit=data.has_time_limit,
+        time_limit=data.time_limit if data.has_time_limit else None,
+        correct_text_answer=data.correct_text_answer if data.input_type in ("text", "number") else None
     )
     
     options = []
-    for opt_data in data.options:
-        option = await Option.objects.create(
-            question=question,
-            text=opt_data.text,
-            is_correct=opt_data.is_correct,
-            order=opt_data.order
-        )
-        options.append(option)
+    if data.input_type == "select":
+        for opt_data in data.options:
+            option = await Option.objects.create(
+                question=question,
+                text=opt_data.text,
+                is_correct=opt_data.is_correct,
+                order=opt_data.order
+            )
+            options.append(option)
 
     await log_audit(
         "question_created",
@@ -296,10 +309,14 @@ async def create_question(
         request=request,
     )
     
+    correct_count = sum(1 for o in options if o.is_correct)
+    is_multiple_choice = correct_count > 1
+    
     return {
         **question.dict(),
         "quiz_id": quiz.id,
-        "options": [opt.dict() for opt in options]
+        "options": [opt.dict() for opt in options],
+        "is_multiple_choice": is_multiple_choice
     }
 
 
@@ -332,10 +349,25 @@ async def get_questions(
     result = []
     for question in questions:
         options = await Option.objects.filter(question=question).order_by("order").all()
+        correct_count = sum(1 for o in options if o.is_correct)
+        is_multiple_choice = correct_count > 1
+        
+        options_data = []
+        for opt in options:
+            opt_dict = opt.dict()
+            if current_user.role == "student":
+                opt_dict["is_correct"] = False
+            options_data.append(opt_dict)
+        
+        q_dict = question.dict()
+        if current_user.role == "student":
+            q_dict["correct_text_answer"] = None
+        
         result.append({
-            **question.dict(),
+            **q_dict,
             "quiz_id": quiz.id,
-            "options": [opt.dict() for opt in options]
+            "options": options_data,
+            "is_multiple_choice": is_multiple_choice
         })
     
     return result
@@ -433,3 +465,164 @@ async def delete_question(
     )
     
     return {"message": "Question deleted successfully"}
+
+
+@router.get("/{quiz_id}/student-statuses")
+async def get_student_statuses(
+    quiz_id: int,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.select_related("group").get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    now = datetime.utcnow()
+    is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
+    
+    members = await GroupMember.objects.select_related("user").filter(group=quiz.group).all()
+    questions = await Question.objects.filter(quiz=quiz).all()
+    total_questions = len(questions)
+    
+    result = []
+    for member in members:
+        student = member.user
+        student_name = f"{student.first_name or ''} {student.last_name or ''}".strip() or student.username
+        attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
+        
+        if not attempt:
+            status = "expired" if is_expired else "not_opened"
+            result.append({
+                "student_id": student.id,
+                "student_name": student_name,
+                "status": status,
+                "score": None,
+                "max_score": None,
+                "answered_count": 0,
+                "total_questions": total_questions,
+                "avg_time_per_answer": None
+            })
+        else:
+            answers = await Answer.objects.filter(attempt=attempt).all()
+            answered_count = len(answers)
+            
+            total_time = sum(a.time_spent or 0 for a in answers)
+            avg_time = total_time / answered_count if answered_count > 0 else None
+            
+            if attempt.is_completed:
+                status = "completed"
+            elif is_expired and answered_count == 0:
+                status = "expired"
+            elif answered_count > 0:
+                status = "in_progress"
+            else:
+                status = "opened"
+            
+            result.append({
+                "student_id": student.id,
+                "student_name": student_name,
+                "status": status,
+                "score": attempt.score,
+                "max_score": attempt.max_score,
+                "answered_count": answered_count,
+                "total_questions": total_questions,
+                "avg_time_per_answer": avg_time
+            })
+    
+    return result
+
+
+@router.post("/{quiz_id}/reissue")
+async def reissue_quiz(
+    quiz_id: int,
+    data: dict,
+    request: Request,
+    current_user: User = Depends(get_current_teacher)
+):
+    from schemas import ReissueQuizRequest
+    
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    student_ids = data.get("student_ids", [])
+    new_available_until = data.get("new_available_until")
+    
+    if new_available_until:
+        new_available_until = datetime.fromisoformat(new_available_until.replace("Z", "+00:00")).replace(tzinfo=None)
+    
+    for student_id in student_ids:
+        attempts = await QuizAttempt.objects.filter(quiz=quiz, student=student_id).all()
+        for attempt in attempts:
+            await Answer.objects.filter(attempt=attempt).delete()
+            await attempt.delete()
+    
+    if new_available_until:
+        await quiz.update(available_until=new_available_until, manual_close=False)
+    
+    await log_audit(
+        "quiz_reissued",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="quiz",
+        resource_id=str(quiz_id),
+        details={"student_ids": student_ids, "new_available_until": str(new_available_until)},
+        request=request,
+    )
+    
+    return {"message": "Quiz reissued successfully", "reissued_for": len(student_ids)}
+
+
+@router.post("/{quiz_id}/close")
+async def close_quiz_early(
+    quiz_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    now = datetime.utcnow()
+    await quiz.update(available_until=now, manual_close=False)
+    
+    await log_audit(
+        "quiz_closed_early",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="quiz",
+        resource_id=str(quiz_id),
+        details={"closed_at": str(now)},
+        request=request,
+    )
+    
+    return {"message": "Quiz closed successfully"}

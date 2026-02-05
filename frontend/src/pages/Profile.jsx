@@ -161,7 +161,6 @@ export default function Profile() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
-      {/* Navigation */}
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -181,7 +180,6 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* Profile header */}
       <header className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-md)] sm:p-8">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--border)]/30 via-transparent to-transparent" aria-hidden />
         <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
@@ -205,7 +203,6 @@ export default function Profile() {
         </div>
       </header>
 
-      {/* Info card */}
       <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">
@@ -250,7 +247,6 @@ export default function Profile() {
         </ul>
       </section>
 
-      {/* Edit profile */}
       <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">
@@ -328,7 +324,6 @@ export default function Profile() {
         </form>
       </section>
 
-      {/* Change password */}
       <section className="mt-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)]">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--border)]/50 text-[var(--text-muted)]">

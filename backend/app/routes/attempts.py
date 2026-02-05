@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
+import random
 from schemas import (
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
     QuizAttemptResponse, QuizResultResponse
@@ -37,6 +38,13 @@ async def start_quiz_attempt(
             detail="Quiz is not active"
         )
     
+    now = utc_now()
+    if not quiz.manual_close and quiz.available_until and quiz.available_until < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Quiz has expired"
+        )
+    
     is_member = await GroupMember.objects.filter(
         group=quiz.group, user=current_user
     ).exists()
@@ -59,10 +67,25 @@ async def start_quiz_attempt(
         pass
     
     if existing_attempt:
-        return existing_attempt
+        questions_order = None
+        if existing_attempt.questions_order:
+            try:
+                questions_order = json.loads(existing_attempt.questions_order)
+            except:
+                pass
+        return {
+            **existing_attempt.dict(),
+            "quiz_id": quiz.id,
+            "student_id": current_user.id,
+            "questions_order": questions_order
+        }
     
     questions = await Question.objects.filter(quiz=quiz).all()
     max_score = sum(q.points for q in questions)
+    
+    question_ids = [q.id for q in questions]
+    random.shuffle(question_ids)
+    questions_order_json = json.dumps(question_ids)
     
     attempt = await QuizAttempt.objects.create(
         quiz=quiz,
@@ -70,7 +93,9 @@ async def start_quiz_attempt(
         score=0.0,
         max_score=max_score,
         started_at=utc_now(),
-        is_completed=False
+        is_completed=False,
+        status="opened",
+        questions_order=questions_order_json
     )
     await log_audit(
         "attempt_started",
@@ -84,7 +109,8 @@ async def start_quiz_attempt(
     return {
         **attempt.dict(),
         "quiz_id": quiz.id,
-        "student_id": current_user.id
+        "student_id": current_user.id,
+        "questions_order": question_ids
     }
 
 
@@ -128,36 +154,65 @@ async def submit_answer(
             detail="Question already answered"
         )
     
-    all_question_options = await Option.objects.filter(question=question).all()
-    all_option_ids = set(opt.id for opt in all_question_options)
-    selected_ids = set(data.selected_options)
+    is_correct = False
+    points_earned = 0.0
+    selected_options_json = "[]"
+    text_answer = None
     
-    if not selected_ids.issubset(all_option_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Selected options do not belong to this question"
-        )
+    input_type = question.input_type or "select"
+    if input_type in ("text", "number"):
+        text_answer = data.text_answer
+        if text_answer is not None and question.correct_text_answer:
+            if input_type == "number":
+                try:
+                    is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
+                except:
+                    is_correct = False
+            else:
+                is_correct = text_answer.strip().lower() == question.correct_text_answer.strip().lower()
+        points_earned = question.points if is_correct else 0.0
+    else:
+        all_question_options = await Option.objects.filter(question=question).all()
+        all_option_ids = set(opt.id for opt in all_question_options)
+        selected_ids = set(data.selected_options)
+        
+        if not selected_ids.issubset(all_option_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selected options do not belong to this question"
+            )
+        
+        correct_options = await Option.objects.filter(
+            question=question,
+            is_correct=True
+        ).all()
+        correct_ids = set(opt.id for opt in correct_options)
+        
+        is_correct = correct_ids == selected_ids
+        points_earned = question.points if is_correct else 0.0
+        selected_options_json = json.dumps(data.selected_options)
     
-    correct_options = await Option.objects.filter(
-        question=question,
-        is_correct=True
-    ).all()
-    correct_ids = set(opt.id for opt in correct_options)
-    
-    is_correct = correct_ids == selected_ids
-    points_earned = question.points if is_correct else 0.0
+    now = utc_now()
+    previous_answers = await Answer.objects.filter(attempt=attempt).order_by("-answered_at").all()
+    if previous_answers:
+        last_answer_time = previous_answers[0].answered_at
+        time_spent = int((now - last_answer_time).total_seconds())
+    else:
+        time_spent = int((now - attempt.started_at).total_seconds())
     
     answer = await Answer.objects.create(
         attempt=attempt,
         question=question,
-        selected_options=json.dumps(data.selected_options),
+        selected_options=selected_options_json,
+        text_answer=text_answer,
         is_correct=is_correct,
         points_earned=points_earned,
-        answered_at=utc_now()
+        time_spent=time_spent,
+        answered_at=now
     )
     
     await attempt.load()
-    await attempt.update(score=attempt.score + points_earned)
+    await attempt.update(score=attempt.score + points_earned, status="in_progress")
     
     return {
         "message": "Answer submitted",
@@ -194,7 +249,8 @@ async def complete_quiz_attempt(
     await attempt.update(
         completed_at=utc_now(),
         time_spent=time_spent,
-        is_completed=True
+        is_completed=True,
+        status="completed"
     )
     await log_audit(
         "attempt_completed",
@@ -230,14 +286,18 @@ async def get_my_attempts(
     
     attempts = await query.order_by("-started_at").all()
     
-    return [
-        {
-            **attempt.dict(),
-            "quiz_id": attempt.quiz.id,
-            "student_id": current_user.id
-        }
-        for attempt in attempts
-    ]
+    result = []
+    for attempt in attempts:
+        data = attempt.dict()
+        data["quiz_id"] = attempt.quiz.id
+        data["student_id"] = current_user.id
+        if data.get("questions_order"):
+            try:
+                data["questions_order"] = json.loads(data["questions_order"])
+            except (json.JSONDecodeError, TypeError):
+                data["questions_order"] = None
+        result.append(data)
+    return result
 
 
 @router.get("/results/{attempt_id}", response_model=QuizResultResponse)
@@ -281,12 +341,20 @@ async def get_attempt_results(
     
     percentage = (attempt.score / attempt.max_score * 100) if attempt.max_score > 0 else 0
     
+    questions_order = None
+    if attempt.questions_order:
+        try:
+            questions_order = json.loads(attempt.questions_order)
+        except (json.JSONDecodeError, TypeError):
+            questions_order = None
+    
+    attempt_data = attempt.dict()
+    attempt_data["quiz_id"] = attempt.quiz.id
+    attempt_data["student_id"] = attempt.student.id
+    attempt_data["questions_order"] = questions_order
+    
     return {
-        "attempt": {
-            **attempt.dict(),
-            "quiz_id": attempt.quiz.id,
-            "student_id": attempt.student.id
-        },
+        "attempt": attempt_data,
         "answers": answer_details,
         "percentage": percentage
     }
@@ -354,9 +422,17 @@ async def get_current_attempt(
     answered_questions = await Answer.objects.filter(attempt=attempt).all()
     answered_ids = [ans.question.id for ans in answered_questions]
     
+    questions_order = None
+    if attempt.questions_order:
+        try:
+            questions_order = json.loads(attempt.questions_order)
+        except:
+            pass
+    
     return {
         "has_attempt": True,
         "attempt_id": attempt.id,
         "started_at": attempt.started_at,
-        "answered_questions": answered_ids
+        "answered_questions": answered_ids,
+        "questions_order": questions_order
     }

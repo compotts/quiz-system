@@ -355,6 +355,21 @@ export const quizzesApi = {
       method: "DELETE",
     });
   },
+  async getStudentStatuses(quizId) {
+    return request(`/quizzes/${quizId}/student-statuses`);
+  },
+  async reissueQuiz(quizId, studentIds, newAvailableUntil = null) {
+    return request(`/quizzes/${quizId}/reissue`, {
+      method: "POST",
+      body: JSON.stringify({ 
+        student_ids: studentIds, 
+        new_available_until: newAvailableUntil 
+      }),
+    });
+  },
+  async closeQuizEarly(quizId) {
+    return request(`/quizzes/${quizId}/close`, { method: "POST" });
+  },
 };
 
 export const attemptsApi = {
@@ -377,10 +392,14 @@ export const attemptsApi = {
       body: JSON.stringify({ quiz_id: quizId }),
     });
   },
-  async submitAnswer(questionId, selectedOptions) {
+  async submitAnswer(questionId, selectedOptions = [], textAnswer = null) {
     return request("/attempts/answer", {
       method: "POST",
-      body: JSON.stringify({ question_id: questionId, selected_options: selectedOptions }),
+      body: JSON.stringify({ 
+        question_id: questionId, 
+        selected_options: selectedOptions,
+        text_answer: textAnswer
+      }),
     });
   },
   async completeAttempt(attemptId) {

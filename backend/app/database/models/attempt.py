@@ -1,8 +1,17 @@
-from ormar import Model, Integer, Float, ForeignKey, DateTime, Text, Boolean
+from ormar import Model, Integer, Float, ForeignKey, DateTime, Text, Boolean, String
 from app.database.database import base_ormar_config, utc_now
 from datetime import datetime
+from enum import Enum
 from app.database.models.user import User
 from app.database.models.quiz import Quiz, Question
+
+
+class AttemptStatus(str, Enum):
+    NOT_OPENED = "not_opened"
+    OPENED = "opened"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    EXPIRED = "expired"
 
 
 class QuizAttempt(Model):
@@ -17,6 +26,8 @@ class QuizAttempt(Model):
     completed_at: datetime = DateTime(nullable=True)
     time_spent: int = Integer(nullable=True)
     is_completed: bool = Boolean(default=False)
+    status: str = String(max_length=20, default="opened")
+    questions_order: str = Text(nullable=True)
     created_at: datetime = DateTime(default=utc_now)
 
 
@@ -27,6 +38,8 @@ class Answer(Model):
     attempt: QuizAttempt = ForeignKey(QuizAttempt, related_name="answers")
     question: Question = ForeignKey(Question)
     selected_options: str = Text()
+    text_answer: str = Text(nullable=True)
     is_correct: bool = Boolean(default=False)
     points_earned: float = Float(default=0.0)
+    time_spent: int = Integer(nullable=True)
     answered_at: datetime = DateTime(default=utc_now)

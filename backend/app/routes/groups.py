@@ -31,6 +31,7 @@ async def create_group(
         name=data.name,
         subject=data.subject,
         code=code,
+        color=data.color or "#6366f1",
         teacher=current_user
     )
     await log_audit(
@@ -47,12 +48,16 @@ async def create_group(
         **group.dict(),
         "teacher_id": current_user.id,
         "teacher_name": teacher_full_name,
-        "member_count": 0
+        "member_count": 0,
+        "incomplete_assignments": 0
     }
 
 
 @router.get("", response_model=List[GroupResponse])
 async def get_my_groups(current_user: User = Depends(get_current_user)):
+    from datetime import datetime
+    now = datetime.utcnow()
+    
     if current_user.role == "teacher" or current_user.role == "admin":
         groups = await Group.objects.select_related("teacher").filter(teacher=current_user).all()
         
@@ -64,7 +69,8 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
                 **group.dict(),
                 "teacher_id": current_user.id,
                 "teacher_name": teacher_full_name,
-                "member_count": member_count
+                "member_count": member_count,
+                "incomplete_assignments": 0
             })
         return result
     else:
@@ -77,11 +83,24 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
             group = membership.group
             member_count = await GroupMember.objects.filter(group=group).count()
             teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
+            
+            quizzes = await Quiz.objects.filter(group=group, is_active=True).all()
+            incomplete_count = 0
+            for quiz in quizzes:
+                if not quiz.manual_close and quiz.available_until and quiz.available_until < now:
+                    continue
+                completed_attempt = await QuizAttempt.objects.filter(
+                    quiz=quiz, student=current_user, is_completed=True
+                ).exists()
+                if not completed_attempt:
+                    incomplete_count += 1
+            
             result.append({
                 **group.dict(),
                 "teacher_id": group.teacher.id,
                 "teacher_name": teacher_full_name,
-                "member_count": member_count
+                "member_count": member_count,
+                "incomplete_assignments": incomplete_count
             })
         return result
 
@@ -91,6 +110,9 @@ async def get_group(
     group_id: int,
     current_user: User = Depends(get_current_user)
 ):
+    from datetime import datetime
+    now = datetime.utcnow()
+    
     group = await Group.objects.select_related("teacher").get_or_none(id=group_id)
     
     if not group:
@@ -113,11 +135,24 @@ async def get_group(
     member_count = await GroupMember.objects.filter(group=group).count()
     teacher_full_name = f"{group.teacher.first_name} {group.teacher.last_name}".strip() if group.teacher.first_name or group.teacher.last_name else group.teacher.username
     
+    incomplete_count = 0
+    if current_user.role == "student":
+        quizzes = await Quiz.objects.filter(group=group, is_active=True).all()
+        for quiz in quizzes:
+            if not quiz.manual_close and quiz.available_until and quiz.available_until < now:
+                continue
+            completed_attempt = await QuizAttempt.objects.filter(
+                quiz=quiz, student=current_user, is_completed=True
+            ).exists()
+            if not completed_attempt:
+                incomplete_count += 1
+    
     return {
         **group.dict(),
         "teacher_id": group.teacher.id,
         "teacher_name": teacher_full_name,
-        "member_count": member_count
+        "member_count": member_count,
+        "incomplete_assignments": incomplete_count
     }
 
 

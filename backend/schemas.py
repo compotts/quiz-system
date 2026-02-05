@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime, timezone
 from app.database.models.user import UserRole
-from app.database.models.quiz import QuizType, TimerMode
 
 
 def _naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
@@ -173,11 +172,13 @@ AdminStatsResponse.model_rebuild()
 class GroupCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     subject: Optional[str] = Field(None, min_length=1, max_length=255)
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 
 class GroupUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     subject: Optional[str] = Field(None, min_length=1, max_length=255)
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 
 class GroupResponse(BaseModel):
@@ -185,10 +186,12 @@ class GroupResponse(BaseModel):
     name: str
     subject: Optional[str] = None
     code: str
+    color: Optional[str] = None
     teacher_id: int
     teacher_name: Optional[str] = None
     created_at: datetime
     member_count: Optional[int] = 0
+    incomplete_assignments: Optional[int] = 0
 
 
 class JoinGroupRequest(BaseModel):
@@ -199,10 +202,11 @@ class QuizCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     group_id: int
-    quiz_type: QuizType = QuizType.SINGLE_CHOICE
-    timer_mode: TimerMode = TimerMode.QUIZ_TOTAL
+    has_quiz_time_limit: bool = False
     time_limit: Optional[int] = None
     available_until: Optional[datetime] = None
+    manual_close: bool = False 
+    allow_show_answers: bool = True 
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -213,11 +217,12 @@ class QuizCreate(BaseModel):
 class QuizUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    quiz_type: Optional[QuizType] = None
-    timer_mode: Optional[TimerMode] = None
+    has_quiz_time_limit: Optional[bool] = None
     time_limit: Optional[int] = None
     is_active: Optional[bool] = None
     available_until: Optional[datetime] = None
+    manual_close: Optional[bool] = None
+    allow_show_answers: Optional[bool] = None
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -231,13 +236,15 @@ class QuizResponse(BaseModel):
     description: Optional[str]
     group_id: int
     teacher_id: int
-    quiz_type: str
-    timer_mode: str
+    has_quiz_time_limit: bool = False
     time_limit: Optional[int]
     is_active: bool
     available_until: Optional[datetime] = None
+    manual_close: bool = False
+    allow_show_answers: bool = True
     created_at: datetime
     question_count: Optional[int] = 0
+    is_expired: Optional[bool] = False
 
 
 class OptionCreate(BaseModel):
@@ -247,20 +254,24 @@ class OptionCreate(BaseModel):
 
 
 class QuestionCreate(BaseModel):
-    question_type: QuizType
     text: str
     order: int
     points: float = 1.0
-    time_limit: Optional[int] = None
-    options: List[OptionCreate]
+    input_type: str = "select"
+    has_time_limit: bool = False 
+    time_limit: Optional[int] = None  
+    options: List[OptionCreate] = []  
+    correct_text_answer: Optional[str] = None 
 
 
 class QuestionUpdate(BaseModel):
-    question_type: Optional[QuizType] = None
     text: Optional[str] = None
     order: Optional[int] = None
     points: Optional[float] = None
+    input_type: Optional[str] = None
+    has_time_limit: Optional[bool] = None
     time_limit: Optional[int] = None
+    correct_text_answer: Optional[str] = None
 
 
 class OptionResponse(BaseModel):
@@ -273,12 +284,15 @@ class OptionResponse(BaseModel):
 class QuestionResponse(BaseModel):
     id: int
     quiz_id: int
-    question_type: str
+    input_type: str = "select"
     text: str
     order: int
     points: float
+    has_time_limit: bool = False
     time_limit: Optional[int]
+    correct_text_answer: Optional[str] = None
     options: List[OptionResponse]
+    is_multiple_choice: bool = False 
 
 
 class StartQuizAttempt(BaseModel):
@@ -287,7 +301,8 @@ class StartQuizAttempt(BaseModel):
 
 class SubmitAnswer(BaseModel):
     question_id: int
-    selected_options: List[int]
+    selected_options: List[int] = [] 
+    text_answer: Optional[str] = None 
 
 
 class CompleteQuizAttempt(BaseModel):
@@ -304,12 +319,36 @@ class QuizAttemptResponse(BaseModel):
     completed_at: Optional[datetime]
     time_spent: Optional[int]
     is_completed: bool
+    status: str = "opened"
+    questions_order: Optional[List[int]] = None
 
 
 class QuizResultResponse(BaseModel):
     attempt: QuizAttemptResponse
     answers: List[dict]
     percentage: float
+
+
+class StudentAttemptStatus(BaseModel):
+    student_id: int
+    student_name: str
+    status: str 
+    score: Optional[float] = None
+    max_score: Optional[float] = None
+    answered_count: int = 0
+    total_questions: int = 0
+    avg_time_per_answer: Optional[float] = None 
+
+
+class ReissueQuizRequest(BaseModel):
+    """Перевыпуск задания для конкретных учеников"""
+    student_ids: List[int]
+    new_available_until: Optional[datetime] = None
+    
+    @field_validator("new_available_until", mode="after")
+    @classmethod
+    def new_available_until_naive_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _naive_utc(v)
 
 
 class ContactMessageCreate(BaseModel):

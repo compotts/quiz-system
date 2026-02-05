@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, ChevronRight, Loader2, RefreshCw, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, Send, X } from "lucide-react";
 import { authApi, attemptsApi, groupsApi, quizzesApi } from "../services/api.js";
+
+const TABS = [
+  { id: "assignments", icon: ClipboardList, label: "Задания" },
+  { id: "grades", icon: BarChart3, label: "Оценивание" },
+];
 
 function formatDate(dateString) {
   if (!dateString) return "—";
@@ -27,27 +32,26 @@ export default function StudentGroupPage() {
 
   const [group, setGroup] = useState(null);
   const [tab, setTab] = useState("assignments");
+  const [assignmentFilter, setAssignmentFilter] = useState("incomplete"); 
 
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
 
-  const [runState, setRunState] = useState(null);
+  const [runState, setRunState] = useState(null); 
   const [runQuiz, setRunQuiz] = useState(null);
   const [runAttemptId, setRunAttemptId] = useState(null);
   const [runQuestions, setRunQuestions] = useState([]);
+  const [runQuestionsOrder, setRunQuestionsOrder] = useState([]);
   const [runAnswered, setRunAnswered] = useState([]);
-  const [runCurrentIndex, setRunCurrentIndex] = useState(0);
-  const [runSelected, setRunSelected] = useState([]);
-  const [runSubmitLoading, setRunSubmitLoading] = useState(false);
-  const [runCompleteLoading, setRunCompleteLoading] = useState(false);
+  const [runAnswers, setRunAnswers] = useState({}); 
+  const [runSubmitting, setRunSubmitting] = useState({});
+  const [runCompleting, setRunCompleting] = useState(false);
   const [runResults, setRunResults] = useState(null);
 
   const [attemptDetailId, setAttemptDetailId] = useState(null);
   const [attemptDetail, setAttemptDetail] = useState(null);
 
   const showQuizRun = runState === "running" || runState === "results";
-  const currentQ = runQuestions[runCurrentIndex];
-  const singleChoice = currentQ && (currentQ.question_type || "").startsWith("single");
 
   useEffect(() => {
     let ignore = false;
@@ -82,7 +86,7 @@ export default function StudentGroupPage() {
       setQuizzes(Array.isArray(q) ? q : []);
       setAttempts(Array.isArray(a) ? a : []);
     } catch (err) {
-      setError(err.message || "ошибка загрузки данных");
+      setError(err.message || "Ошибка загрузки данных");
     } finally {
       setLoading(false);
     }
@@ -114,46 +118,54 @@ export default function StudentGroupPage() {
     return s;
   }, [attemptsInGroup]);
 
-  const assignments = useMemo(() => {
+  const filteredQuizzes = useMemo(() => {
     const now = Date.now();
     return (quizzes || [])
-      .filter((q) => !completedQuizIds.has(q.id))
       .map((q) => {
         const untilMs = q.available_until ? new Date(q.available_until).getTime() : null;
-        const expired = untilMs != null && !Number.isNaN(untilMs) && untilMs < now;
-        return { ...q, _expired: expired };
+        const expired = !q.manual_close && untilMs != null && !Number.isNaN(untilMs) && untilMs < now;
+        const completed = completedQuizIds.has(q.id);
+        return { ...q, _expired: expired, _completed: completed };
+      })
+      .filter((q) => {
+        if (assignmentFilter === "incomplete") return !q._completed && !q._expired;
+        return q._completed;
       });
-  }, [quizzes, completedQuizIds]);
+  }, [quizzes, completedQuizIds, assignmentFilter]);
 
   const startOrContinueQuiz = async (quiz) => {
     setError("");
     try {
       const cur = await attemptsApi.getCurrentAttempt(quiz.id);
       let attemptId;
+      let questionsOrder = null;
+
       if (cur.has_attempt) {
         attemptId = cur.attempt_id;
+        questionsOrder = cur.questions_order;
       } else {
         const started = await attemptsApi.startAttempt(quiz.id);
         attemptId = started.id;
+        questionsOrder = started.questions_order;
       }
+
       const qs = await quizzesApi.getQuestions(quiz.id);
       const questions = Array.isArray(qs) ? qs : [];
       const answered = cur.has_attempt ? cur.answered_questions || [] : [];
-      let idx = 0;
-      const order = questions.map((q) => q.id);
-      for (let i = 0; i < order.length; i++) {
-        if (!answered.includes(order[i])) {
-          idx = i;
-          break;
-        }
-        idx = i + 1;
+
+      let orderedQuestions = questions;
+      if (questionsOrder && Array.isArray(questionsOrder)) {
+        const qMap = {};
+        questions.forEach((q) => { qMap[q.id] = q; });
+        orderedQuestions = questionsOrder.map((id) => qMap[id]).filter(Boolean);
       }
+
       setRunQuiz(quiz);
       setRunAttemptId(attemptId);
-      setRunQuestions(questions);
+      setRunQuestions(orderedQuestions);
+      setRunQuestionsOrder(questionsOrder || orderedQuestions.map((q) => q.id));
       setRunAnswered(answered);
-      setRunCurrentIndex(Math.min(idx, questions.length));
-      setRunSelected([]);
+      setRunAnswers({});
       setRunResults(null);
       setRunState("running");
     } catch (err) {
@@ -161,36 +173,56 @@ export default function StudentGroupPage() {
     }
   };
 
-  const submitCurrentAnswer = async () => {
-    const q = runQuestions[runCurrentIndex];
-    if (!q || runSubmitLoading) return;
-    const single = (q.question_type || "").startsWith("single");
-    const optIds = (q.options || []).map((o) => o.id);
-    const selected = single ? (runSelected.length ? [runSelected[0]] : []) : runSelected.filter((id) => optIds.includes(id));
-    if (!selected.length) return;
+  const handleAnswerChange = (questionId, value, isText = false) => {
+    setRunAnswers((prev) => ({
+      ...prev,
+      [questionId]: isText
+        ? { ...prev[questionId], text: value }
+        : { ...prev[questionId], selected: value },
+    }));
+  };
 
-    setRunSubmitLoading(true);
+  const submitAnswer = async (question) => {
+    const answer = runAnswers[question.id];
+    if (!answer) return;
+
+    const inputType = question.input_type || "select";
+    let selectedOptions = [];
+    let textAnswer = null;
+
+    if (inputType === "select") {
+      selectedOptions = answer.selected || [];
+      if (!selectedOptions.length) return;
+    } else {
+      textAnswer = answer.text;
+      if (!textAnswer?.trim()) return;
+    }
+
+    setRunSubmitting((prev) => ({ ...prev, [question.id]: true }));
     setError("");
+
     try {
-      await attemptsApi.submitAnswer(q.id, selected);
-      const nextAnswered = [...runAnswered, q.id];
-      setRunAnswered(nextAnswered);
-      setRunSelected([]);
-      let nextIdx = runCurrentIndex + 1;
-      while (nextIdx < runQuestions.length && nextAnswered.includes(runQuestions[nextIdx].id)) nextIdx++;
-      setRunCurrentIndex(nextIdx);
-      if (nextIdx >= runQuestions.length) {
-        setRunCompleteLoading(true);
-        await attemptsApi.completeAttempt(runAttemptId);
-        const res = await attemptsApi.getAttemptResults(runAttemptId);
-        setRunResults(res);
-        setRunState("results");
-      }
+      await attemptsApi.submitAnswer(question.id, selectedOptions, textAnswer);
+      setRunAnswered((prev) => [...prev, question.id]);
     } catch (err) {
       setError(err.message || t("student.quizzes.errorSubmit"));
     } finally {
-      setRunSubmitLoading(false);
-      setRunCompleteLoading(false);
+      setRunSubmitting((prev) => ({ ...prev, [question.id]: false }));
+    }
+  };
+
+  const completeQuiz = async () => {
+    setRunCompleting(true);
+    setError("");
+    try {
+      await attemptsApi.completeAttempt(runAttemptId);
+      const res = await attemptsApi.getAttemptResults(runAttemptId);
+      setRunResults(res);
+      setRunState("results");
+    } catch (err) {
+      setError(err.message || t("student.quizzes.errorComplete"));
+    } finally {
+      setRunCompleting(false);
     }
   };
 
@@ -199,7 +231,9 @@ export default function StudentGroupPage() {
     setRunQuiz(null);
     setRunAttemptId(null);
     setRunQuestions([]);
+    setRunQuestionsOrder([]);
     setRunAnswered([]);
+    setRunAnswers({});
     setRunResults(null);
     setError("");
     loadAll();
@@ -234,13 +268,20 @@ export default function StudentGroupPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard/student")}
-                  className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                  className="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
                 >
-                  ← Назад к группам
+                  <ArrowLeft className="h-4 w-4" />
+                  Назад к группам
                 </button>
-                <h1 className="mt-2 text-xl font-semibold text-[var(--text)] sm:text-2xl">
-                  {group?.name || "Группа"}
-                </h1>
+                <div className="mt-2 flex items-center gap-3">
+                  <div
+                    className="h-4 w-4 rounded-full"
+                    style={{ backgroundColor: group?.color || "#6366f1" }}
+                  />
+                  <h1 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
+                    {group?.name || "Группа"}
+                  </h1>
+                </div>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
                   Преподаватель: {group?.teacher_name || (group?.teacher_id ? `#${group.teacher_id}` : "—")}
                   {" · "}
@@ -256,6 +297,23 @@ export default function StudentGroupPage() {
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               </button>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+                    tab === t.id
+                      ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                      : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  <t.icon className="h-4 w-4" />
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -275,199 +333,287 @@ export default function StudentGroupPage() {
 
           {showQuizRun ? (
             <div>
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-[var(--text)]">{runQuiz?.title}</h2>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    Отвечено: {runAnswered.length} / {runQuestions.length}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={exitQuizRun}
                   className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
                 >
-                  {t("student.quizzes.backToQuizzes")}
+                  {runState === "results" ? "Закрыть" : "Выйти"}
                 </button>
-                {runState === "running" && runQuiz && (
-                  <span className="text-sm text-[var(--text-muted)]">
-                    {runQuiz.title} — {runCurrentIndex + 1} / {runQuestions.length}
-                  </span>
-                )}
               </div>
 
               {runState === "results" && runResults && (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.quizzes.results")}</h2>
-                  <p className="mt-2 text-[var(--text-muted)]">
-                    {runResults.attempt?.score} / {runResults.attempt?.max_score} ({Math.round(runResults.percentage ?? 0)}%)
+                  <h3 className="text-lg font-semibold text-[var(--text)]">Результаты</h3>
+                  <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
+                    {runResults.attempt?.score} / {runResults.attempt?.max_score}
+                    <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
+                      ({Math.round(runResults.percentage ?? 0)}%)
+                    </span>
                   </p>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-6 space-y-3">
                     {(runResults.answers || []).map((a, i) => (
-                      <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                      <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
                         <p className="font-medium text-[var(--text)]">{a.question_text}</p>
                         <p
-                          className={`mt-1 text-sm ${
+                          className={`mt-2 flex items-center gap-2 text-sm ${
                             a.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                           }`}
                         >
-                          {a.is_correct ? "✓" : "✗"} {a.points_earned} / {a.max_points}
+                          {a.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                          {a.points_earned} / {a.max_points} баллов
                         </p>
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={exitQuizRun}
-                    className="mt-6 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
-                  >
-                    {t("student.quizzes.backToQuizzes")}
-                  </button>
                 </div>
               )}
 
-              {runState === "running" && currentQ && (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <p className="font-medium text-[var(--text)]">{currentQ.text}</p>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {t("teacher.quizzes.points")}: {currentQ.points} ·{" "}
-                    {singleChoice ? t("teacher.quizzes.quizTypeSingle") : t("teacher.quizzes.quizTypeMultiple")}
-                  </p>
-                  <div className="mt-4 space-y-2">
-                    {(currentQ.options || []).map((opt) => {
-                      const sel = runSelected.includes(opt.id);
-                      return (
-                        <label
-                          key={opt.id}
-                          className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
-                            sel ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] hover:bg-[var(--bg-card)]"
-                          }`}
-                        >
-                          <input
-                            type={singleChoice ? "radio" : "checkbox"}
-                            name="opt"
-                            checked={sel}
-                            onChange={() => {
-                              if (singleChoice) setRunSelected([opt.id]);
-                              else setRunSelected((s) => (s.includes(opt.id) ? s.filter((x) => x !== opt.id) : [...s, opt.id]));
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-[var(--text)]">{opt.text}</span>
-                        </label>
-                      );
-                    })}
+              {runState === "running" && (
+                <div className="space-y-4">
+                  {runQuestions.map((q, idx) => {
+                    const isAnswered = runAnswered.includes(q.id);
+                    const isSubmitting = runSubmitting[q.id];
+                    const answer = runAnswers[q.id] || {};
+                    const inputType = q.input_type || "select";
+                    const isMultiple = q.is_multiple_choice;
+
+                    return (
+                      <div
+                        key={q.id}
+                        className={`rounded-xl border bg-[var(--surface)] p-6 transition-opacity ${
+                          isAnswered
+                            ? "border-green-500/30 bg-green-500/5 opacity-75"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)]/10 text-xs font-medium text-[var(--accent)]">
+                                {idx + 1}
+                              </span>
+                              <span className="font-medium text-[var(--text)]">{q.text}</span>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                              <span>{q.points} баллов</span>
+                              {inputType === "select" && isMultiple && (
+                                <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5">
+                                  Несколько вариантов ответа
+                                </span>
+                              )}
+                              {q.has_time_limit && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {q.time_limit}с
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {isAnswered && (
+                            <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                          )}
+                        </div>
+
+                        {!isAnswered && (
+                          <div className="mt-4">
+                            {inputType === "select" ? (
+                              <div className="space-y-2">
+                                {(q.options || []).map((opt) => {
+                                  const selected = (answer.selected || []).includes(opt.id);
+                                  return (
+                                    <label
+                                      key={opt.id}
+                                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                                        selected
+                                          ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                                          : "border-[var(--border)] hover:bg-[var(--bg-card)]"
+                                      }`}
+                                    >
+                                      <input
+                                        type={isMultiple ? "checkbox" : "radio"}
+                                        name={`q-${q.id}`}
+                                        checked={selected}
+                                        onChange={() => {
+                                          if (isMultiple) {
+                                            const prev = answer.selected || [];
+                                            const next = selected
+                                              ? prev.filter((id) => id !== opt.id)
+                                              : [...prev, opt.id];
+                                            handleAnswerChange(q.id, next);
+                                          } else {
+                                            handleAnswerChange(q.id, [opt.id]);
+                                          }
+                                        }}
+                                        className="h-4 w-4"
+                                      />
+                                      <span className="text-[var(--text)]">{opt.text}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <input
+                                type={inputType === "number" ? "number" : "text"}
+                                value={answer.text || ""}
+                                onChange={(e) => handleAnswerChange(q.id, e.target.value, true)}
+                                placeholder={inputType === "number" ? "Введите число" : "Введите ответ"}
+                                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-[var(--text)]"
+                              />
+                            )}
+
+                            <button
+                              onClick={() => submitAnswer(q)}
+                              disabled={isSubmitting || (inputType === "select" ? !(answer.selected?.length) : !answer.text?.trim())}
+                              className="mt-4 flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
+                            >
+                              {isSubmitting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                              Ответить
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      onClick={completeQuiz}
+                      disabled={runCompleting}
+                      className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {runCompleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      Завершить задание
+                    </button>
                   </div>
-                  <button
-                    onClick={submitCurrentAnswer}
-                    disabled={runSubmitLoading || runCompleteLoading || !runSelected.length}
-                    className="mt-6 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50"
-                  >
-                    {runSubmitLoading || runCompleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{" "}
-                    {runCurrentIndex < runQuestions.length - 1 ? t("student.quizzes.submitAnswer") : t("student.quizzes.complete")}
-                  </button>
                 </div>
               )}
             </div>
           ) : (
             <>
-              <div className="mb-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTab("assignments")}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                    tab === "assignments"
-                      ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
-                      : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  Задания
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTab("history")}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                    tab === "history"
-                      ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
-                      : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  История
-                </button>
-              </div>
-
               {loading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
                 </div>
               ) : tab === "assignments" ? (
-                assignments.length === 0 ? (
-                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                    Активных заданий нет
+                <div>
+                  <div className="mb-4">
+                    <select
+                      value={assignmentFilter}
+                      onChange={(e) => setAssignmentFilter(e.target.value)}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+                    >
+                      <option value="incomplete">Невыполненные</option>
+                      <option value="completed">Выполненные</option>
+                    </select>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {assignments.map((q) => (
-                      <div
-                        key={q.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
-                      >
-                        <div>
-                          <div className="font-medium text-[var(--text)]">{q.title}</div>
-                          <div className="mt-1 text-sm text-[var(--text-muted)]">
-                            Доступно до: {q.available_until ? formatDate(q.available_until) : "—"}
-                            {q._expired ? " (истекло)" : ""}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={q._expired}
-                          onClick={() => startOrContinueQuiz(q)}
-                          className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50"
+
+                  {filteredQuizzes.length === 0 ? (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
+                      {assignmentFilter === "incomplete" ? "Нет активных заданий" : "Нет выполненных заданий"}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredQuizzes.map((q) => (
+                        <div
+                          key={q.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
                         >
-                          {t("student.quizzes.start")}
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : attemptsInGroup.length === 0 ? (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
-                  История пустая
+                          <div>
+                            <div className="font-medium text-[var(--text)]">{q.title}</div>
+                            <div className="mt-1 text-sm text-[var(--text-muted)]">
+                              {q.manual_close ? (
+                                "Пока не завершит учитель"
+                              ) : (
+                                <>Доступно до: {formatDate(q.available_until)}</>
+                              )}
+                            </div>
+                          </div>
+                          {q._completed ? (
+                            <span className="rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-600 dark:text-green-400">
+                              Выполнено
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startOrContinueQuiz(q)}
+                              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
+                            >
+                              Начать
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {attemptsInGroup.map((a) => {
-                    const status = a.is_completed ? "выполнил" : "не выполнил";
-                    const pct = a.max_score > 0 ? Math.round((a.score / a.max_score) * 100) : 0;
-                    return (
-                      <div
-                        key={a.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
-                      >
-                        <div>
-                          <div className="font-medium text-[var(--text)]">{quizTitleMap[a.quiz_id] ?? `Quiz #${a.quiz_id}`}</div>
-                          <div className="mt-1 text-sm text-[var(--text-muted)]">
-                            Статус: {status}
-                            {a.is_completed ? ` · ${a.score} / ${a.max_score} (${pct}%)` : ""}
-                            {" · "}
-                            {a.is_completed ? formatDate(a.completed_at) : formatDate(a.started_at)}
-                          </div>
-                        </div>
-                        {a.is_completed ? (
-                          <button
-                            type="button"
-                            onClick={() => loadAttemptDetail(a.id)}
-                            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                <div>
+                  {attemptsInGroup.filter((a) => a.is_completed).length === 0 ? (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
+                      Нет завершённых заданий
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {attemptsInGroup.filter((a) => a.is_completed).map((a) => {
+                        const pct = a.max_score > 0 ? Math.round((a.score / a.max_score) * 100) : 0;
+                        return (
+                          <div
+                            key={a.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
                           >
-                            {t("student.attempts.viewDetails")}
-                          </button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+                            <div>
+                              <div className="font-medium text-[var(--text)]">
+                                {quizTitleMap[a.quiz_id] ?? `Задание #${a.quiz_id}`}
+                              </div>
+                              <div className="mt-1 text-sm text-[var(--text-muted)]">
+                                {formatDate(a.completed_at)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-[var(--accent)]">
+                                  {a.score} / {a.max_score}
+                                </div>
+                                <div className="text-sm text-[var(--text-muted)]">{pct}%</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => loadAttemptDetail(a.id)}
+                                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                              >
+                                Подробнее
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
               {attemptDetailId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
                   <div className="my-8 w-full max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.attempts.viewDetails")}</h2>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-[var(--text)]">Результаты</h2>
                       <button
                         onClick={() => {
                           setAttemptDetailId(null);
@@ -479,22 +625,23 @@ export default function StudentGroupPage() {
                       </button>
                     </div>
                     {!attemptDetail ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--text-muted)]" />
                     ) : (
                       <div className="space-y-4">
                         <p className="text-sm text-[var(--text-muted)]">
-                          {t("student.attempts.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
+                          Оценка: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
                           {Math.round(attemptDetail.percentage ?? 0)}%)
                         </p>
                         {(attemptDetail.answers || []).map((ans, i) => (
-                          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
                             <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
                             <p
-                              className={`mt-1 text-sm ${
+                              className={`mt-2 flex items-center gap-2 text-sm ${
                                 ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                               }`}
                             >
-                              {ans.is_correct ? "✓" : "✗"} {ans.points_earned} / {ans.max_points}
+                              {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                              {ans.points_earned} / {ans.max_points} баллов
                             </p>
                           </div>
                         ))}
@@ -510,4 +657,3 @@ export default function StudentGroupPage() {
     </div>
   );
 }
-

@@ -10,11 +10,19 @@ class QuizType(str, Enum):
     SINGLE_CHOICE = "single_choice"
     MULTIPLE_CHOICE = "multiple_choice"
     DRAG_DROP_ORDER = "drag_drop_order"
+    TEXT_INPUT = "text_input"
+    NUMBER_INPUT = "number_input"
 
 
 class TimerMode(str, Enum):
     QUIZ_TOTAL = "quiz_total"
     PER_QUESTION = "per_question"
+
+
+class QuestionInputType(str, Enum):
+    SELECT = "select" 
+    TEXT = "text" 
+    NUMBER = "number"
 
 
 class Quiz(Model):
@@ -25,11 +33,14 @@ class Quiz(Model):
     description: str = Text(nullable=True)
     group: Group = ForeignKey(Group, related_name="quizzes")
     teacher: User = ForeignKey(User, related_name="created_quizzes")
-    quiz_type: QuizType = String(max_length=20, default=QuizType.SINGLE_CHOICE)
-    timer_mode: TimerMode = String(max_length=20, default=TimerMode.QUIZ_TOTAL)
+    quiz_type: str = String(max_length=20, default="single_choice", nullable=True) 
+    timer_mode: str = String(max_length=20, default="quiz_total", nullable=True)
+    has_quiz_time_limit: bool = Boolean(default=False) 
     time_limit: int = Integer(nullable=True)
     is_active: bool = Boolean(default=True)
     available_until: datetime = DateTime(nullable=True)
+    manual_close: bool = Boolean(default=False) 
+    allow_show_answers: bool = Boolean(default=True)
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)
 
@@ -39,11 +50,14 @@ class Question(Model):
 
     id: int = Integer(primary_key=True)
     quiz: Quiz = ForeignKey(Quiz, related_name="questions")
-    question_type: QuizType = String(max_length=20)
+    question_type: str = String(max_length=20, nullable=True) 
+    input_type: str = String(max_length=20, default="select")
     text: str = Text()
     order: int = Integer()
     points: float = Float(default=1.0)
-    time_limit: int = Integer(nullable=True)
+    has_time_limit: bool = Boolean(default=False)
+    time_limit: int = Integer(nullable=True) 
+    correct_text_answer: str = Text(nullable=True) 
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)
 

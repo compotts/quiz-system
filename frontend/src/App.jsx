@@ -9,6 +9,8 @@ import BlogPostPage from "./pages/BlogPostPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminInit from "./pages/AdminInit.jsx";
 import TeacherDashboard from "./pages/TeacherDashboard.jsx";
+import TeacherGroupPage from "./pages/TeacherGroupPage.jsx";
+import TeacherQuizPage from "./pages/TeacherQuizPage.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import StudentGroupPage from "./pages/StudentGroupPage.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -45,7 +47,6 @@ function App() {
             if (cancelled) return;
             if (user?.role === "admin") setMaintenanceAdmin(user);
           } catch {
-            // не админ или 503 — остаёмся на странице обслуживания
           }
         }
       } catch {
@@ -96,6 +97,8 @@ function App() {
           <Route path="/admin/init" element={<AdminInit />} />
           <Route path="/dashboard/admin" element={<AdminDashboard />} />
           <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
+          <Route path="/dashboard/teacher/group/:groupId" element={<TeacherGroupPage />} />
+          <Route path="/dashboard/teacher/quiz/:quizId" element={<TeacherQuizPage />} />
           <Route path="/dashboard/student" element={<StudentDashboard />} />
           <Route path="/dashboard/student/groups/:groupId" element={<StudentGroupPage />} />
         </Routes>
