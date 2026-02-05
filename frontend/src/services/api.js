@@ -358,6 +358,9 @@ export const quizzesApi = {
   async getStudentStatuses(quizId) {
     return request(`/quizzes/${quizId}/student-statuses`);
   },
+  async getStudentDetail(quizId, studentId) {
+    return request(`/quizzes/${quizId}/student-detail/${studentId}`);
+  },
   async reissueQuiz(quizId, studentIds, newAvailableUntil = null) {
     return request(`/quizzes/${quizId}/reissue`, {
       method: "POST",

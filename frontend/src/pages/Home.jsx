@@ -45,12 +45,12 @@ const BANNER_STYLE_CLASSES = {
 };
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [siteStatus, setSiteStatus] = useState({
     maintenance_mode: false,
     registration_enabled: true,
-    home_banner_text: "",
+    home_banner_text: {},
     home_banner_style: "warning",
   });
   const [statusLoading, setStatusLoading] = useState(true);
@@ -62,7 +62,7 @@ export default function Home() {
         setSiteStatus({
           maintenance_mode: !!data.maintenance_mode,
           registration_enabled: data.registration_enabled !== false,
-          home_banner_text: data.home_banner_text || "",
+          home_banner_text: data.home_banner_text || {},
           home_banner_style: data.home_banner_style || "warning",
         });
       })
@@ -70,8 +70,22 @@ export default function Home() {
       .finally(() => setStatusLoading(false));
   }, []);
 
+  const getBannerText = () => {
+    const bannerTexts = siteStatus.home_banner_text;
+    if (!bannerTexts || typeof bannerTexts !== "object") return "";
+    
+    const currentLang = i18n.language;
+    if (bannerTexts[currentLang]?.trim()) return bannerTexts[currentLang];
+    const fallbackOrder = ["ru", "en", "lt"];
+    for (const lang of fallbackOrder) {
+      if (bannerTexts[lang]?.trim()) return bannerTexts[lang];
+    }
+    return "";
+  };
+
   const bannerStyle = BANNER_STYLE_CLASSES[siteStatus.home_banner_style] || BANNER_STYLE_CLASSES.warning;
-  const showBanner = siteStatus.home_banner_text?.trim();
+  const bannerText = getBannerText();
+  const showBanner = !!bannerText;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -86,7 +100,7 @@ export default function Home() {
           className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
           role="alert"
         >
-          {siteStatus.home_banner_text}
+          {bannerText}
         </div>
       )}
 

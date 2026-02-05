@@ -43,20 +43,31 @@ async def _get_str_setting(key: str) -> str | None:
     return s.value if s and s.value else None
 
 
+async def _get_json_setting(key: str, default=None):
+    import json
+    s = await SystemSetting.objects.get_or_none(key=key)
+    if s and s.value:
+        try:
+            return json.loads(s.value)
+        except (json.JSONDecodeError, TypeError):
+            return default
+    return default
+
+
 @router.get("/registration-settings")
 async def get_registration_settings():
     auto_enabled = await is_auto_registration_enabled()
     reg_enabled = await is_registration_enabled()
     maintenance = await is_maintenance_mode()
     contact = await is_contact_enabled()
-    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_text = await _get_json_setting("home_banner_text", {})
     home_banner_style = await _get_str_setting("home_banner_style")
     return {
         "auto_registration_enabled": auto_enabled,
         "registration_enabled": reg_enabled,
         "maintenance_mode": maintenance,
         "contact_enabled": contact,
-        "home_banner_text": home_banner_text or "",
+        "home_banner_text": home_banner_text or {},
         "home_banner_style": home_banner_style or "warning",
     }
 

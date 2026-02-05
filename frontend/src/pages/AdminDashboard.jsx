@@ -114,8 +114,9 @@ export default function AdminDashboard() {
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [contactEnabled, setContactEnabled] = useState(true);
-  const [homeBannerText, setHomeBannerText] = useState("");
+  const [homeBannerText, setHomeBannerText] = useState({ ru: "", en: "", lt: "" });
   const [homeBannerStyle, setHomeBannerStyle] = useState("warning");
+  const [bannerLang, setBannerLang] = useState("ru");
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
@@ -321,7 +322,7 @@ export default function AdminDashboard() {
       setRegistrationEnabled(data.registration_enabled !== false);
       setMaintenanceMode(!!data.maintenance_mode);
       setContactEnabled(data.contact_enabled !== false);
-      setHomeBannerText(data.home_banner_text ?? "");
+      setHomeBannerText(data.home_banner_text && typeof data.home_banner_text === "object" ? data.home_banner_text : { ru: "", en: "", lt: "" });
       setHomeBannerStyle(data.home_banner_style ?? "warning");
     } catch (err) {
       setError(err.message || "ошибка загрузки настроек");
@@ -394,11 +395,17 @@ export default function AdminDashboard() {
     setSettingsSaving(true);
     setError("");
     try {
+      const cleanedBannerText = {};
+      Object.entries(homeBannerText).forEach(([lang, text]) => {
+        const trimmed = (text || "").trim();
+        if (trimmed) cleanedBannerText[lang] = trimmed;
+      });
+      
       const data = await adminApi.updateSettings({
-        home_banner_text: homeBannerText.trim() || "",
+        home_banner_text: Object.keys(cleanedBannerText).length > 0 ? cleanedBannerText : null,
         home_banner_style: homeBannerStyle,
       });
-      setHomeBannerText(data.home_banner_text ?? "");
+      setHomeBannerText(data.home_banner_text && typeof data.home_banner_text === "object" ? data.home_banner_text : { ru: "", en: "", lt: "" });
       setHomeBannerStyle(data.home_banner_style ?? "warning");
     } catch (err) {
       setError(err.message || "ошибка сохранения баннера");
@@ -406,6 +413,12 @@ export default function AdminDashboard() {
       setSettingsSaving(false);
     }
   };
+  
+  const updateBannerText = (lang, text) => {
+    setHomeBannerText((prev) => ({ ...prev, [lang]: text }));
+  };
+  
+  const hasBannerText = Object.values(homeBannerText).some((t) => t?.trim());
 
   const handleMarkMessageRead = async (messageId) => {
     setProcessingMessage(messageId);
@@ -1727,14 +1740,44 @@ export default function AdminDashboard() {
                         {t("admin.homeBannerDesc")}
                       </p>
                     </div>
+                    
+                    <div className="flex gap-1 rounded-lg bg-[var(--bg-card)] p-1">
+                      {[
+                        { code: "ru", label: "Русский" },
+                        { code: "en", label: "English" },
+                        { code: "lt", label: "Lietuvių" },
+                      ].map((lang) => (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onClick={() => setBannerLang(lang.code)}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                            bannerLang === lang.code
+                              ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                              : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                          }`}
+                        >
+                          {lang.label}
+                          {homeBannerText[lang.code]?.trim() && (
+                            <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    
                     <textarea
-                      value={homeBannerText}
-                      onChange={(e) => setHomeBannerText(e.target.value)}
+                      value={homeBannerText[bannerLang] || ""}
+                      onChange={(e) => updateBannerText(bannerLang, e.target.value)}
                       placeholder={t("admin.homeBannerPlaceholder")}
                       rows={3}
                       maxLength={500}
-                      className="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                     />
+                    
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {t("admin.homeBannerLangHint")}
+                    </p>
+                    
                     <div className="flex flex-wrap items-center gap-3">
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <span className="text-[var(--text-muted)]">{t("admin.homeBannerStyle")}</span>
@@ -1759,9 +1802,9 @@ export default function AdminDashboard() {
                         {t("admin.homeBannerSave")}
                       </button>
                     </div>
-                    {homeBannerText.trim() && (
+                    {hasBannerText && (
                       <p className="text-xs text-[var(--text-muted)]">
-                        {homeBannerText.length}/500
+                        {(homeBannerText[bannerLang] || "").length}/500
                       </p>
                     )}
                   </div>

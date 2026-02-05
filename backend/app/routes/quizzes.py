@@ -545,6 +545,104 @@ async def get_student_statuses(
     return result
 
 
+@router.get("/{quiz_id}/student-detail/{student_id}")
+async def get_student_detail(
+    quiz_id: int,
+    student_id: int,
+    current_user: User = Depends(get_current_teacher)
+):
+    """Get detailed statistics for a specific student's attempt"""
+    quiz = await Quiz.objects.select_related("group").get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    student = await User.objects.get_or_none(id=student_id)
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+    
+    student_name = f"{student.first_name or ''} {student.last_name or ''}".strip() or student.username
+    
+    attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
+    
+    questions = await Question.objects.filter(quiz=quiz).order_by("order").all()
+    
+    question_details = []
+    for q in questions:
+        options = await Option.objects.filter(question=q).order_by("order").all()
+        
+        answer = None
+        if attempt:
+            answer = await Answer.objects.filter(attempt=attempt, question=q).first()
+        
+        selected_options = []
+        if answer and answer.selected_options:
+            try:
+                selected_options = json.loads(answer.selected_options) if isinstance(answer.selected_options, str) else answer.selected_options
+            except:
+                selected_options = []
+        
+        is_correct = answer.is_correct if answer else None
+        points_earned = answer.points_earned if answer else 0
+        time_spent = answer.time_spent if answer else None
+        text_answer = answer.text_answer if answer else None
+        
+        question_details.append({
+            "question_id": q.id,
+            "question_text": q.text,
+            "input_type": q.input_type or "select",
+            "points": q.points,
+            "correct_text_answer": q.correct_text_answer,
+            "options": [
+                {
+                    "id": o.id,
+                    "text": o.text,
+                    "is_correct": o.is_correct,
+                    "was_selected": o.id in selected_options
+                }
+                for o in options
+            ],
+            "answered": answer is not None,
+            "is_correct": is_correct,
+            "points_earned": points_earned,
+            "time_spent": time_spent,
+            "text_answer": text_answer,
+            "selected_option_ids": selected_options
+        })
+    
+    total_time = sum(q["time_spent"] or 0 for q in question_details if q["answered"])
+    answered_count = sum(1 for q in question_details if q["answered"])
+    correct_count = sum(1 for q in question_details if q["is_correct"])
+    
+    return {
+        "student_id": student_id,
+        "student_name": student_name,
+        "attempt_id": attempt.id if attempt else None,
+        "started_at": attempt.started_at.isoformat() if attempt and attempt.started_at else None,
+        "completed_at": attempt.completed_at.isoformat() if attempt and attempt.completed_at else None,
+        "is_completed": attempt.is_completed if attempt else False,
+        "score": attempt.score if attempt else 0,
+        "max_score": attempt.max_score if attempt else sum(q.points for q in questions),
+        "total_time": total_time,
+        "answered_count": answered_count,
+        "correct_count": correct_count,
+        "total_questions": len(questions),
+        "questions": question_details
+    }
+
+
 @router.post("/{quiz_id}/reissue")
 async def reissue_quiz(
     quiz_id: int,

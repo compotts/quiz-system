@@ -253,6 +253,7 @@
     "homeBannerStyleSuccess": "Success (green)",
     "homeBannerStyleNeutral": "Neutral (gray)",
     "homeBannerSave": "Save banner",
+    "homeBannerLangHint": "If text for a language is not specified, text from another available language will be shown",
     "status": { "pending": "Pending", "approved": "Approved", "rejected": "Rejected" },
     "roles": { "admin": "Admin", "teacher": "Teacher", "student": "Student", "teacherShort": "Teacher" },
     "searchFields": { "all": "Everywhere", "username": "Username", "email": "Email", "firstName": "First Name", "lastName": "Last Name" },
@@ -493,7 +494,23 @@
       "exportQuestions": "Export questions to JSON",
       "importQuestions": "Import questions from JSON",
       "importError": "Error importing questions",
-      "importInvalidFormat": "Invalid file format"
+      "importInvalidFormat": "Invalid file format",
+      "details": "Details",
+      "overallStats": "Overall Statistics",
+      "statsCompleted": "Completed",
+      "statsAvgScore": "Average Score",
+      "statsRange": "Range",
+      "statsAvgTime": "Avg. Time",
+      "statsDistribution": "Score Distribution",
+      "studentDetails": "Student Details",
+      "detailCorrect": "Correct",
+      "detailTotalTime": "Total Time",
+      "detailTimeChart": "Time per Question",
+      "detailCorrectLegend": "Correct",
+      "detailIncorrectLegend": "Incorrect",
+      "detailUnansweredLegend": "Unanswered",
+      "detailQuestions": "Answers by Question",
+      "detailStudentAnswer": "Student's answer"
     }
   },
   "student": {

@@ -233,6 +233,7 @@
     "homeBannerStyleSuccess": "Успех (зелёный)",
     "homeBannerStyleNeutral": "Нейтральный (серый)",
     "homeBannerSave": "Сохранить баннер",
+    "homeBannerLangHint": "Если текст на каком-то языке не указан, будет показан текст на доступном языке",
     "status": { "pending": "На рассмотрении", "approved": "Одобрено", "rejected": "Отклонено" },
     "roles": { "admin": "Админ", "teacher": "Преподаватель", "student": "Студент", "teacherShort": "Препод." },
     "searchFields": { "all": "Везде", "username": "Username", "email": "Email", "firstName": "Имя", "lastName": "Фамилия" },
@@ -473,7 +474,23 @@
       "exportQuestions": "Экспортировать вопросы в JSON",
       "importQuestions": "Импортировать вопросы из JSON",
       "importError": "Ошибка импорта вопросов",
-      "importInvalidFormat": "Неверный формат файла"
+      "importInvalidFormat": "Неверный формат файла",
+      "details": "Подробнее",
+      "overallStats": "Общая статистика",
+      "statsCompleted": "Выполнили",
+      "statsAvgScore": "Средний балл",
+      "statsRange": "Диапазон",
+      "statsAvgTime": "Среднее время",
+      "statsDistribution": "Распределение оценок",
+      "studentDetails": "Детали студента",
+      "detailCorrect": "Правильных",
+      "detailTotalTime": "Общее время",
+      "detailTimeChart": "Время на каждый вопрос",
+      "detailCorrectLegend": "Правильно",
+      "detailIncorrectLegend": "Неправильно",
+      "detailUnansweredLegend": "Без ответа",
+      "detailQuestions": "Ответы по вопросам",
+      "detailStudentAnswer": "Ответ студента"
     }
   },
   "blog": {

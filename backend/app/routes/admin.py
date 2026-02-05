@@ -93,13 +93,34 @@ async def _set_str_setting(key: str, value: str | None):
         await SystemSetting.objects.create(key=key, value=v)
 
 
+async def _get_json_setting(key: str, default=None):
+    import json
+    s = await SystemSetting.objects.get_or_none(key=key)
+    if s and s.value:
+        try:
+            return json.loads(s.value)
+        except (json.JSONDecodeError, TypeError):
+            return default
+    return default
+
+
+async def _set_json_setting(key: str, v):
+    import json
+    s = await SystemSetting.objects.get_or_none(key=key)
+    json_str = json.dumps(v, ensure_ascii=False) if v else ""
+    if s:
+        await s.update(value=json_str)
+    else:
+        await SystemSetting.objects.create(key=key, value=json_str)
+
+
 @router.get("/settings", response_model=AdminSettingsResponse)
 async def get_settings(current_admin: User = Depends(get_current_admin)):
     auto_reg = await _get_bool_setting("auto_registration_enabled", False)
     reg_enabled = await _get_bool_setting("registration_enabled", True)
     maintenance = await _get_bool_setting("maintenance_mode", False)
     contact = await _get_bool_setting("contact_enabled", True)
-    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_text = await _get_json_setting("home_banner_text")
     home_banner_style = await _get_str_setting("home_banner_style")
     return AdminSettingsResponse(
         auto_registration_enabled=auto_reg,
@@ -127,14 +148,14 @@ async def update_settings(
         await _set_bool_setting("contact_enabled", data.contact_enabled)
     payload = data.model_dump(exclude_unset=True)
     if "home_banner_text" in payload:
-        await _set_str_setting("home_banner_text", payload["home_banner_text"] or "")
+        await _set_json_setting("home_banner_text", payload["home_banner_text"] or {})
     if "home_banner_style" in payload:
         await _set_str_setting("home_banner_style", payload["home_banner_style"] or "warning")
     auto_reg = await _get_bool_setting("auto_registration_enabled", False)
     reg_enabled = await _get_bool_setting("registration_enabled", True)
     maintenance = await _get_bool_setting("maintenance_mode", False)
     contact = await _get_bool_setting("contact_enabled", True)
-    home_banner_text = await _get_str_setting("home_banner_text")
+    home_banner_text = await _get_json_setting("home_banner_text")
     home_banner_style = await _get_str_setting("home_banner_style")
     await log_audit(
         "settings_updated",

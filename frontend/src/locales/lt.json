@@ -253,6 +253,7 @@
     "homeBannerStyleSuccess": "Sėkmė (žalias)",
     "homeBannerStyleNeutral": "Neutralus (pilkas)",
     "homeBannerSave": "Išsaugoti skydelį",
+    "homeBannerLangHint": "Jei tekstas kokiai nors kalbai nenurodytas, bus rodomas tekstas iš kitos prieinamos kalbos",
     "status": { "pending": "Svarstoma", "approved": "Patvirtinta", "rejected": "Atmesta" },
     "roles": { "admin": "Admin", "teacher": "Dėstytojas", "student": "Studentas", "teacherShort": "Dėst." },
     "searchFields": { "all": "Visur", "username": "Vart. vardas", "email": "El. paštas", "firstName": "Vardas", "lastName": "Pavardė" },
@@ -493,7 +494,23 @@
       "exportQuestions": "Eksportuoti klausimus į JSON",
       "importQuestions": "Importuoti klausimus iš JSON",
       "importError": "Klaida importuojant klausimus",
-      "importInvalidFormat": "Neteisingas failo formatas"
+      "importInvalidFormat": "Neteisingas failo formatas",
+      "details": "Išsamiau",
+      "overallStats": "Bendra statistika",
+      "statsCompleted": "Atlikta",
+      "statsAvgScore": "Vidutinis balas",
+      "statsRange": "Diapazonas",
+      "statsAvgTime": "Vid. laikas",
+      "statsDistribution": "Balų pasiskirstymas",
+      "studentDetails": "Studento informacija",
+      "detailCorrect": "Teisingi",
+      "detailTotalTime": "Bendras laikas",
+      "detailTimeChart": "Laikas kiekvienam klausimui",
+      "detailCorrectLegend": "Teisingai",
+      "detailIncorrectLegend": "Neteisingai",
+      "detailUnansweredLegend": "Neatsakyta",
+      "detailQuestions": "Atsakymai pagal klausimus",
+      "detailStudentAnswer": "Studento atsakymas"
     }
   },
   "student": {

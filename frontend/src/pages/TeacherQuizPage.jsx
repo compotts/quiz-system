@@ -22,6 +22,11 @@ import {
   AlertTriangle,
   Download,
   Upload,
+  ChevronRight,
+  User,
+  TrendingUp,
+  Target,
+  Timer,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
@@ -88,6 +93,11 @@ export default function TeacherQuizPage() {
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(null);
   const [importingQuestions, setImportingQuestions] = useState(false);
+  
+  const [showStudentDetail, setShowStudentDetail] = useState(null);
+  const [studentDetail, setStudentDetail] = useState(null);
+  const [loadingStudentDetail, setLoadingStudentDetail] = useState(false);
+  const [showOverallStats, setShowOverallStats] = useState(true);
 
   const handleExportQuestions = () => {
     if (!questions.length) return;
@@ -278,6 +288,64 @@ export default function TeacherQuizPage() {
       setReissuing(false);
     }
   };
+
+  const loadStudentDetail = async (studentId) => {
+    setShowStudentDetail(studentId);
+    setStudentDetail(null);
+    setLoadingStudentDetail(true);
+    try {
+      const data = await quizzesApi.getStudentDetail(qid, studentId);
+      setStudentDetail(data);
+    } catch (err) {
+      setError(err.message || t("common.errorGeneric"));
+    } finally {
+      setLoadingStudentDetail(false);
+    }
+  };
+
+  const closeStudentDetail = () => {
+    setShowStudentDetail(null);
+    setStudentDetail(null);
+  };
+
+  const overallStats = (() => {
+    const completed = studentStatuses.filter((s) => s.status === "completed");
+    if (completed.length === 0) return null;
+
+    const scores = completed.map((s) => s.score || 0);
+    const maxScores = completed.map((s) => s.max_score || 0);
+    const percentages = completed.map((s) => (s.max_score > 0 ? (s.score / s.max_score) * 100 : 0));
+    const avgTimes = completed.filter((s) => s.avg_time_per_answer != null).map((s) => s.avg_time_per_answer);
+
+    const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const avgMaxScore = maxScores.reduce((a, b) => a + b, 0) / maxScores.length;
+    const avgPercentage = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+    const avgTime = avgTimes.length > 0 ? avgTimes.reduce((a, b) => a + b, 0) / avgTimes.length : null;
+
+    const minPct = Math.min(...percentages);
+    const maxPct = Math.max(...percentages);
+
+    const distribution = [0, 0, 0, 0, 0];
+    percentages.forEach((p) => {
+      if (p < 20) distribution[0]++;
+      else if (p < 40) distribution[1]++;
+      else if (p < 60) distribution[2]++;
+      else if (p < 80) distribution[3]++;
+      else distribution[4]++;
+    });
+
+    return {
+      totalStudents: studentStatuses.length,
+      completedCount: completed.length,
+      avgScore,
+      avgMaxScore,
+      avgPercentage,
+      avgTime,
+      minPct,
+      maxPct,
+      distribution,
+    };
+  })();
 
   const addOption = () => {
     setQuestionForm((f) => ({
@@ -548,8 +616,8 @@ export default function TeacherQuizPage() {
               )}
 
               {activeTab === "grading" && (
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setShowReissueModal(true)}
                       className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
@@ -557,7 +625,93 @@ export default function TeacherQuizPage() {
                       <RotateCcw className="h-4 w-4" />
                       {t("teacher.quizPage.reissue")}
                     </button>
+                    <button
+                      onClick={() => setShowOverallStats(!showOverallStats)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        showOverallStats
+                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                          : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                      }`}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      {t("teacher.quizPage.overallStats")}
+                    </button>
                   </div>
+
+                  {showOverallStats && overallStats && (
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                      <h3 className="mb-4 text-lg font-medium text-[var(--text)]">{t("teacher.quizPage.overallStats")}</h3>
+                      
+                      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                            <User className="h-4 w-4" />
+                            {t("teacher.quizPage.statsCompleted")}
+                          </div>
+                          <div className="mt-1 text-2xl font-bold text-[var(--text)]">
+                            {overallStats.completedCount} / {overallStats.totalStudents}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                            <Target className="h-4 w-4" />
+                            {t("teacher.quizPage.statsAvgScore")}
+                          </div>
+                          <div className="mt-1 text-2xl font-bold text-[var(--accent)]">
+                            {overallStats.avgPercentage.toFixed(1)}%
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                            <TrendingUp className="h-4 w-4" />
+                            {t("teacher.quizPage.statsRange")}
+                          </div>
+                          <div className="mt-1 text-2xl font-bold text-[var(--text)]">
+                            {overallStats.minPct.toFixed(0)}% - {overallStats.maxPct.toFixed(0)}%
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                          <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                            <Timer className="h-4 w-4" />
+                            {t("teacher.quizPage.statsAvgTime")}
+                          </div>
+                          <div className="mt-1 text-2xl font-bold text-[var(--text)]">
+                            {formatTime(overallStats.avgTime)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="mb-3 text-sm font-medium text-[var(--text-muted)]">{t("teacher.quizPage.statsDistribution")}</h4>
+                        <div className="flex items-end gap-2 h-32">
+                          {["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"].map((label, i) => {
+                            const count = overallStats.distribution[i];
+                            const maxCount = Math.max(...overallStats.distribution, 1);
+                            const height = (count / maxCount) * 100;
+                            const colors = [
+                              "bg-red-500",
+                              "bg-orange-500",
+                              "bg-yellow-500",
+                              "bg-blue-500",
+                              "bg-green-500",
+                            ];
+                            return (
+                              <div key={label} className="flex flex-1 flex-col items-center gap-1">
+                                <div className="w-full flex flex-col items-center justify-end" style={{ height: "100px" }}>
+                                  <span className="text-xs font-medium text-[var(--text)]">{count}</span>
+                                  <div
+                                    className={`w-full rounded-t ${colors[i]} transition-all`}
+                                    style={{ height: `${Math.max(height, 4)}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-[var(--text-muted)]">{label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {studentStatuses.length === 0 ? (
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
@@ -573,20 +727,45 @@ export default function TeacherQuizPage() {
                             <th className="p-3">{t("teacher.quizPage.score")}</th>
                             <th className="p-3">{t("teacher.quizPage.progress")}</th>
                             <th className="p-3">{t("teacher.quizPage.avgTime")}</th>
+                            <th className="p-3"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {studentStatuses.map((s) => {
                             const statusInfo = STATUS_LABELS[s.status] || STATUS_LABELS.not_opened;
+                            const pct = s.max_score > 0 ? (s.score / s.max_score) * 100 : 0;
                             return (
-                              <tr key={s.student_id} className="border-b border-[var(--border)] last:border-b-0">
+                              <tr key={s.student_id} className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--bg-card)]">
                                 <td className="p-3 text-[var(--text)]">{s.student_name}</td>
                                 <td className={`p-3 ${statusInfo.color}`}>{statusInfo.label}</td>
                                 <td className="p-3">
-                                  {s.score != null ? `${s.score} / ${s.max_score}` : "—"}
+                                  {s.score != null ? (
+                                    <div className="flex items-center gap-2">
+                                      <span>{s.score} / {s.max_score}</span>
+                                      <div className="h-1.5 w-16 rounded-full bg-[var(--border)]">
+                                        <div
+                                          className={`h-full rounded-full ${
+                                            pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-yellow-500" : "bg-red-500"
+                                          }`}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    "—"
+                                  )}
                                 </td>
                                 <td className="p-3">{s.answered_count} / {s.total_questions}</td>
                                 <td className="p-3">{formatTime(s.avg_time_per_answer)}</td>
+                                <td className="p-3">
+                                  <button
+                                    onClick={() => loadStudentDetail(s.student_id)}
+                                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                                  >
+                                    {t("teacher.quizPage.details")}
+                                    <ChevronRight className="h-4 w-4" />
+                                  </button>
+                                </td>
                               </tr>
                             );
                           })}
@@ -872,6 +1051,202 @@ export default function TeacherQuizPage() {
               >
                 {t("common.cancel")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStudentDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] p-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--text)]">
+                  {studentDetail?.student_name || t("teacher.quizPage.studentDetails")}
+                </h2>
+                {studentDetail && (
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
+                    {studentDetail.is_completed ? t("teacher.quizPage.statusCompleted") : t("teacher.quizPage.statusInProgress")}
+                    {studentDetail.completed_at && ` · ${new Date(studentDetail.completed_at).toLocaleString()}`}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={closeStudentDetail}
+                className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingStudentDetail ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : studentDetail ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                      <div className="text-sm text-[var(--text-muted)]">{t("teacher.quizPage.score")}</div>
+                      <div className="mt-1 text-2xl font-bold text-[var(--accent)]">
+                        {studentDetail.score} / {studentDetail.max_score}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--text-muted)]">
+                        ({studentDetail.max_score > 0 ? ((studentDetail.score / studentDetail.max_score) * 100).toFixed(1) : 0}%)
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                      <div className="text-sm text-[var(--text-muted)]">{t("teacher.quizPage.detailCorrect")}</div>
+                      <div className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">
+                        {studentDetail.correct_count} / {studentDetail.total_questions}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                      <div className="text-sm text-[var(--text-muted)]">{t("teacher.quizPage.progress")}</div>
+                      <div className="mt-1 text-2xl font-bold text-[var(--text)]">
+                        {studentDetail.answered_count} / {studentDetail.total_questions}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-[var(--bg-card)] p-4">
+                      <div className="text-sm text-[var(--text-muted)]">{t("teacher.quizPage.detailTotalTime")}</div>
+                      <div className="mt-1 text-2xl font-bold text-[var(--text)]">
+                        {formatTime(studentDetail.total_time)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {studentDetail.questions.some((q) => q.time_spent != null) && (
+                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
+                      <h4 className="mb-3 text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.detailTimeChart")}</h4>
+                      <div className="flex items-end gap-1 h-24 overflow-x-auto pb-2">
+                        {studentDetail.questions.map((q, i) => {
+                          const time = q.time_spent || 0;
+                          const maxTime = Math.max(...studentDetail.questions.map((x) => x.time_spent || 0), 1);
+                          const height = (time / maxTime) * 100;
+                          return (
+                            <div key={q.question_id} className="flex flex-col items-center min-w-[24px]" title={`${q.question_text}: ${formatTime(time)}`}>
+                              <div
+                                className={`w-5 rounded-t transition-all ${
+                                  q.is_correct ? "bg-green-500" : q.answered ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
+                                }`}
+                                style={{ height: `${Math.max(height, 4)}px` }}
+                              />
+                              <span className="mt-1 text-xs text-[var(--text-muted)]">{i + 1}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-2 flex gap-4 text-xs text-[var(--text-muted)]">
+                        <span className="flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-green-500" /> {t("teacher.quizPage.detailCorrectLegend")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-red-500" /> {t("teacher.quizPage.detailIncorrectLegend")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600" /> {t("teacher.quizPage.detailUnansweredLegend")}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="mb-3 text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.detailQuestions")}</h4>
+                    <div className="space-y-3">
+                      {studentDetail.questions.map((q, idx) => (
+                        <div
+                          key={q.question_id}
+                          className={`rounded-lg border p-4 ${
+                            q.is_correct
+                              ? "border-green-500/30 bg-green-500/5"
+                              : q.answered
+                              ? "border-red-500/30 bg-red-500/5"
+                              : "border-[var(--border)] bg-[var(--bg-card)]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/10 text-xs font-medium text-[var(--accent)]">
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <p className="font-medium text-[var(--text)]">{q.question_text}</p>
+                                <div className="mt-1 flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                                  <span>{q.points_earned} / {q.points} {t("student.groupPage.points")}</span>
+                                  {q.time_spent != null && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {formatTime(q.time_spent)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {q.answered && (
+                              q.is_correct ? (
+                                <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <XCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+                              )
+                            )}
+                          </div>
+
+                          {q.input_type === "select" && q.options?.length > 0 && (
+                            <div className="mt-3 space-y-1 pl-8">
+                              {q.options.map((opt) => (
+                                <div
+                                  key={opt.id}
+                                  className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
+                                    opt.is_correct && opt.was_selected
+                                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                                      : opt.was_selected && !opt.is_correct
+                                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                                      : opt.is_correct
+                                      ? "text-green-600 dark:text-green-400"
+                                      : "text-[var(--text-muted)]"
+                                  }`}
+                                >
+                                  {opt.was_selected && (
+                                    opt.is_correct ? (
+                                      <CheckCircle className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <XCircle className="h-3.5 w-3.5" />
+                                    )
+                                  )}
+                                  {!opt.was_selected && opt.is_correct && (
+                                    <CheckCircle className="h-3.5 w-3.5 opacity-50" />
+                                  )}
+                                  {opt.text}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {q.input_type !== "select" && q.answered && (
+                            <div className="mt-3 pl-8 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[var(--text-muted)]">{t("teacher.quizPage.detailStudentAnswer")}:</span>
+                                <span className={q.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                  {q.text_answer || "—"}
+                                </span>
+                              </div>
+                              {!q.is_correct && q.correct_text_answer && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[var(--text-muted)]">{t("teacher.quizPage.correctAnswer")}:</span>
+                                  <span className="text-green-600 dark:text-green-400">{q.correct_text_answer}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-[var(--text-muted)]">{t("common.errorGeneric")}</div>
+              )}
             </div>
           </div>
         </div>
