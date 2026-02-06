@@ -65,8 +65,13 @@ async def create_quiz(
     )
     now = datetime.utcnow()
     is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
+    qd = quiz.dict()
+    if qd.get("show_results") is None:
+        qd["show_results"] = True
+    if qd.get("question_display_mode") is None:
+        qd["question_display_mode"] = "all_on_page"
     return {
-        **quiz.dict(),
+        **qd,
         "group_id": group.id,
         "teacher_id": current_user.id,
         "question_count": 0,
@@ -107,8 +112,13 @@ async def get_quizzes(
     for quiz in quizzes:
         question_count = await Question.objects.filter(quiz=quiz).count()
         is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
+        qd = quiz.dict()
+        if qd.get("show_results") is None:
+            qd["show_results"] = True
+        if qd.get("question_display_mode") is None:
+            qd["question_display_mode"] = "all_on_page"
         result.append({
-            **quiz.dict(),
+            **qd,
             "group_id": quiz.group.id,
             "teacher_id": quiz.teacher.id,
             "question_count": question_count,
@@ -145,9 +155,13 @@ async def get_quiz(
     
     question_count = await Question.objects.filter(quiz=quiz).count()
     is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
-    
+    qd = quiz.dict()
+    if qd.get("show_results") is None:
+        qd["show_results"] = True
+    if qd.get("question_display_mode") is None:
+        qd["question_display_mode"] = "all_on_page"
     return {
-        **quiz.dict(),
+        **qd,
         "group_id": quiz.group.id,
         "teacher_id": quiz.teacher.id,
         "question_count": question_count,
@@ -195,9 +209,13 @@ async def update_quiz(
     
     question_count = await Question.objects.filter(quiz=quiz).count()
     is_expired = not quiz.manual_close and quiz.available_until and quiz.available_until < now
-    
+    qd = quiz.dict()
+    if qd.get("show_results") is None:
+        qd["show_results"] = True
+    if qd.get("question_display_mode") is None:
+        qd["question_display_mode"] = "all_on_page"
     return {
-        **quiz.dict(),
+        **qd,
         "group_id": quiz.group.id,
         "teacher_id": quiz.teacher.id,
         "question_count": question_count,
@@ -742,7 +760,10 @@ async def get_student_detail(
         
         answer = None
         if attempt:
-            answer = await Answer.objects.filter(attempt=attempt, question=q).first()
+            try:
+                answer = await Answer.objects.filter(attempt=attempt, question=q).first()
+            except:
+                pass
         
         selected_options = []
         if answer and answer.selected_options:

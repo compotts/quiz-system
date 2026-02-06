@@ -481,6 +481,12 @@ async def get_attempt_results(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
         )
+
+    if not attempt.is_completed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not completed yet"
+        )
     
     answers = await Answer.objects.select_related("question").filter(attempt=attempt).all()
     answer_details = []
