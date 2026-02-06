@@ -15,6 +15,7 @@ class QuizType(str, Enum):
 
 
 class TimerMode(str, Enum):
+    NONE = "none"
     QUIZ_TOTAL = "quiz_total"
     PER_QUESTION = "per_question"
 
@@ -23,6 +24,11 @@ class QuestionInputType(str, Enum):
     SELECT = "select" 
     TEXT = "text" 
     NUMBER = "number"
+
+
+class QuestionDisplayMode(str, Enum):
+    ALL_ON_PAGE = "all_on_page"
+    ONE_PER_PAGE = "one_per_page" 
 
 
 class Quiz(Model):
@@ -34,13 +40,16 @@ class Quiz(Model):
     group: Group = ForeignKey(Group, related_name="quizzes")
     teacher: User = ForeignKey(User, related_name="created_quizzes")
     quiz_type: str = String(max_length=20, default="single_choice", nullable=True) 
-    timer_mode: str = String(max_length=20, default="quiz_total", nullable=True)
-    has_quiz_time_limit: bool = Boolean(default=False) 
-    time_limit: int = Integer(nullable=True)
+    timer_mode: str = String(max_length=20, default="none", nullable=True)
+    has_quiz_time_limit: bool = Boolean(default=False)
+    time_limit: int = Integer(nullable=True)  
+    question_time_limit: int = Integer(nullable=True)
     is_active: bool = Boolean(default=True)
     available_until: datetime = DateTime(nullable=True)
     manual_close: bool = Boolean(default=False) 
-    allow_show_answers: bool = Boolean(default=True)
+    allow_show_answers: bool = Boolean(default=True) 
+    show_results: bool = Boolean(default=True) 
+    question_display_mode: str = String(max_length=20, default="all_on_page") 
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)
 
@@ -55,8 +64,6 @@ class Question(Model):
     text: str = Text()
     order: int = Integer()
     points: float = Float(default=1.0)
-    has_time_limit: bool = Boolean(default=False)
-    time_limit: int = Integer(nullable=True) 
     correct_text_answer: str = Text(nullable=True) 
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from schemas import (
     QuizCreate, QuizUpdate, QuizResponse,
-    QuestionCreate, QuestionUpdate, QuestionResponse,
+    QuestionCreate, QuestionUpdate, QuestionResponse, QuestionsBatchCreate,
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
     QuizAttemptResponse, QuizResultResponse
 )
@@ -43,11 +43,15 @@ async def create_quiz(
         description=data.description,
         group=group,
         teacher=current_user,
-        has_quiz_time_limit=data.has_quiz_time_limit,
-        time_limit=data.time_limit,
+        timer_mode=data.timer_mode,
+        time_limit=data.time_limit if data.timer_mode == "quiz_total" else None,
+        question_time_limit=data.question_time_limit if data.timer_mode == "per_question" else None,
+        has_quiz_time_limit=data.timer_mode == "quiz_total",
         available_until=to_naive_utc(data.available_until) if not data.manual_close else None,
         manual_close=data.manual_close,
         allow_show_answers=data.allow_show_answers,
+        show_results=data.show_results,
+        question_display_mode=data.question_display_mode,
         is_active=True
     )
     await log_audit(
@@ -283,13 +287,22 @@ async def create_question(
         text=data.text,
         order=data.order,
         points=data.points,
-        has_time_limit=data.has_time_limit,
-        time_limit=data.time_limit if data.has_time_limit else None,
         correct_text_answer=data.correct_text_answer if data.input_type in ("text", "number") else None
     )
     
     options = []
     if data.input_type == "select":
+        if not data.options:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one option is required for select type"
+            )
+        correct_count_opts = sum(1 for o in data.options if o.is_correct)
+        if correct_count_opts < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one correct answer must be selected"
+            )
         for opt_data in data.options:
             option = await Option.objects.create(
                 question=question,
@@ -318,6 +331,84 @@ async def create_question(
         "options": [opt.dict() for opt in options],
         "is_multiple_choice": is_multiple_choice
     }
+
+
+@router.post("/{quiz_id}/questions/batch", response_model=List[QuestionResponse])
+async def create_questions_batch(
+    quiz_id: int,
+    data: QuestionsBatchCreate,
+    request: Request,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    created_questions = []
+    
+    for q_data in data.questions:
+        question = await Question.objects.create(
+            quiz=quiz,
+            question_type="single_choice",
+            input_type=q_data.input_type,
+            text=q_data.text,
+            order=q_data.order,
+            points=q_data.points,
+            correct_text_answer=q_data.correct_text_answer if q_data.input_type in ("text", "number") else None
+        )
+        
+        options = []
+        if q_data.input_type == "select":
+            if not q_data.options:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="At least one option is required for select type"
+                )
+            if sum(1 for o in q_data.options if o.is_correct) < 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="At least one correct answer must be selected"
+                )
+            for opt_data in q_data.options:
+                option = await Option.objects.create(
+                    question=question,
+                    text=opt_data.text,
+                    is_correct=opt_data.is_correct,
+                    order=opt_data.order
+                )
+                options.append(option)
+        
+        correct_count = sum(1 for o in options if o.is_correct)
+        is_multiple_choice = correct_count > 1
+        
+        created_questions.append({
+            **question.dict(),
+            "quiz_id": quiz.id,
+            "options": [opt.dict() for opt in options],
+            "is_multiple_choice": is_multiple_choice
+        })
+    
+    await log_audit(
+        "questions_batch_created",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="question",
+        resource_id=str(quiz_id),
+        details={"quiz_id": quiz_id, "count": len(created_questions)},
+        request=request,
+    )
+    
+    return created_questions
 
 
 @router.get("/{quiz_id}/questions", response_model=List[QuestionResponse])
@@ -404,6 +495,28 @@ async def update_question(
         )
     
     update_data = data.dict(exclude_unset=True)
+    options_data = update_data.pop("options", None)
+
+    if options_data is not None and (question.input_type == "select" or update_data.get("input_type") == "select"):
+        if not options_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one option is required for select type"
+            )
+        if sum(1 for o in options_data if o.get("is_correct")) < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one correct answer must be selected"
+            )
+        await Option.objects.filter(question=question).delete()
+        for i, opt_data in enumerate(options_data):
+            await Option.objects.create(
+                question=question,
+                text=opt_data["text"],
+                is_correct=opt_data.get("is_correct", False),
+                order=opt_data.get("order", i),
+            )
+
     if update_data:
         if "question_type" in update_data:
             update_data["question_type"] = update_data["question_type"].value
@@ -465,6 +578,47 @@ async def delete_question(
     )
     
     return {"message": "Question deleted successfully"}
+
+
+@router.delete("/{quiz_id}/questions")
+async def delete_all_questions(
+    quiz_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz not found"
+        )
+    
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    questions = await Question.objects.filter(quiz=quiz).all()
+    deleted_count = len(questions)
+    
+    for question in questions:
+        await Answer.objects.filter(question=question).delete()
+        await Option.objects.filter(question=question).delete()
+        await question.delete()
+    
+    await log_audit(
+        "all_questions_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="quiz",
+        resource_id=str(quiz_id),
+        details={"deleted_count": deleted_count},
+        request=request,
+    )
+    
+    return {"message": f"Deleted {deleted_count} questions", "deleted_count": deleted_count}
 
 
 @router.get("/{quiz_id}/student-statuses")
@@ -575,8 +729,11 @@ async def get_student_detail(
     
     student_name = f"{student.first_name or ''} {student.last_name or ''}".strip() or student.username
     
-    attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
-    
+    attempt = None
+    try:
+        attempt = await QuizAttempt.objects.filter(quiz=quiz, student=student).first()
+    except:
+        pass
     questions = await Question.objects.filter(quiz=quiz).order_by("order").all()
     
     question_details = []

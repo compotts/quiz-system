@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 import random
+import unicodedata
 from schemas import (
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
-    QuizAttemptResponse, QuizResultResponse
+    QuizAttemptResponse, QuizResultResponse,
+    SubmitAnswersBatch, SubmitAnswersBatchResponse
 )
 from app.database.models.quiz import Quiz, Question, Option
 from app.database.models.group import GroupMember
@@ -16,6 +18,19 @@ from datetime import datetime
 import json
 
 router = APIRouter(prefix="/attempts", tags=["Quiz Attempts"])
+
+
+def normalize_text_answer(text: str) -> str:
+    if not text:
+        return ""
+    text = text.strip().lower()
+    text = text.replace("ё", "е")
+    text = unicodedata.normalize("NFKC", text)
+    return text
+
+
+def compare_text_answers(user_answer: str, correct_answer: str) -> bool:
+    return normalize_text_answer(user_answer) == normalize_text_answer(correct_answer)
 
 
 @router.post("/start", response_model=QuizAttemptResponse)
@@ -169,7 +184,7 @@ async def submit_answer(
                 except:
                     is_correct = False
             else:
-                is_correct = text_answer.strip().lower() == question.correct_text_answer.strip().lower()
+                is_correct = compare_text_answers(text_answer, question.correct_text_answer)
         points_earned = question.points if is_correct else 0.0
     else:
         all_question_options = await Option.objects.filter(question=question).all()
@@ -218,6 +233,151 @@ async def submit_answer(
         "message": "Answer submitted",
         "is_correct": is_correct,
         "points_earned": points_earned
+    }
+
+
+@router.post("/submit-batch", response_model=SubmitAnswersBatchResponse)
+async def submit_answers_batch(
+    data: SubmitAnswersBatch,
+    request: Request,
+    current_user: User = Depends(get_current_student)
+):
+    attempt = await QuizAttempt.objects.select_related("quiz").get_or_none(
+        id=data.attempt_id,
+        student=current_user
+    )
+    
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attempt not found"
+        )
+    
+    if attempt.is_completed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Attempt already completed"
+        )
+    
+    questions = await Question.objects.filter(quiz=attempt.quiz).all()
+    question_map = {q.id: q for q in questions}
+    
+    existing_answers = await Answer.objects.filter(attempt=attempt).all()
+    answered_question_ids = {a.question.id for a in existing_answers}
+    
+    submitted_count = 0
+    skipped_count = 0
+    total_points_earned = 0.0
+    now = utc_now()
+    
+    if existing_answers:
+        last_answer = sorted(existing_answers, key=lambda x: x.answered_at)[-1]
+        base_time = last_answer.answered_at
+    else:
+        base_time = attempt.started_at
+    
+    for answer_data in data.answers:
+        question_id = answer_data.question_id
+        
+        if question_id in answered_question_ids:
+            skipped_count += 1
+            continue
+        
+        question = question_map.get(question_id)
+        if not question:
+            skipped_count += 1
+            continue
+        
+        is_correct = False
+        points_earned = 0.0
+        selected_options_json = "[]"
+        text_answer = None
+        
+        input_type = question.input_type or "select"
+        
+        if input_type in ("text", "number"):
+            text_answer = answer_data.text_answer
+            if text_answer is not None and question.correct_text_answer:
+                if input_type == "number":
+                    try:
+                        is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
+                    except:
+                        is_correct = False
+                else:
+                    is_correct = text_answer.strip().lower() == question.correct_text_answer.strip().lower()
+            points_earned = question.points if is_correct else 0.0
+        else:
+            all_question_options = await Option.objects.filter(question=question).all()
+            all_option_ids = set(opt.id for opt in all_question_options)
+            selected_ids = set(answer_data.selected_options)
+            
+            if not selected_ids.issubset(all_option_ids):
+                skipped_count += 1
+                continue
+            
+            correct_options = await Option.objects.filter(
+                question=question,
+                is_correct=True
+            ).all()
+            correct_ids = set(opt.id for opt in correct_options)
+            
+            is_correct = correct_ids == selected_ids
+            points_earned = question.points if is_correct else 0.0
+            selected_options_json = json.dumps(answer_data.selected_options)
+        
+        time_spent = int((now - base_time).total_seconds())
+        
+        await Answer.objects.create(
+            attempt=attempt,
+            question=question,
+            selected_options=selected_options_json,
+            text_answer=text_answer,
+            is_correct=is_correct,
+            points_earned=points_earned,
+            time_spent=time_spent,
+            answered_at=now
+        )
+        
+        total_points_earned += points_earned
+        submitted_count += 1
+        answered_question_ids.add(question_id)
+        base_time = now
+    
+    new_score = attempt.score + total_points_earned
+    await attempt.update(score=new_score, status="in_progress")
+    
+    if data.complete:
+        time_spent = int((utc_now() - attempt.started_at).total_seconds())
+        await attempt.update(
+            completed_at=utc_now(),
+            time_spent=time_spent,
+            is_completed=True,
+            status="completed"
+        )
+        await log_audit(
+            "attempt_completed",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="attempt",
+            resource_id=str(attempt.id),
+            details={
+                "quiz_id": attempt.quiz.id,
+                "quiz_title": attempt.quiz.title,
+                "score": new_score,
+                "max_score": attempt.max_score,
+            },
+            request=request,
+        )
+    
+    percentage = (new_score / attempt.max_score * 100) if attempt.max_score > 0 else 0
+    
+    return {
+        "submitted_count": submitted_count,
+        "skipped_count": skipped_count,
+        "score": new_score,
+        "max_score": attempt.max_score,
+        "percentage": percentage,
+        "is_completed": data.complete
     }
 
 
@@ -329,11 +489,22 @@ async def get_attempt_results(
         options = await Option.objects.filter(question=question).all()
         selected_ids = json.loads(answer.selected_options)
         
+        options_map = {opt.id: opt.text for opt in options}
+        selected_texts = [options_map.get(oid, str(oid)) for oid in selected_ids]
+        correct_option_texts = [opt.text for opt in options if opt.is_correct]
+        
+        input_type = question.input_type or "select"
+        
         answer_details.append({
             "question_id": question.id,
             "question_text": question.text,
+            "input_type": input_type,
             "selected_options": selected_ids,
+            "selected_texts": selected_texts,
+            "text_answer": answer.text_answer,
             "correct_options": [opt.id for opt in options if opt.is_correct],
+            "correct_option_texts": correct_option_texts,
+            "correct_text_answer": question.correct_text_answer if input_type in ("text", "number") else None,
             "is_correct": answer.is_correct,
             "points_earned": answer.points_earned,
             "max_points": question.points
@@ -356,7 +527,9 @@ async def get_attempt_results(
     return {
         "attempt": attempt_data,
         "answers": answer_details,
-        "percentage": percentage
+        "percentage": percentage,
+        "allow_show_answers": attempt.quiz.allow_show_answers if hasattr(attempt.quiz, 'allow_show_answers') else True,
+        "show_results": attempt.quiz.show_results if hasattr(attempt.quiz, 'show_results') else True
     }
 
 

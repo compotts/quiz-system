@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Target,
   Timer,
+  Edit3,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
@@ -70,8 +71,13 @@ export default function TeacherQuizPage() {
   const [studentStatuses, setStudentStatuses] = useState([]);
   const [settingsForm, setSettingsForm] = useState({
     allow_show_answers: true,
+    show_results: true,
     manual_close: false,
     available_until: "",
+    timer_mode: "none",
+    time_limit: "",
+    question_time_limit: "",
+    question_display_mode: "all_on_page",
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [closingQuiz, setClosingQuiz] = useState(false);
@@ -85,15 +91,21 @@ export default function TeacherQuizPage() {
     order: 0,
     points: 1,
     input_type: "select",
-    has_time_limit: false,
-    time_limit: null,
     options: [{ text: "", is_correct: false, order: 0 }],
     correct_text_answer: "",
   });
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState(null);
+  const [deletingQuestion, setDeletingQuestion] = useState(false);
+  const [confirmDeleteAllQuestions, setConfirmDeleteAllQuestions] = useState(false);
+  const [deletingAllQuestions, setDeletingAllQuestions] = useState(false);
   const [importingQuestions, setImportingQuestions] = useState(false);
-  
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [editQuestionForm, setEditQuestionForm] = useState(null);
+  const [savingQuestion, setSavingQuestion] = useState(false);
+  const [questionFormError, setQuestionFormError] = useState("");
+  const [editQuestionError, setEditQuestionError] = useState("");
+
   const [showStudentDetail, setShowStudentDetail] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
   const [loadingStudentDetail, setLoadingStudentDetail] = useState(false);
@@ -109,8 +121,6 @@ export default function TeacherQuizPage() {
         text: q.text,
         points: q.points,
         input_type: q.input_type,
-        has_time_limit: q.has_time_limit,
-        time_limit: q.time_limit,
         correct_text_answer: q.correct_text_answer,
         options: q.options?.map((o) => ({
           text: o.text,
@@ -146,7 +156,8 @@ export default function TeacherQuizPage() {
         throw new Error(t("teacher.quizPage.importInvalidFormat"));
       }
 
-      let successCount = 0;
+      // Prepare all questions for batch import
+      const questionsToImport = [];
       for (let i = 0; i < importedQuestions.length; i++) {
         const q = importedQuestions[i];
         const questionData = {
@@ -154,8 +165,6 @@ export default function TeacherQuizPage() {
           order: questions.length + i,
           points: q.points ?? 1,
           input_type: q.input_type || "select",
-          has_time_limit: q.has_time_limit || false,
-          time_limit: q.has_time_limit ? q.time_limit : null,
         };
 
         if (questionData.input_type === "select") {
@@ -168,20 +177,21 @@ export default function TeacherQuizPage() {
           questionData.options = opts;
         } else {
           questionData.correct_text_answer = q.correct_text_answer?.trim() || null;
+          questionData.options = [];
         }
 
-        try {
-          await quizzesApi.createQuestion(qid, questionData);
-          successCount++;
-        } catch (err) {
-          console.error(`Failed to import question ${i + 1}:`, err);
-        }
+        questionsToImport.push(questionData);
       }
+
+      if (questionsToImport.length === 0) {
+        throw new Error(t("teacher.quizPage.importInvalidFormat"));
+      }
+
+      // Import all questions in a single batch request
+      await quizzesApi.createQuestionsBatch(qid, questionsToImport);
 
       await loadQuestions();
-      if (successCount > 0) {
-        setError("");
-      }
+      setError("");
     } catch (err) {
       setError(err.message || t("teacher.quizPage.importError"));
     } finally {
@@ -206,8 +216,13 @@ export default function TeacherQuizPage() {
       setQuiz(q);
       setSettingsForm({
         allow_show_answers: q.allow_show_answers !== false,
+        show_results: q.show_results !== false,
         manual_close: q.manual_close || false,
         available_until: q.available_until ? new Date(q.available_until).toISOString().slice(0, 16) : "",
+        timer_mode: q.timer_mode || "none",
+        time_limit: q.time_limit || "",
+        question_time_limit: q.question_time_limit || "",
+        question_display_mode: q.question_display_mode || "all_on_page",
       });
     } catch (err) {
       setError(err.message || t("teacher.quizzes.errorLoad"));
@@ -250,8 +265,13 @@ export default function TeacherQuizPage() {
     try {
       await quizzesApi.updateQuiz(qid, {
         allow_show_answers: settingsForm.allow_show_answers,
+        show_results: settingsForm.show_results,
         manual_close: settingsForm.manual_close,
         available_until: settingsForm.manual_close ? null : (settingsForm.available_until ? new Date(settingsForm.available_until).toISOString() : null),
+        timer_mode: settingsForm.timer_mode,
+        time_limit: settingsForm.timer_mode === "quiz_total" ? (parseInt(settingsForm.time_limit) || null) : null,
+        question_time_limit: settingsForm.timer_mode === "per_question" ? (parseInt(settingsForm.question_time_limit) || null) : null,
+        question_display_mode: settingsForm.question_display_mode,
       });
       await loadQuiz();
     } catch (err) {
@@ -372,23 +392,32 @@ export default function TeacherQuizPage() {
   const handleCreateQuestion = async (e) => {
     e.preventDefault();
     if (!questionForm.text.trim()) return;
-    
+
+    let opts = null;
+    if (questionForm.input_type === "select") {
+      opts = questionForm.options.filter((o) => o.text.trim()).map((o, i) => ({
+        text: o.text.trim(),
+        is_correct: !!o.is_correct,
+        order: i,
+      }));
+      if (!opts.length) {
+        setQuestionFormError(t("teacher.quizPage.errorAtLeastOneOption"));
+        return;
+      }
+      if (!opts.some((o) => o.is_correct)) {
+        setQuestionFormError(t("teacher.quizPage.errorAtLeastOneCorrect"));
+        return;
+      }
+    }
+    setQuestionFormError("");
+
     const data = {
       text: questionForm.text.trim(),
       order: questions.length,
       points: questionForm.points,
       input_type: questionForm.input_type,
-      has_time_limit: questionForm.has_time_limit,
-      time_limit: questionForm.has_time_limit ? questionForm.time_limit : null,
     };
-
     if (questionForm.input_type === "select") {
-      const opts = questionForm.options.filter((o) => o.text.trim()).map((o, i) => ({
-        text: o.text.trim(),
-        is_correct: !!o.is_correct,
-        order: i,
-      }));
-      if (!opts.length) return;
       data.options = opts;
     } else {
       data.correct_text_answer = questionForm.correct_text_answer.trim() || null;
@@ -403,14 +432,12 @@ export default function TeacherQuizPage() {
         order: 0,
         points: 1,
         input_type: "select",
-        has_time_limit: false,
-        time_limit: null,
         options: [{ text: "", is_correct: false, order: 0 }],
         correct_text_answer: "",
       });
       await loadQuestions();
     } catch (err) {
-      setError(err.message || t("teacher.quizzes.errorQuestionCreate"));
+      setQuestionFormError(err.message || t("teacher.quizzes.errorQuestionCreate"));
     } finally {
       setCreatingQuestion(false);
     }
@@ -418,12 +445,121 @@ export default function TeacherQuizPage() {
 
   const handleDeleteQuestion = async () => {
     if (!confirmDeleteQuestion) return;
+    setDeletingQuestion(true);
     try {
       await quizzesApi.deleteQuestion(qid, confirmDeleteQuestion.id);
       setConfirmDeleteQuestion(null);
       await loadQuestions();
     } catch (err) {
       setError(err.message || t("teacher.quizzes.errorQuestionDelete"));
+    } finally {
+      setDeletingQuestion(false);
+    }
+  };
+
+  const handleDeleteAllQuestions = async () => {
+    setDeletingAllQuestions(true);
+    try {
+      await quizzesApi.deleteAllQuestions(qid);
+      setConfirmDeleteAllQuestions(false);
+      await loadQuestions();
+    } catch (err) {
+      setError(err.message || t("teacher.quizzes.errorQuestionDelete"));
+    } finally {
+      setDeletingAllQuestions(false);
+    }
+  };
+
+  const openEditQuestion = (question) => {
+    setError("");
+    setEditQuestionError("");
+    setEditingQuestion(question);
+    const options = (question.options || []).map((o, i) => ({
+      text: o.text || "",
+      is_correct: !!o.is_correct,
+      order: o.order ?? i,
+    }));
+    if (question.input_type === "select" && !options.length) {
+      options.push({ text: "", is_correct: false, order: 0 });
+    }
+    setEditQuestionForm({
+      text: question.text,
+      points: question.points,
+      input_type: question.input_type || "select",
+      correct_text_answer: question.correct_text_answer || "",
+      options,
+    });
+  };
+
+  const editAddOption = () => {
+    setEditQuestionForm((f) => ({
+      ...f,
+      options: [...(f.options || []), { text: "", is_correct: false, order: (f.options?.length ?? 0) }],
+    }));
+  };
+
+  const editUpdateOption = (idx, patch) => {
+    setEditQuestionForm((f) => {
+      const o = [...(f.options || [])];
+      o[idx] = { ...o[idx], ...patch };
+      return { ...f, options: o };
+    });
+  };
+
+  const editRemoveOption = (idx) => {
+    setEditQuestionForm((f) => ({
+      ...f,
+      options: (f.options || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleSaveQuestion = async (e) => {
+    e.preventDefault();
+    if (!editingQuestion || !editQuestionForm.text.trim()) return;
+
+    if (editQuestionForm.input_type === "select") {
+      const opts = (editQuestionForm.options || []).filter((o) => o.text?.trim()).map((o, i) => ({
+        text: o.text.trim(),
+        is_correct: !!o.is_correct,
+        order: i,
+      }));
+      if (!opts.length) {
+        setEditQuestionError(t("teacher.quizPage.errorAtLeastOneOption"));
+        return;
+      }
+      if (!opts.some((o) => o.is_correct)) {
+        setEditQuestionError(t("teacher.quizPage.errorAtLeastOneCorrect"));
+        return;
+      }
+    }
+    setEditQuestionError("");
+
+    setSavingQuestion(true);
+    try {
+      const data = {
+        text: editQuestionForm.text.trim(),
+        points: editQuestionForm.points,
+        input_type: editQuestionForm.input_type,
+      };
+
+      if (editQuestionForm.input_type === "select") {
+        data.options = (editQuestionForm.options || []).filter((o) => o.text?.trim()).map((o, i) => ({
+          text: o.text.trim(),
+          is_correct: !!o.is_correct,
+          order: i,
+        }));
+      } else {
+        data.correct_text_answer = editQuestionForm.correct_text_answer?.trim() || null;
+      }
+
+      await quizzesApi.updateQuestion(qid, editingQuestion.id, data);
+      setEditingQuestion(null);
+      setEditQuestionForm(null);
+      await loadQuestions();
+    } catch (err) {
+      setEditQuestionError(err.message || t("teacher.quizzes.errorQuestionUpdate"));
+    } finally {
+      setSavingQuestion(false);
     }
   };
 
@@ -513,7 +649,7 @@ export default function TeacherQuizPage() {
                 <div>
                   <div className="mb-4 flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => setShowQuestionForm(true)}
+                      onClick={() => { setError(""); setQuestionFormError(""); setShowQuestionForm(true); }}
                       className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
                     >
                       <Plus className="h-4 w-4" />
@@ -546,6 +682,15 @@ export default function TeacherQuizPage() {
                       />
                     </label>
                     
+                    <button
+                      onClick={() => setConfirmDeleteAllQuestions(true)}
+                      disabled={questions.length === 0}
+                      className="flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-600 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {t("teacher.quizPage.deleteAll")}
+                    </button>
+                    
                     <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                       <input
                         type="checkbox"
@@ -576,7 +721,6 @@ export default function TeacherQuizPage() {
                                 <span>{t("teacher.quizPage.points")}: {q.points}</span>
                                 <span>·</span>
                                 <span>{t("teacher.quizPage.inputType")}: {q.input_type === "select" ? (q.is_multiple_choice ? t("teacher.quizzes.quizTypeMultiple") : t("teacher.quizzes.quizTypeSingle")) : q.input_type === "text" ? t("teacher.quizPage.inputTypeText") : t("teacher.quizPage.inputTypeNumber")}</span>
-                                {q.has_time_limit && <><span>·</span><span>{q.time_limit}s</span></>}
                               </div>
                               {q.input_type === "select" && q.options?.length > 0 && (
                                 <ul className="mt-3 space-y-1">
@@ -601,12 +745,22 @@ export default function TeacherQuizPage() {
                                 </div>
                               )}
                             </div>
-                            <button
-                              onClick={() => setConfirmDeleteQuestion(q)}
-                              className="rounded-lg border border-red-500/30 p-1.5 text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => openEditQuestion(q)}
+                                className="rounded-lg border border-[var(--border)] p-1.5 text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                                title={t("common.edit")}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteQuestion(q)}
+                                className="rounded-lg border border-red-500/30 p-1.5 text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                                title={t("common.delete")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -784,35 +938,100 @@ export default function TeacherQuizPage() {
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <input
                           type="checkbox"
-                          checked={settingsForm.allow_show_answers}
-                          onChange={(e) => setSettingsForm((f) => ({ ...f, allow_show_answers: e.target.checked }))}
+                          checked={settingsForm.show_results}
+                          onChange={(e) => setSettingsForm((f) => ({ ...f, show_results: e.target.checked }))}
                         />
-                        {t("teacher.quizPage.settingsAllowShowAnswers")}
+                        {t("teacher.quizPage.settingsShowResults")}
                       </label>
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <input
                           type="checkbox"
-                          checked={settingsForm.manual_close}
-                          onChange={(e) => setSettingsForm((f) => ({ ...f, manual_close: e.target.checked }))}
+                          checked={settingsForm.allow_show_answers}
+                          onChange={(e) => setSettingsForm((f) => ({ ...f, allow_show_answers: e.target.checked }))}
+                          disabled={!settingsForm.show_results}
                         />
-                        {t("teacher.quizPage.settingsManualClose")}
+                        {t("teacher.quizPage.settingsAllowShowAnswers")}
                       </label>
-                      {!settingsForm.manual_close && (
-                        <div>
-                          <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.settingsAvailableUntil")}</label>
+                      
+                      <div className="border-t border-[var(--border)] pt-4">
+                        <label className="block text-sm font-medium text-[var(--text)] mb-2">{t("teacher.quizPage.settingsQuestionDisplay")}</label>
+                        <select
+                          value={settingsForm.question_display_mode}
+                          onChange={(e) => setSettingsForm((f) => ({ ...f, question_display_mode: e.target.value }))}
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                        >
+                          <option value="all_on_page">{t("teacher.quizPage.displayAllOnPage")}</option>
+                          <option value="one_per_page">{t("teacher.quizPage.displayOnePerPage")}</option>
+                        </select>
+                      </div>
+                      
+                      <div className="border-t border-[var(--border)] pt-4">
+                        <label className="block text-sm font-medium text-[var(--text)] mb-2">{t("teacher.quizPage.settingsTimerMode")}</label>
+                        <select
+                          value={settingsForm.timer_mode}
+                          onChange={(e) => setSettingsForm((f) => ({ ...f, timer_mode: e.target.value }))}
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                        >
+                          <option value="none">{t("teacher.quizPage.timerNone")}</option>
+                          <option value="quiz_total">{t("teacher.quizPage.timerQuizTotal")}</option>
+                          <option value="per_question">{t("teacher.quizPage.timerPerQuestion")}</option>
+                        </select>
+                        
+                        {settingsForm.timer_mode === "quiz_total" && (
+                          <div className="mt-2">
+                            <label className="block text-sm text-[var(--text-muted)] mb-1">{t("teacher.quizPage.timerQuizTotalMinutes")}</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={settingsForm.time_limit ? Math.floor(settingsForm.time_limit / 60) : ""}
+                              onChange={(e) => setSettingsForm((f) => ({ ...f, time_limit: e.target.value ? parseInt(e.target.value) * 60 : "" }))}
+                              placeholder="10"
+                              className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                            />
+                          </div>
+                        )}
+                        
+                        {settingsForm.timer_mode === "per_question" && (
+                          <div className="mt-2">
+                            <label className="block text-sm text-[var(--text-muted)] mb-1">{t("teacher.quizPage.timerPerQuestionSeconds")}</label>
+                            <input
+                              type="number"
+                              min="5"
+                              value={settingsForm.question_time_limit || ""}
+                              onChange={(e) => setSettingsForm((f) => ({ ...f, question_time_limit: e.target.value ? parseInt(e.target.value) : "" }))}
+                              placeholder="30"
+                              className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="border-t border-[var(--border)] pt-4">
+                        <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                           <input
-                            type="datetime-local"
-                            value={settingsForm.available_until}
-                            onChange={(e) => setSettingsForm((f) => ({ ...f, available_until: e.target.value }))}
-                            className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                            type="checkbox"
+                            checked={settingsForm.manual_close}
+                            onChange={(e) => setSettingsForm((f) => ({ ...f, manual_close: e.target.checked }))}
                           />
-                        </div>
-                      )}
+                          {t("teacher.quizPage.settingsManualClose")}
+                        </label>
+                        {!settingsForm.manual_close && (
+                          <div className="mt-2">
+                            <label className="block text-sm text-[var(--text-muted)] mb-1">{t("teacher.quizPage.settingsAvailableUntil")}</label>
+                            <input
+                              type="datetime-local"
+                              value={settingsForm.available_until}
+                              onChange={(e) => setSettingsForm((f) => ({ ...f, available_until: e.target.value }))}
+                              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <button
                       type="submit"
                       disabled={savingSettings}
-                      className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
+                      className="mt-6 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] disabled:opacity-50"
                     >
                       {savingSettings && <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />}
                       {t("teacher.quizPage.updateSettings")}
@@ -846,10 +1065,19 @@ export default function TeacherQuizPage() {
           <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.addQuestion")}</h2>
-              <button onClick={() => setShowQuestionForm(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
+              <button onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {questionFormError && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {questionFormError}
+                <button type="button" onClick={() => setQuestionFormError("")} className="ml-auto">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <form onSubmit={handleCreateQuestion} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.questionText")}</label>
@@ -886,27 +1114,6 @@ export default function TeacherQuizPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-                  <input
-                    type="checkbox"
-                    checked={questionForm.has_time_limit}
-                    onChange={(e) => setQuestionForm((f) => ({ ...f, has_time_limit: e.target.checked }))}
-                  />
-                  {t("teacher.quizPage.questionTimeLimit")}
-                </label>
-                {questionForm.has_time_limit && (
-                  <input
-                    type="number"
-                    min={1}
-                    value={questionForm.time_limit ?? ""}
-                    onChange={(e) => setQuestionForm((f) => ({ ...f, time_limit: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Секунды"
-                    className="mt-2 w-24 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text)]"
-                  />
-                )}
-              </div>
-
               {questionForm.input_type === "select" ? (
                 <div>
                   <div className="flex items-center justify-between">
@@ -967,7 +1174,7 @@ export default function TeacherQuizPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowQuestionForm(false)}
+                  onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); }}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
                   {t("common.cancel")}
@@ -985,17 +1192,180 @@ export default function TeacherQuizPage() {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={handleDeleteQuestion}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                disabled={deletingQuestion}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
               >
+                {deletingQuestion && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t("common.yes")}, {t("common.delete")}
               </button>
               <button
                 onClick={() => setConfirmDeleteQuestion(null)}
-                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
+                disabled={deletingQuestion}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)] disabled:opacity-50"
               >
                 {t("common.cancel")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteAllQuestions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <p className="text-[var(--text)]">{t("teacher.quizPage.confirmDeleteAllQuestions")}</p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {t("teacher.quizPage.deleteAllWarning", { count: questions.length })}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={handleDeleteAllQuestions}
+                disabled={deletingAllQuestions}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingAllQuestions && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t("common.yes")}, {t("teacher.quizPage.deleteAll")}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteAllQuestions(false)}
+                disabled={deletingAllQuestions}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)] disabled:opacity-50"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingQuestion && editQuestionForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.editQuestion")}</h2>
+              <button onClick={() => { setEditingQuestion(null); setEditQuestionForm(null); setEditQuestionError(""); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {editQuestionError && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {editQuestionError}
+                <button type="button" onClick={() => setEditQuestionError("")} className="ml-auto">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <form onSubmit={handleSaveQuestion} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.questionText")}</label>
+                <textarea
+                  value={editQuestionForm.text}
+                  onChange={(e) => setEditQuestionForm({ ...editQuestionForm, text: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.points")}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editQuestionForm.points}
+                    onChange={(e) => setEditQuestionForm({ ...editQuestionForm, points: parseFloat(e.target.value) || 1 })}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.inputType")}</label>
+                  <select
+                    value={editQuestionForm.input_type}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      const next = { ...editQuestionForm, input_type: newType };
+                      if (newType === "select" && (!next.options || !next.options.length)) {
+                        next.options = [{ text: "", is_correct: false, order: 0 }];
+                      }
+                      setEditQuestionForm(next);
+                    }}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                  >
+                    <option value="select">{t("teacher.quizPage.inputTypeSelect")}</option>
+                    <option value="text">{t("teacher.quizPage.inputTypeText")}</option>
+                    <option value="number">{t("teacher.quizPage.inputTypeNumber")}</option>
+                  </select>
+                </div>
+              </div>
+              {editQuestionForm.input_type === "select" ? (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.options")}</label>
+                    <button type="button" onClick={editAddOption} className="text-sm text-[var(--accent)] hover:underline">
+                      + {t("teacher.quizPage.addOption")}
+                    </button>
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {(editQuestionForm.options || []).map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={opt.text}
+                          onChange={(e) => editUpdateOption(idx, { text: e.target.value })}
+                          placeholder={t("teacher.quizPage.optionPlaceholder")}
+                          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                        />
+                        <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                          <input
+                            type="checkbox"
+                            checked={!!opt.is_correct}
+                            onChange={(e) => editUpdateOption(idx, { is_correct: e.target.checked })}
+                          />
+                          {t("teacher.quizPage.correct")}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => editRemoveOption(idx)}
+                          className="rounded p-1 text-red-600 hover:bg-red-500/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.correctAnswer")}</label>
+                  <input
+                    type={editQuestionForm.input_type === "number" ? "number" : "text"}
+                    value={editQuestionForm.correct_text_answer}
+                    onChange={(e) => setEditQuestionForm({ ...editQuestionForm, correct_text_answer: e.target.value })}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                  />
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingQuestion}
+                  className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingQuestion && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {t("common.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingQuestion(null); setEditQuestionForm(null); setEditQuestionError(""); }}
+                  disabled={savingQuestion}
+                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--border)]"
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

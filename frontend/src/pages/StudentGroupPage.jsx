@@ -46,6 +46,17 @@ export default function StudentGroupPage() {
   const [runAnswers, setRunAnswers] = useState({});
   const [runCompleting, setRunCompleting] = useState(false);
   const [runResults, setRunResults] = useState(null);
+  const [startingQuizId, setStartingQuizId] = useState(null);
+  
+  // Pagination for one_per_page mode
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [timerActive, setTimerActive] = useState(false);
+  
+  // Show correct answers toggle for results
+  const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
 
   const [attemptDetailId, setAttemptDetailId] = useState(null);
   const [attemptDetail, setAttemptDetail] = useState(null);
@@ -132,7 +143,43 @@ export default function StudentGroupPage() {
       });
   }, [quizzes, completedQuizIds, assignmentFilter]);
 
+  // Timer effect
+  useEffect(() => {
+    if (!timerActive || timeLeft === null || timeLeft <= 0) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Auto-submit when time runs out
+          if (runQuiz?.timer_mode === "per_question") {
+            // Move to next question or complete quiz
+            if (currentQuestionIndex < runQuestions.length - 1) {
+              setCurrentQuestionIndex((i) => i + 1);
+              // Reset timer for next question
+              setTimeLeft(runQuiz?.question_time_limit || 30);
+            } else {
+              // Last question - complete quiz
+              setTimerActive(false);
+              completeQuiz();
+            }
+          } else if (runQuiz?.timer_mode === "quiz_total") {
+            // Quiz timer expired - auto complete
+            setTimerActive(false);
+            completeQuiz();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [timerActive, timeLeft, currentQuestionIndex, runQuestions.length, runQuiz]);
+
   const startOrContinueQuiz = async (quiz) => {
+    if (startingQuizId) return; // Prevent double-click
+    setStartingQuizId(quiz.id);
     setError("");
     try {
       const cur = await attemptsApi.getCurrentAttempt(quiz.id);
@@ -166,9 +213,25 @@ export default function StudentGroupPage() {
       setRunAnswered(answered);
       setRunAnswers({});
       setRunResults(null);
+      setCurrentQuestionIndex(0);
+      
+      // Initialize timer based on quiz settings
+      if (quiz.timer_mode === "quiz_total" && quiz.time_limit) {
+        setTimeLeft(quiz.time_limit);
+        setTimerActive(true);
+      } else if (quiz.timer_mode === "per_question" && quiz.question_time_limit) {
+        setTimeLeft(quiz.question_time_limit);
+        setTimerActive(true);
+      } else {
+        setTimeLeft(null);
+        setTimerActive(false);
+      }
+      
       setRunState("running");
     } catch (err) {
       setError(err.message || t("student.quizzes.errorStart"));
+    } finally {
+      setStartingQuizId(null);
     }
   };
 
@@ -185,6 +248,9 @@ export default function StudentGroupPage() {
     setRunCompleting(true);
     setError("");
     try {
+      // Collect all unanswered questions with valid answers
+      const answersToSubmit = [];
+      
       for (const question of runQuestions) {
         if (runAnswered.includes(question.id)) continue;
         
@@ -192,25 +258,38 @@ export default function StudentGroupPage() {
         if (!answer) continue;
 
         const inputType = question.input_type || "select";
-        let selectedOptions = [];
-        let textAnswer = null;
-
+        
         if (inputType === "select") {
-          selectedOptions = answer.selected || [];
-          if (!selectedOptions.length) continue;
+          const selectedOptions = answer.selected || [];
+          if (selectedOptions.length > 0) {
+            answersToSubmit.push({
+              question_id: question.id,
+              selected_options: selectedOptions,
+              text_answer: null
+            });
+          }
         } else {
-          textAnswer = answer.text;
-          if (!textAnswer?.trim()) continue;
-        }
-
-        try {
-          await attemptsApi.submitAnswer(question.id, selectedOptions, textAnswer);
-        } catch (err) {
-          console.error(`Failed to submit answer for question ${question.id}:`, err);
+          const textAnswer = answer.text;
+          if (textAnswer?.trim()) {
+            answersToSubmit.push({
+              question_id: question.id,
+              selected_options: [],
+              text_answer: textAnswer
+            });
+          }
         }
       }
 
-      await attemptsApi.completeAttempt(runAttemptId);
+      // Submit all answers in a single batch request and complete the attempt
+      await attemptsApi.submitAnswersBatch(runAttemptId, answersToSubmit, true);
+      
+      // Check if quiz allows showing results
+      if (runQuiz?.show_results === false) {
+        // Just exit without showing results
+        exitQuizRun();
+        return;
+      }
+      
       const res = await attemptsApi.getAttemptResults(runAttemptId);
       setRunResults(res);
       setRunState("results");
@@ -230,6 +309,10 @@ export default function StudentGroupPage() {
     setRunAnswered([]);
     setRunAnswers({});
     setRunResults(null);
+    setCurrentQuestionIndex(0);
+    setTimeLeft(null);
+    setTimerActive(false);
+    setShowCorrectAnswers(false);
     setError("");
     loadAll();
   };
@@ -348,7 +431,19 @@ export default function StudentGroupPage() {
 
               {runState === "results" && runResults && (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-                  <h3 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h3>
+                    {runResults.allow_show_answers && (
+                      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                        <input
+                          type="checkbox"
+                          checked={showCorrectAnswers}
+                          onChange={(e) => setShowCorrectAnswers(e.target.checked)}
+                        />
+                        {t("student.groupPage.showCorrectAnswers")}
+                      </label>
+                    )}
+                  </div>
                   <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
                     {runResults.attempt?.score} / {runResults.attempt?.max_score}
                     <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
@@ -357,7 +452,9 @@ export default function StudentGroupPage() {
                   </p>
                   <div className="mt-6 space-y-3">
                     {(runResults.answers || []).map((a, i) => (
-                      <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
+                      <div key={i} className={`rounded-lg border p-4 ${
+                        a.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
+                      }`}>
                         <p className="font-medium text-[var(--text)]">{a.question_text}</p>
                         <p
                           className={`mt-2 flex items-center gap-2 text-sm ${
@@ -367,6 +464,24 @@ export default function StudentGroupPage() {
                           {a.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
                           {a.points_earned} / {a.max_points} {t("student.groupPage.points")}
                         </p>
+                        {showCorrectAnswers && !a.is_correct && (
+                          <div className="mt-3 rounded-lg bg-[var(--bg)] p-3">
+                            <p className="text-sm text-[var(--text-muted)]">
+                              <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
+                              {a.input_type === "select" 
+                                ? (a.selected_texts?.join(", ") || t("student.groupPage.noAnswer"))
+                                : (a.text_answer || t("student.groupPage.noAnswer"))
+                              }
+                            </p>
+                            <p className="mt-1 text-sm text-green-600 dark:text-green-400">
+                              <span className="font-medium">{t("student.groupPage.correctAnswerWas")}:</span>{" "}
+                              {a.input_type === "select"
+                                ? (a.correct_option_texts?.join(", ") || "-")
+                                : (a.correct_text_answer || "-")
+                              }
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -375,7 +490,28 @@ export default function StudentGroupPage() {
 
               {runState === "running" && (
                 <div className="space-y-4">
-                  {runQuestions.map((q, idx) => {
+                  {/* Timer display */}
+                  {timerActive && timeLeft !== null && (
+                    <div className={`rounded-xl border p-4 flex items-center justify-between ${
+                      timeLeft <= 10 ? "border-red-500/50 bg-red-500/10" : "border-[var(--border)] bg-[var(--surface)]"
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Clock className={`h-5 w-5 ${timeLeft <= 10 ? "text-red-500" : "text-[var(--accent)]"}`} />
+                        <span className={`font-medium ${timeLeft <= 10 ? "text-red-500" : "text-[var(--text)]"}`}>
+                          {runQuiz?.timer_mode === "quiz_total" 
+                            ? t("student.groupPage.quizTimeLeft") 
+                            : t("student.groupPage.questionTimeLeft")}
+                        </span>
+                      </div>
+                      <span className={`text-xl font-bold ${timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-[var(--text)]"}`}>
+                        {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Questions - all on page or one per page */}
+                  {(runQuiz?.question_display_mode === "one_per_page" ? [runQuestions[currentQuestionIndex]].filter(Boolean) : runQuestions).map((q, idx) => {
+                    const actualIdx = runQuiz?.question_display_mode === "one_per_page" ? currentQuestionIndex : idx;
                     const isAnswered = runAnswered.includes(q.id);
                     const answer = runAnswers[q.id] || {};
                     const inputType = q.input_type || "select";
@@ -394,7 +530,7 @@ export default function StudentGroupPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)]/10 text-xs font-medium text-[var(--accent)]">
-                                {idx + 1}
+                                {actualIdx + 1}
                               </span>
                               <span className="font-medium text-[var(--text)]">{q.text}</span>
                             </div>
@@ -403,12 +539,6 @@ export default function StudentGroupPage() {
                               {inputType === "select" && isMultiple && (
                                 <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5">
                                   {t("student.groupPage.multipleChoice")}
-                                </span>
-                              )}
-                              {q.has_time_limit && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {q.time_limit}s
                                 </span>
                               )}
                             </div>
@@ -470,20 +600,88 @@ export default function StudentGroupPage() {
                     );
                   })}
 
-                  <div className="mt-6 flex justify-center">
-                    <button
-                      onClick={completeQuiz}
-                      disabled={runCompleting}
-                      className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {runCompleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                  {/* Pagination for one_per_page mode */}
+                  {runQuiz?.question_display_mode === "one_per_page" && (
+                    <div className="mt-6 flex items-center justify-between">
+                      <button
+                        onClick={() => {
+                          setCurrentQuestionIndex((i) => Math.max(0, i - 1));
+                          // Reset per-question timer if applicable
+                          if (runQuiz?.timer_mode === "per_question" && runQuiz?.question_time_limit) {
+                            setTimeLeft(runQuiz.question_time_limit);
+                          }
+                        }}
+                        disabled={currentQuestionIndex === 0}
+                        className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface)] disabled:opacity-50"
+                      >
+                        {t("student.groupPage.prevQuestion")}
+                      </button>
+                      
+                      <div className="flex items-center gap-2">
+                        {runQuestions.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setCurrentQuestionIndex(i);
+                              if (runQuiz?.timer_mode === "per_question" && runQuiz?.question_time_limit) {
+                                setTimeLeft(runQuiz.question_time_limit);
+                              }
+                            }}
+                            className={`h-8 w-8 rounded-full text-sm font-medium transition-colors ${
+                              i === currentQuestionIndex
+                                ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                                : runAnswered.includes(runQuestions[i]?.id)
+                                  ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                                  : "bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--bg-card)]"
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {currentQuestionIndex < runQuestions.length - 1 ? (
+                        <button
+                          onClick={() => {
+                            setCurrentQuestionIndex((i) => Math.min(runQuestions.length - 1, i + 1));
+                            if (runQuiz?.timer_mode === "per_question" && runQuiz?.question_time_limit) {
+                              setTimeLeft(runQuiz.question_time_limit);
+                            }
+                          }}
+                          className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface)]"
+                        >
+                          {t("student.groupPage.nextQuestion")}
+                        </button>
                       ) : (
-                        <CheckCircle className="h-4 w-4" />
+                        <button
+                          onClick={completeQuiz}
+                          disabled={runCompleting}
+                          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {runCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                          {t("student.groupPage.completeAssignment")}
+                        </button>
                       )}
-                      {t("student.groupPage.completeAssignment")}
-                    </button>
-                  </div>
+                    </div>
+                  )}
+                  
+                  {/* Complete button for all_on_page mode */}
+                  {runQuiz?.question_display_mode !== "one_per_page" && (
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        onClick={completeQuiz}
+                        disabled={runCompleting}
+                        className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {runCompleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                        {t("student.groupPage.completeAssignment")}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -535,10 +733,20 @@ export default function StudentGroupPage() {
                             <button
                               type="button"
                               onClick={() => startOrContinueQuiz(q)}
-                              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
+                              disabled={startingQuizId !== null}
+                              className="flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {t("student.groupPage.start")}
-                              <ChevronRight className="h-4 w-4" />
+                              {startingQuizId === q.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  {t("common.loading")}
+                                </>
+                              ) : (
+                                <>
+                                  {t("student.groupPage.start")}
+                                  <ChevronRight className="h-4 w-4" />
+                                </>
+                              )}
                             </button>
                           )}
                         </div>

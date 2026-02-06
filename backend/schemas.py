@@ -202,11 +202,14 @@ class QuizCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     group_id: int
-    has_quiz_time_limit: bool = False
-    time_limit: Optional[int] = None
+    timer_mode: str = "none" 
+    time_limit: Optional[int] = None    
+    question_time_limit: Optional[int] = None
     available_until: Optional[datetime] = None
     manual_close: bool = False 
-    allow_show_answers: bool = True 
+    allow_show_answers: bool = True
+    show_results: bool = True
+    question_display_mode: str = "all_on_page"
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -217,12 +220,15 @@ class QuizCreate(BaseModel):
 class QuizUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    has_quiz_time_limit: Optional[bool] = None
+    timer_mode: Optional[str] = None
     time_limit: Optional[int] = None
+    question_time_limit: Optional[int] = None
     is_active: Optional[bool] = None
     available_until: Optional[datetime] = None
     manual_close: Optional[bool] = None
     allow_show_answers: Optional[bool] = None
+    show_results: Optional[bool] = None
+    question_display_mode: Optional[str] = None
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -236,12 +242,15 @@ class QuizResponse(BaseModel):
     description: Optional[str]
     group_id: int
     teacher_id: int
-    has_quiz_time_limit: bool = False
+    timer_mode: str = "none"
     time_limit: Optional[int]
+    question_time_limit: Optional[int] = None
     is_active: bool
     available_until: Optional[datetime] = None
     manual_close: bool = False
     allow_show_answers: bool = True
+    show_results: bool = True
+    question_display_mode: str = "all_on_page"
     created_at: datetime
     question_count: Optional[int] = 0
     is_expired: Optional[bool] = False
@@ -258,10 +267,12 @@ class QuestionCreate(BaseModel):
     order: int
     points: float = 1.0
     input_type: str = "select"
-    has_time_limit: bool = False 
-    time_limit: Optional[int] = None  
     options: List[OptionCreate] = []  
-    correct_text_answer: Optional[str] = None 
+    correct_text_answer: Optional[str] = None
+
+
+class QuestionsBatchCreate(BaseModel):
+    questions: List[QuestionCreate] 
 
 
 class QuestionUpdate(BaseModel):
@@ -269,9 +280,8 @@ class QuestionUpdate(BaseModel):
     order: Optional[int] = None
     points: Optional[float] = None
     input_type: Optional[str] = None
-    has_time_limit: Optional[bool] = None
-    time_limit: Optional[int] = None
     correct_text_answer: Optional[str] = None
+    options: Optional[List[OptionCreate]] = None
 
 
 class OptionResponse(BaseModel):
@@ -288,8 +298,6 @@ class QuestionResponse(BaseModel):
     text: str
     order: int
     points: float
-    has_time_limit: bool = False
-    time_limit: Optional[int]
     correct_text_answer: Optional[str] = None
     options: List[OptionResponse]
     is_multiple_choice: bool = False 
@@ -303,6 +311,21 @@ class SubmitAnswer(BaseModel):
     question_id: int
     selected_options: List[int] = [] 
     text_answer: Optional[str] = None 
+
+
+class SubmitAnswersBatch(BaseModel):
+    attempt_id: int
+    answers: List[SubmitAnswer]
+    complete: bool = True
+
+
+class SubmitAnswersBatchResponse(BaseModel):
+    submitted_count: int
+    skipped_count: int
+    score: float
+    max_score: float
+    percentage: float
+    is_completed: bool
 
 
 class CompleteQuizAttempt(BaseModel):
@@ -327,6 +350,8 @@ class QuizResultResponse(BaseModel):
     attempt: QuizAttemptResponse
     answers: List[dict]
     percentage: float
+    allow_show_answers: bool = True
+    show_results: bool = True
 
 
 class StudentAttemptStatus(BaseModel):
@@ -341,7 +366,6 @@ class StudentAttemptStatus(BaseModel):
 
 
 class ReissueQuizRequest(BaseModel):
-    """Перевыпуск задания для конкретных учеников"""
     student_ids: List[int]
     new_available_until: Optional[datetime] = None
     
