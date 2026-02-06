@@ -14,6 +14,16 @@ const BANNER_STYLE_CLASSES = {
   neutral: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
 };
 
+function getBannerText(bannerText, currentLang) {
+  if (!bannerText) return "";
+  if (typeof bannerText === "string") return bannerText;
+  if (typeof bannerText === "object" && bannerText !== null) {
+    const text = bannerText[currentLang] || bannerText.ru || bannerText.en || "";
+    return typeof text === "string" ? text : "";
+  }
+  return "";
+}
+
 export default function MaintenancePage({ siteStatus, backendUnavailable, onLoginSuccess }) {
   const { t } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -21,7 +31,8 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
   const { lang, setLang, langs } = useLanguage();
   const bannerStyle =
     BANNER_STYLE_CLASSES[siteStatus?.home_banner_style] || BANNER_STYLE_CLASSES.warning;
-  const showBanner = !backendUnavailable && siteStatus?.home_banner_text?.trim();
+  const bannerText = getBannerText(siteStatus?.home_banner_text, lang);
+  const showBanner = !backendUnavailable && bannerText && bannerText.trim();
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg)]">
@@ -67,7 +78,7 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
           className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
           role="alert"
         >
-          {siteStatus.home_banner_text}
+          {bannerText}
         </div>
       )}
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">
