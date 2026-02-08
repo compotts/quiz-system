@@ -255,6 +255,12 @@
     "homeBannerStyleNeutral": "Neutral (gray)",
     "homeBannerSave": "Save banner",
     "homeBannerLangHint": "If text for a language is not specified, text from another available language will be shown",
+    "experimentalCleanupTitle": "Experimental cleanup",
+    "experimentalCleanupDesc": "Removes from the database all quizzes, questions, options, student attempts and answers. This action cannot be undone.",
+    "experimentalCleanupButton": "Experimental cleanup",
+    "experimentalCleanupConfirm": "Yes, delete all",
+    "experimentalCleanupSuccess": "Cleanup completed. Quizzes deleted: {{count}}.",
+    "experimentalCleanupError": "Cleanup failed",
     "status": { "pending": "Pending", "approved": "Approved", "rejected": "Rejected" },
     "roles": { "admin": "Admin", "teacher": "Teacher", "student": "Student", "teacherShort": "Teacher" },
     "searchFields": { "all": "Everywhere", "username": "Username", "email": "Email", "firstName": "First Name", "lastName": "Last Name" },
@@ -309,7 +315,8 @@
       "contact_message_sent": "Contact message sent",
       "contact_message_read": "Contact message read",
       "contact_messages_read_all": "All contact messages read",
-      "contact_message_deleted": "Contact message deleted"
+      "contact_message_deleted": "Contact message deleted",
+      "experimental_cleanup": "Experimental cleanup"
     },
     "logsSearchFields": { "username": "Username", "ip": "IP address", "all": "Everywhere" },
     "approveAll": "Approve all",
@@ -431,6 +438,9 @@
       "creating": "Creating...",
       "questions": "questions",
       "expired": "Expired",
+      "deleteAssignment": "Delete assignment",
+      "confirmDeleteAssignment": "Delete assignment \"{{title}}\"?",
+      "confirmDeleteAssignmentHint": "All questions and student attempts will be deleted. This cannot be undone.",
       "noMembers": "No members",
       "removeMember": "Remove",
       "confirmRemoveMember": "Remove member {{name}}?",
@@ -487,6 +497,7 @@
       "settingsQuestionDisplay": "Question display mode",
       "displayAllOnPage": "All questions on one page",
       "displayOnePerPage": "One question per page",
+      "settingsDisplayModeLocked": "Cannot change while timer is enabled",
       "settingsTimerMode": "Timer mode",
       "timerNone": "No timer",
       "timerQuizTotal": "Timer for entire quiz",
@@ -530,7 +541,10 @@
       "seconds": "seconds",
       "editOptionsNote": "Note: to change answer options, delete the question and create a new one.",
       "errorAtLeastOneOption": "Add at least one answer option.",
-      "errorAtLeastOneCorrect": "Select at least one correct answer."
+      "errorAtLeastOneCorrect": "Select at least one correct answer.",
+      "deleteAssignment": "Delete assignment",
+      "confirmDeleteAssignment": "Delete assignment \"{{title}}\"?",
+      "confirmDeleteAssignmentHint": "All questions and student attempts will be deleted. This cannot be undone."
     }
   },
   "student": {
@@ -607,7 +621,10 @@
       "answered": "Answered",
       "completeAssignment": "Complete assignment",
       "close": "Close",
-      "exit": "Exit"
+      "exit": "Exit",
+      "exitConfirmMessage": "If you exit, your current result will be saved. Exit?",
+      "exitConfirmYes": "Exit",
+      "exitConfirmNo": "Stay"
     }
   }
 }

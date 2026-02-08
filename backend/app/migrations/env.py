@@ -19,9 +19,6 @@ from app.database.database import base_ormar_config
 from app.database.models.system_setting import SystemSetting
 from app.database.models.audit_log import AuditLog
 
-
-print(f"Loaded models: {[m.ormar_config.tablename for m in [User, QuizAttempt, Answer, Group, GroupMember, Quiz, Question, Option, RegistrationCode, RegistrationRequest, ContactMessage, BlogPost, SystemSetting]]}")  # debug
-
 config = context.config
 
 if config.config_file_name is not None:

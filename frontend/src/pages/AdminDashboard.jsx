@@ -129,6 +129,9 @@ export default function AdminDashboard() {
   const [auditLogsSearch, setAuditLogsSearch] = useState("");
   const [auditLogsSearchField, setAuditLogsSearchField] = useState("username");
   const [logsSearchFieldOpen, setLogsSearchFieldOpen] = useState(false);
+  const [experimentalCleanupConfirm, setExperimentalCleanupConfirm] = useState(false);
+  const [experimentalCleanupLoading, setExperimentalCleanupLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -420,6 +423,23 @@ export default function AdminDashboard() {
   
   const hasBannerText = Object.values(homeBannerText).some((t) => t?.trim());
 
+  const handleExperimentalCleanup = async () => {
+    if (!experimentalCleanupConfirm) return;
+    setExperimentalCleanupLoading(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const data = await adminApi.experimentalCleanup();
+      setExperimentalCleanupConfirm(false);
+      loadStats();
+      setSuccessMessage(t("admin.experimentalCleanupSuccess", { count: data.deleted_quizzes ?? 0 }));
+    } catch (err) {
+      setError(err.message || t("admin.experimentalCleanupError"));
+    } finally {
+      setExperimentalCleanupLoading(false);
+    }
+  };
+
   const handleMarkMessageRead = async (messageId) => {
     setProcessingMessage(messageId);
     try {
@@ -596,6 +616,18 @@ export default function AdminDashboard() {
               <button
                 onClick={() => setError("")}
                 className="ml-auto text-red-600 hover:text-red-700 dark:text-red-400"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
+              <Check className="h-4 w-4 shrink-0" />
+              {successMessage}
+              <button
+                onClick={() => setSuccessMessage("")}
+                className="ml-auto text-green-600 hover:text-green-700 dark:text-green-400"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1504,6 +1536,7 @@ export default function AdminDashboard() {
                   <option value="contact_message_read">{t("admin.logs.contact_message_read")}</option>
                   <option value="contact_messages_read_all">{t("admin.logs.contact_messages_read_all")}</option>
                   <option value="contact_message_deleted">{t("admin.logs.contact_message_deleted")}</option>
+                  <option value="experimental_cleanup">{t("admin.logs.experimental_cleanup")}</option>
                 </select>
                 <select
                   value={auditLogsResourceFilter}
@@ -1806,6 +1839,49 @@ export default function AdminDashboard() {
                       <p className="text-xs text-[var(--text-muted)]">
                         {(homeBannerText[bannerLang] || "").length}/500
                       </p>
+                    )}
+                  </div>
+
+                  <div className="border-t border-red-500/30 pt-6 mt-6">
+                    <h3 className="text-sm font-semibold text-red-600 dark:text-red-400">
+                      {t("admin.experimentalCleanupTitle")}
+                    </h3>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      {t("admin.experimentalCleanupDesc")}
+                    </p>
+                    {!experimentalCleanupConfirm ? (
+                      <button
+                        type="button"
+                        onClick={() => setExperimentalCleanupConfirm(true)}
+                        className="mt-3 flex items-center gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-500/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t("admin.experimentalCleanupButton")}
+                      </button>
+                    ) : (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleExperimentalCleanup}
+                          disabled={experimentalCleanupLoading}
+                          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {experimentalCleanupLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          {t("admin.experimentalCleanupConfirm")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExperimentalCleanupConfirm(false)}
+                          disabled={experimentalCleanupLoading}
+                          className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--border)]"
+                        >
+                          {t("common.cancel")}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

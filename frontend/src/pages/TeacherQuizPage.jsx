@@ -110,6 +110,8 @@ export default function TeacherQuizPage() {
   const [studentDetail, setStudentDetail] = useState(null);
   const [loadingStudentDetail, setLoadingStudentDetail] = useState(false);
   const [showOverallStats, setShowOverallStats] = useState(true);
+  const [showConfirmDeleteQuiz, setShowConfirmDeleteQuiz] = useState(false);
+  const [deletingQuizAssignment, setDeletingQuizAssignment] = useState(false);
 
   const handleExportQuestions = () => {
     if (!questions.length) return;
@@ -156,7 +158,6 @@ export default function TeacherQuizPage() {
         throw new Error(t("teacher.quizPage.importInvalidFormat"));
       }
 
-      // Prepare all questions for batch import
       const questionsToImport = [];
       for (let i = 0; i < importedQuestions.length; i++) {
         const q = importedQuestions[i];
@@ -187,7 +188,6 @@ export default function TeacherQuizPage() {
         throw new Error(t("teacher.quizPage.importInvalidFormat"));
       }
 
-      // Import all questions in a single batch request
       await quizzesApi.createQuestionsBatch(qid, questionsToImport);
 
       await loadQuestions();
@@ -259,6 +259,12 @@ export default function TeacherQuizPage() {
     loadAll();
   }, [currentUser, qid]);
 
+  useEffect(() => {
+    if (settingsForm.timer_mode === "per_question" && settingsForm.question_display_mode !== "one_per_page") {
+      setSettingsForm((f) => ({ ...f, question_display_mode: "one_per_page" }));
+    }
+  }, [settingsForm.timer_mode]);
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     setSavingSettings(true);
@@ -271,7 +277,7 @@ export default function TeacherQuizPage() {
         timer_mode: settingsForm.timer_mode,
         time_limit: settingsForm.timer_mode === "quiz_total" ? (parseInt(settingsForm.time_limit) || null) : null,
         question_time_limit: settingsForm.timer_mode === "per_question" ? (parseInt(settingsForm.question_time_limit) || null) : null,
-        question_display_mode: settingsForm.question_display_mode,
+        question_display_mode: settingsForm.timer_mode === "per_question" ? "one_per_page" : settingsForm.question_display_mode,
       });
       await loadQuiz();
     } catch (err) {
@@ -290,6 +296,21 @@ export default function TeacherQuizPage() {
       setError(err.message || t("common.errorGeneric"));
     } finally {
       setClosingQuiz(false);
+    }
+  };
+
+  const handleDeleteQuizAssignment = async () => {
+    setDeletingQuizAssignment(true);
+    setError("");
+    try {
+      await quizzesApi.deleteQuiz(qid);
+      const groupId = quiz?.group_id;
+      if (groupId) navigate(`/dashboard/teacher/group/${groupId}`);
+      else navigate("/dashboard/teacher");
+    } catch (err) {
+      setError(err.message || t("teacher.quizzes.errorDelete"));
+    } finally {
+      setDeletingQuizAssignment(false);
     }
   };
 
@@ -912,13 +933,15 @@ export default function TeacherQuizPage() {
                                 <td className="p-3">{s.answered_count} / {s.total_questions}</td>
                                 <td className="p-3">{formatTime(s.avg_time_per_answer)}</td>
                                 <td className="p-3">
-                                  <button
-                                    onClick={() => loadStudentDetail(s.student_id)}
-                                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-[var(--accent)] hover:bg-[var(--accent)]/10"
-                                  >
-                                    {t("teacher.quizPage.details")}
-                                    <ChevronRight className="h-4 w-4" />
-                                  </button>
+                                  {s.status !== "not_opened" && (
+                                    <button
+                                      onClick={() => loadStudentDetail(s.student_id)}
+                                      className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                                    >
+                                      {t("teacher.quizPage.details")}
+                                      <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -956,13 +979,17 @@ export default function TeacherQuizPage() {
                       <div className="border-t border-[var(--border)] pt-4">
                         <label className="block text-sm font-medium text-[var(--text)] mb-2">{t("teacher.quizPage.settingsQuestionDisplay")}</label>
                         <select
-                          value={settingsForm.question_display_mode}
+                          value={settingsForm.timer_mode === "per_question" ? "one_per_page" : settingsForm.question_display_mode}
                           onChange={(e) => setSettingsForm((f) => ({ ...f, question_display_mode: e.target.value }))}
-                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
+                          disabled={settingsForm.timer_mode !== "none"}
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)] disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <option value="all_on_page">{t("teacher.quizPage.displayAllOnPage")}</option>
                           <option value="one_per_page">{t("teacher.quizPage.displayOnePerPage")}</option>
                         </select>
+                        {settingsForm.timer_mode !== "none" && (
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">{t("teacher.quizPage.settingsDisplayModeLocked")}</p>
+                        )}
                       </div>
                       
                       <div className="border-t border-[var(--border)] pt-4">
@@ -1052,6 +1079,44 @@ export default function TeacherQuizPage() {
                       <Square className="h-4 w-4" />
                       {t("teacher.quizPage.closeEarly")}
                     </button>
+                  </div>
+
+                  <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+                    <h3 className="text-lg font-medium text-red-600 dark:text-red-400">{t("teacher.quizPage.deleteAssignment")}</h3>
+                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                      {t("teacher.quizPage.confirmDeleteAssignmentHint")}
+                    </p>
+                    {!showConfirmDeleteQuiz ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmDeleteQuiz(true)}
+                        className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t("teacher.quizPage.deleteAssignment")}
+                      </button>
+                    ) : (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-[var(--text)]">{t("teacher.quizPage.confirmDeleteAssignment", { title: quiz?.title || "" })}</span>
+                        <button
+                          type="button"
+                          onClick={handleDeleteQuizAssignment}
+                          disabled={deletingQuizAssignment}
+                          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {deletingQuizAssignment && <Loader2 className="h-4 w-4 animate-spin" />}
+                          {t("common.yes")}, {t("common.delete")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmDeleteQuiz(false)}
+                          disabled={deletingQuizAssignment}
+                          className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)] disabled:opacity-50"
+                        >
+                          {t("common.cancel")}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

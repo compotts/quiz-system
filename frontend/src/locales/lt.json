@@ -255,6 +255,12 @@
     "homeBannerStyleNeutral": "Neutralus (pilkas)",
     "homeBannerSave": "Išsaugoti skydelį",
     "homeBannerLangHint": "Jei tekstas kokiai nors kalbai nenurodytas, bus rodomas tekstas iš kitos prieinamos kalbos",
+    "experimentalCleanupTitle": "Eksperimentinis valymas",
+    "experimentalCleanupDesc": "Iš duomenų bazės pašalina visus kvizus, klausimus, atsakymų variantus, mokinių bandymus ir atsakymus. Veiksmas negrąžinamas.",
+    "experimentalCleanupButton": "Eksperimentinis valymas",
+    "experimentalCleanupConfirm": "Taip, ištrinti viską",
+    "experimentalCleanupSuccess": "Valymas atliktas. Ištrinta kvizų: {{count}}.",
+    "experimentalCleanupError": "Valymo klaida",
     "status": { "pending": "Svarstoma", "approved": "Patvirtinta", "rejected": "Atmesta" },
     "roles": { "admin": "Admin", "teacher": "Dėstytojas", "student": "Studentas", "teacherShort": "Dėst." },
     "searchFields": { "all": "Visur", "username": "Vart. vardas", "email": "El. paštas", "firstName": "Vardas", "lastName": "Pavardė" },
@@ -309,7 +315,8 @@
       "contact_message_sent": "Žinutė išsiųsta",
       "contact_message_read": "Žinutė perskaityta",
       "contact_messages_read_all": "Visos žinutės perskaitytos",
-      "contact_message_deleted": "Žinutė ištrinta"
+      "contact_message_deleted": "Žinutė ištrinta",
+      "experimental_cleanup": "Eksperimentinis valymas"
     },
     "logsSearchFields": { "username": "Vartotojo vardas", "ip": "IP adresas", "all": "Visur" },
     "approveAll": "Patvirtinti visus",
@@ -431,6 +438,9 @@
       "creating": "Kuriama...",
       "questions": "klausimai",
       "expired": "Pasibaigė",
+      "deleteAssignment": "Ištrinti užduotį",
+      "confirmDeleteAssignment": "Ištrinti užduotį \"{{title}}\"?",
+      "confirmDeleteAssignmentHint": "Visi klausimai ir studentų bandymai bus ištrinti. Atšaukti nebus galima.",
       "noMembers": "Narių nėra",
       "removeMember": "Pašalinti",
       "confirmRemoveMember": "Pašalinti narį {{name}}?",
@@ -487,6 +497,7 @@
       "settingsQuestionDisplay": "Klausimų rodymo režimas",
       "displayAllOnPage": "Visi klausimai viename puslapyje",
       "displayOnePerPage": "Vienas klausimas puslapyje",
+      "settingsDisplayModeLocked": "Negalima keisti, kai įjungtas laikmatis",
       "settingsTimerMode": "Laikmačio režimas",
       "timerNone": "Be laikmačio",
       "timerQuizTotal": "Laikmatis visam viktorizai",
@@ -530,7 +541,10 @@
       "seconds": "sekundės",
       "editOptionsNote": "Pastaba: norėdami pakeisti atsakymų variantus, ištrinkite klausimą ir sukurkite naują.",
       "errorAtLeastOneOption": "Pridėkite bent vieną atsakymo variantą.",
-      "errorAtLeastOneCorrect": "Pasirinkite bent vieną teisingą atsakymą."
+      "errorAtLeastOneCorrect": "Pasirinkite bent vieną teisingą atsakymą.",
+      "deleteAssignment": "Ištrinti užduotį",
+      "confirmDeleteAssignment": "Ištrinti užduotį \"{{title}}\"?",
+      "confirmDeleteAssignmentHint": "Visi klausimai ir studentų bandymai bus ištrinti. Atšaukti nebus galima."
     }
   },
   "student": {
@@ -607,7 +621,10 @@
       "answered": "Atsakyta",
       "completeAssignment": "Baigti užduotį",
       "close": "Uždaryti",
-      "exit": "Išeiti"
+      "exit": "Išeiti",
+      "exitConfirmMessage": "Jei išeisite, bus išsaugotas dabartinis rezultatas. Išeiti?",
+      "exitConfirmYes": "Išeiti",
+      "exitConfirmNo": "Likti"
     }
   }
 }

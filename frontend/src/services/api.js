@@ -197,6 +197,12 @@ export const adminApi = {
     });
   },
 
+  async experimentalCleanup() {
+    return request("/admin/experimental-cleanup", {
+      method: "POST",
+    });
+  },
+
   async getContactMessages({ page = 1, perPage = 20, isRead = null } = {}) {
     const params = new URLSearchParams();
     params.append("page", page);
@@ -431,6 +437,16 @@ export const attemptsApi = {
         complete
       }),
     });
+  },
+  submitAnswersBatchOnUnload(attemptId, answers) {
+    const url = `${API_BASE_URL}/attempts/submit-batch`;
+    const token = localStorage.getItem("access_token");
+    fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ attempt_id: attemptId, answers, complete: true }),
+      headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+      keepalive: true,
+    }).catch(() => {});
   },
   async completeAttempt(attemptId) {
     return request("/attempts/complete", {

@@ -309,8 +309,9 @@ class StartQuizAttempt(BaseModel):
 
 class SubmitAnswer(BaseModel):
     question_id: int
-    selected_options: List[int] = [] 
-    text_answer: Optional[str] = None 
+    selected_options: List[int] = []
+    text_answer: Optional[str] = None
+    time_spent: Optional[int] = None
 
 
 class SubmitAnswersBatch(BaseModel):

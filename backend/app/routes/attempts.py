@@ -325,7 +325,10 @@ async def submit_answers_batch(
             points_earned = question.points if is_correct else 0.0
             selected_options_json = json.dumps(answer_data.selected_options)
         
-        time_spent = int((now - base_time).total_seconds())
+        if getattr(answer_data, "time_spent", None) is not None and answer_data.time_spent >= 0:
+            time_spent = answer_data.time_spent
+        else:
+            time_spent = int((now - base_time).total_seconds())
         
         await Answer.objects.create(
             attempt=attempt,
@@ -480,12 +483,6 @@ async def get_attempt_results(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
-        )
-
-    if not attempt.is_completed:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Assignment not completed yet"
         )
     
     answers = await Answer.objects.select_related("question").filter(attempt=attempt).all()

@@ -235,6 +235,12 @@
     "homeBannerStyleNeutral": "Нейтральный (серый)",
     "homeBannerSave": "Сохранить баннер",
     "homeBannerLangHint": "Если текст на каком-то языке не указан, будет показан текст на доступном языке",
+    "experimentalCleanupTitle": "Экспериментальная очистка",
+    "experimentalCleanupDesc": "Удаляет из базы все квизы, вопросы, варианты ответов, попытки учеников и ответы. Действие необратимо.",
+    "experimentalCleanupButton": "Экспериментальная очистка",
+    "experimentalCleanupConfirm": "Да, удалить всё",
+    "experimentalCleanupSuccess": "Очистка выполнена. Удалено квизов: {{count}}.",
+    "experimentalCleanupError": "Ошибка при очистке",
     "status": { "pending": "На рассмотрении", "approved": "Одобрено", "rejected": "Отклонено" },
     "roles": { "admin": "Админ", "teacher": "Преподаватель", "student": "Студент", "teacherShort": "Препод." },
     "searchFields": { "all": "Везде", "username": "Username", "email": "Email", "firstName": "Имя", "lastName": "Фамилия" },
@@ -289,7 +295,8 @@
       "contact_message_sent": "Сообщение отправлено",
       "contact_message_read": "Сообщение прочитано",
       "contact_messages_read_all": "Все сообщения прочитаны",
-      "contact_message_deleted": "Сообщение удалено"
+      "contact_message_deleted": "Сообщение удалено",
+      "experimental_cleanup": "Экспериментальная очистка"
     },
     "logsSearchFields": { "username": "Имя пользователя", "ip": "IP-адрес", "all": "Везде" },
     "approveAll": "Принять все",
@@ -411,6 +418,9 @@
       "creating": "Создание...",
       "questions": "вопросов",
       "expired": "Просрочено",
+      "deleteAssignment": "Удалить задание",
+      "confirmDeleteAssignment": "Удалить задание «{{title}}»?",
+      "confirmDeleteAssignmentHint": "Будут удалены все вопросы и попытки студентов. Это действие необратимо.",
       "noMembers": "Нет участников",
       "removeMember": "Исключить",
       "confirmRemoveMember": "Исключить участника {{name}}?",
@@ -467,6 +477,7 @@
       "settingsQuestionDisplay": "Режим отображения вопросов",
       "displayAllOnPage": "Все вопросы на одной странице",
       "displayOnePerPage": "По одному вопросу на странице",
+      "settingsDisplayModeLocked": "Нельзя изменить при включённом таймере",
       "settingsTimerMode": "Режим таймера",
       "timerNone": "Без таймера",
       "timerQuizTotal": "Таймер на весь квиз",
@@ -510,7 +521,10 @@
       "seconds": "секунды",
       "editOptionsNote": "Примечание: для изменения вариантов ответов удалите вопрос и создайте новый.",
       "errorAtLeastOneOption": "Добавьте хотя бы один вариант ответа.",
-      "errorAtLeastOneCorrect": "Выберите хотя бы один правильный ответ."
+      "errorAtLeastOneCorrect": "Выберите хотя бы один правильный ответ.",
+      "deleteAssignment": "Удалить задание",
+      "confirmDeleteAssignment": "Удалить задание «{{title}}»?",
+      "confirmDeleteAssignmentHint": "Будут удалены все вопросы и попытки студентов. Это действие необратимо."
     }
   },
   "blog": {
@@ -607,7 +621,10 @@
       "answered": "Отвечено",
       "completeAssignment": "Завершить задание",
       "close": "Закрыть",
-      "exit": "Выйти"
+      "exit": "Выйти",
+      "exitConfirmMessage": "Если вы выйдете, сохранится текущий результат. Выйти?",
+      "exitConfirmYes": "Выйти",
+      "exitConfirmNo": "Остаться"
     }
   }
 }

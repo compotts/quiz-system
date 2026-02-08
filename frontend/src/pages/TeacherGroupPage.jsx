@@ -70,6 +70,8 @@ export default function TeacherGroupPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [confirmDeleteQuiz, setConfirmDeleteQuiz] = useState(null);
+  const [deletingQuiz, setDeletingQuiz] = useState(false);
   const [quizForm, setQuizForm] = useState({
     title: "",
     description: "",
@@ -214,6 +216,21 @@ export default function TeacherGroupPage() {
     }
   };
 
+  const handleDeleteQuiz = async () => {
+    if (!confirmDeleteQuiz) return;
+    setDeletingQuiz(true);
+    setError("");
+    try {
+      await quizzesApi.deleteQuiz(confirmDeleteQuiz.id);
+      setConfirmDeleteQuiz(null);
+      await loadQuizzes();
+    } catch (err) {
+      setError(err.message || t("teacher.quizzes.errorDelete"));
+    } finally {
+      setDeletingQuiz(false);
+    }
+  };
+
   const copyCode = () => {
     if (group?.code) navigator.clipboard?.writeText(group.code);
   };
@@ -353,6 +370,14 @@ export default function TeacherGroupPage() {
                                   {t("teacher.groupPage.expired")}
                                 </span>
                               )}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setConfirmDeleteQuiz(q); }}
+                                className="rounded p-1.5 text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-600"
+                                title={t("teacher.groupPage.deleteAssignment")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -509,6 +534,32 @@ export default function TeacherGroupPage() {
           )}
         </div>
       </div>
+
+      {confirmDeleteQuiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <p className="text-[var(--text)]">{t("teacher.groupPage.confirmDeleteAssignment", { title: confirmDeleteQuiz.title })}</p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">{t("teacher.groupPage.confirmDeleteAssignmentHint")}</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={handleDeleteQuiz}
+                disabled={deletingQuiz}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingQuiz && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t("common.yes")}, {t("common.delete")}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteQuiz(null)}
+                disabled={deletingQuiz}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)] disabled:opacity-50"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showQuizModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

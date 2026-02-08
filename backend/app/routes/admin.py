@@ -8,7 +8,8 @@ from schemas import (
 from app.database.models.user import User, UserRole
 from app.database.models.audit_log import AuditLog
 from app.database.models.group import Group, GroupMember
-from app.database.models.quiz import Quiz
+from app.database.models.quiz import Quiz, Question, Option
+from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
 from app.database.models.contact_message import ContactMessage
 from app.database.models.system_setting import SystemSetting
@@ -659,3 +660,39 @@ async def delete_user(
     )
     
     return {"message": "User deleted successfully"}
+
+
+@router.post("/experimental-cleanup")
+async def experimental_cleanup(
+    request: Request,
+    current_admin: User = Depends(get_current_admin)
+):
+    if current_admin.id != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only developer can perform this action"
+        )
+
+    quizzes = await Quiz.objects.all()
+    deleted_quizzes = 0
+    for quiz in quizzes:
+        attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
+        for attempt in attempts:
+            await Answer.objects.filter(attempt=attempt).delete()
+        await QuizAttempt.objects.filter(quiz=quiz).delete()
+        questions = await Question.objects.filter(quiz=quiz).all()
+        for question in questions:
+            await Option.objects.filter(question=question).delete()
+        await Question.objects.filter(quiz=quiz).delete()
+        await quiz.delete()
+        deleted_quizzes += 1
+
+    await log_audit(
+        "experimental_cleanup",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="quiz",
+        details={"deleted_quizzes": deleted_quizzes},
+        request=request,
+    )
+    return {"message": "Experimental cleanup completed", "deleted_quizzes": deleted_quizzes}

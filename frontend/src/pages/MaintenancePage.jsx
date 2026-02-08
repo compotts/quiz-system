@@ -36,37 +36,6 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg)]">
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-        <div
-          className="flex rounded-xl border border-[var(--border)] bg-[var(--surface)] p-0.5"
-          role="group"
-          aria-label={t("header.lang")}
-        >
-          {langs.map((l) => (
-            <button
-              key={l.code}
-              type="button"
-              onClick={() => setLang(l.code)}
-              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 ${
-                lang === l.code
-                  ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={toggle}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
-          aria-label={isDark ? t("header.themeLight") : t("header.themeDark")}
-        >
-          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
-      </div>
-
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -110,6 +79,36 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
           )}
         </div>
       </main>
+      <div className="flex shrink-0 items-center justify-center gap-2 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <div
+          className="flex rounded-xl border border-[var(--border)] bg-[var(--bg)] p-0.5"
+          role="group"
+          aria-label={t("header.lang")}
+        >
+          {langs.map((l) => (
+            <button
+              key={l.code}
+              type="button"
+              onClick={() => setLang(l.code)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 ${
+                lang === l.code
+                  ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+          aria-label={isDark ? t("header.themeLight") : t("header.themeDark")}
+        >
+          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+      </div>
     </div>
   );
 }
