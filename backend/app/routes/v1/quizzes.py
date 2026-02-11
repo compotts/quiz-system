@@ -4,11 +4,12 @@ from schemas import (
     QuizCreate, QuizUpdate, QuizResponse,
     QuestionCreate, QuestionUpdate, QuestionResponse, QuestionsBatchCreate,
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
-    QuizAttemptResponse, QuizResultResponse
+    QuizAttemptResponse, QuizResultResponse,
+    AntiCheatingLogResponse, AntiCheatingEventResponse, IdenticalAnswersGroup,
 )
 from app.database.models.quiz import Quiz, Question, Option
 from app.database.models.group import Group, GroupMember
-from app.database.models.attempt import QuizAttempt, Answer
+from app.database.models.attempt import QuizAttempt, Answer, AntiCheatingEvent
 from app.database.models.user import User
 from app.utils.auth import get_current_teacher, get_current_user, get_current_student
 from app.utils.audit import log_audit
@@ -52,6 +53,7 @@ async def create_quiz(
         allow_show_answers=data.allow_show_answers,
         show_results=data.show_results,
         question_display_mode=data.question_display_mode,
+        anti_cheating_mode=data.anti_cheating_mode,
         is_active=True
     )
     await log_audit(
@@ -70,6 +72,8 @@ async def create_quiz(
         qd["show_results"] = True
     if qd.get("question_display_mode") is None:
         qd["question_display_mode"] = "all_on_page"
+    if qd.get("anti_cheating_mode") is None:
+        qd["anti_cheating_mode"] = False
     return {
         **qd,
         "group_id": group.id,
@@ -117,6 +121,8 @@ async def get_quizzes(
             qd["show_results"] = True
         if qd.get("question_display_mode") is None:
             qd["question_display_mode"] = "all_on_page"
+        if qd.get("anti_cheating_mode") is None:
+            qd["anti_cheating_mode"] = False
         result.append({
             **qd,
             "group_id": quiz.group.id,
@@ -160,6 +166,8 @@ async def get_quiz(
         qd["show_results"] = True
     if qd.get("question_display_mode") is None:
         qd["question_display_mode"] = "all_on_page"
+    if qd.get("anti_cheating_mode") is None:
+        qd["anti_cheating_mode"] = False
     return {
         **qd,
         "group_id": quiz.group.id,
@@ -167,6 +175,103 @@ async def get_quiz(
         "question_count": question_count,
         "is_expired": is_expired
     }
+
+
+def _answer_signature(answers_by_question: dict) -> tuple:
+    out = []
+    for qid in sorted(answers_by_question.keys()):
+        val = answers_by_question[qid]
+        if isinstance(val, (list, set)):
+            out.append((qid, "select", tuple(sorted(val))))
+        else:
+            out.append((qid, "text", (val or "").strip().lower()))
+    return tuple(out)
+
+
+@router.get("/{quiz_id}/anti-cheating-log", response_model=AntiCheatingLogResponse)
+async def get_quiz_anti_cheating_log(
+    quiz_id: int,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not getattr(quiz, "anti_cheating_mode", False):
+        return {"events": [], "identical_answers_groups": []}
+
+    events = await AntiCheatingEvent.objects.select_related(["attempt", "attempt__student"]).filter(
+        attempt__quiz=quiz
+    ).order_by("-created_at").all()
+
+    event_list = []
+    for ev in events:
+        student_name = None
+        student_id = None
+        if ev.attempt and ev.attempt.student:
+            u = ev.attempt.student
+            parts = [getattr(u, "first_name", None), getattr(u, "last_name", None)]
+            student_name = " ".join(p for p in parts if p).strip() or u.username
+            student_id = u.id
+        event_list.append(AntiCheatingEventResponse(
+            id=ev.id,
+            attempt_id=ev.attempt.id,
+            event_type=ev.event_type,
+            details=ev.details,
+            created_at=ev.created_at,
+            student_id=student_id,
+            student_name=student_name,
+        ))
+
+    completed = await QuizAttempt.objects.select_related("student").filter(
+        quiz=quiz, is_completed=True
+    ).all()
+    if len(completed) < 2:
+        return {"events": event_list, "identical_answers_groups": []}
+
+    questions = await Question.objects.filter(quiz=quiz).order_by("order").all()
+    qids = [q.id for q in questions]
+    if not qids:
+        return {"events": event_list, "identical_answers_groups": []}
+
+    attempt_signatures = {}
+    for attempt in completed:
+        answers = await Answer.objects.filter(attempt=attempt, question__id__in=qids).select_related("question").all()
+        by_q = {qid: "_" for qid in qids}
+        for ans in answers:
+            qid = ans.question.id
+            inp = ans.question.input_type or "select"
+            if inp == "select":
+                try:
+                    ids = json.loads(ans.selected_options or "[]")
+                    by_q[qid] = sorted(ids)
+                except Exception:
+                    by_q[qid] = []
+            else:
+                by_q[qid] = (ans.text_answer or "").strip().lower() or "_"
+        sig = _answer_signature(by_q)
+        if sig not in attempt_signatures:
+            attempt_signatures[sig] = []
+        attempt_signatures[sig].append(attempt)
+
+    identical_answers_groups = []
+    for sig, attempts in attempt_signatures.items():
+        if len(attempts) < 2:
+            continue
+        names = []
+        for a in attempts:
+            u = a.student
+            parts = [getattr(u, "first_name", None), getattr(u, "last_name", None)]
+            names.append(" ".join(p for p in parts if p).strip() or u.username)
+        completed_at = attempts[0].completed_at if attempts else None
+        identical_answers_groups.append(IdenticalAnswersGroup(
+            attempt_ids=[a.id for a in attempts],
+            student_names=names,
+            completed_at=completed_at,
+        ))
+
+    return {"events": event_list, "identical_answers_groups": identical_answers_groups}
 
 
 @router.patch("/{quiz_id}", response_model=QuizResponse)
@@ -214,6 +319,8 @@ async def update_quiz(
         qd["show_results"] = True
     if qd.get("question_display_mode") is None:
         qd["question_display_mode"] = "all_on_page"
+    if qd.get("anti_cheating_mode") is None:
+        qd["anti_cheating_mode"] = False
     return {
         **qd,
         "group_id": quiz.group.id,
@@ -723,7 +830,6 @@ async def get_student_detail(
     student_id: int,
     current_user: User = Depends(get_current_teacher)
 ):
-    """Get detailed statistics for a specific student's attempt"""
     quiz = await Quiz.objects.select_related("group").get_or_none(id=quiz_id)
     
     if not quiz:
@@ -853,6 +959,7 @@ async def reissue_quiz(
     for student_id in student_ids:
         attempts = await QuizAttempt.objects.filter(quiz=quiz, student=student_id).all()
         for attempt in attempts:
+            await AntiCheatingEvent.objects.filter(attempt=attempt).delete()
             await Answer.objects.filter(attempt=attempt).delete()
             await attempt.delete()
     

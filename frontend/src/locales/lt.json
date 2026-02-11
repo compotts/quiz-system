@@ -356,6 +356,7 @@
     "tabs": { "groups": "Grupės", "quizzes": "Viktorinos", "results": "Rezultatai" },
     "groups": {
       "create": "Sukurti grupę",
+      "loading": "Įkeliama...",
       "createPlaceholder": "Grupės pavadinimas",
       "code": "Kodas",
       "copyCode": "Kopijuoti kodą",
@@ -434,6 +435,8 @@
       "manualClose": "Kol uždarysiu",
       "quizTimeLimit": "Viktorinos laiko limitas (minutės)",
       "allowShowAnswers": "Leisti peržiūrėti atsakymus po baigimo",
+      "antiCheatingMode": "Apsaugos nuo sukčiavimo režimas",
+      "antiCheatingExperimental": "Eksperimentinė funkcija.",
       "create": "Sukurti",
       "creating": "Kuriama...",
       "questions": "klausimai",
@@ -455,7 +458,19 @@
     },
     "quizPage": {
       "backToGroup": "Atgal į grupę",
-      "tabs": { "questions": "Klausimai", "grading": "Vertinimas", "settings": "Nustatymai" },
+      "tabs": { "questions": "Klausimai", "grading": "Vertinimas", "antiCheatingLog": "Apsaugos nuo sukčiavimo žurnalas", "settings": "Nustatymai" },
+      "antiCheatingLogDesc": "Skirtuko perjungimų įvykiai ir studentų grupės su vienodais atsakymais.",
+      "identicalAnswers": "Vienodi atsakymai",
+      "identicalAnswersDesc": "Studentų grupės, pateikusios vienodus atsakymus.",
+      "identicalAnswersGroupCount": "{{count}} studentai",
+      "identicalAnswersCompletedAt": "Atlikta {{date}}",
+      "antiCheatingEvents": "Apsaugos įvykiai",
+      "noAntiCheatingEvents": "Įvykių nėra.",
+      "eventTime": "Laikas",
+      "eventStudentName": "Studentas",
+      "eventType": "Tipas",
+      "eventTabSwitch": "Skirtuko perjungimas",
+      "tabSwitchCount": "Perjungimas #{{count}}",
       "showCorrectAnswers": "Rodyti teisingus atsakymus",
       "noQuestions": "Klausimų nėra",
       "addQuestion": "Pridėti klausimą",
@@ -494,6 +509,8 @@
       "reissuing": "Kartojama...",
       "settingsShowResults": "Rodyti rezultatus studentui po užbaigimo",
       "settingsAllowShowAnswers": "Leisti studentams peržiūrėti teisingus atsakymus",
+      "settingsAntiCheating": "Apsaugos nuo sukčiavimo režimas",
+      "settingsAntiCheatingExperimental": "Eksperimentinė funkcija: stebimas skirtuko perjungimas, siūlomas pilno ekrano režimas, kopijavimas išjungtas.",
       "settingsQuestionDisplay": "Klausimų rodymo režimas",
       "displayAllOnPage": "Visi klausimai viename puslapyje",
       "displayOnePerPage": "Vienas klausimas puslapyje",
@@ -624,7 +641,14 @@
       "exit": "Išeiti",
       "exitConfirmMessage": "Jei išeisite, bus išsaugotas dabartinis rezultatas. Išeiti?",
       "exitConfirmYes": "Išeiti",
-      "exitConfirmNo": "Likti"
+      "exitConfirmNo": "Likti",
+      "antiCheatingFullscreenTitle": "Apsaugos nuo sukčiavimo režimas",
+      "antiCheatingFullscreenPrompt": "Rekomenduojama įjungti pilno ekrano režimą.",
+      "antiCheatingFullscreenPrompt2": "Jeigu perjungsite į kitą skirtuką arba išeisite iš lango 2 kartus, užduotis bus automatiškai pateikta.",
+      "antiCheatingEnterFullscreen": "Įjungti pilno ekrano režimą",
+      "antiCheatingContinueAnyway": "Tęsti be pilno ekrano",
+      "antiCheatingTabWarning": "Aptiktas skirtuko perjungimas. Jei perjungsite dar kartą, užduotis bus automatiškai pateikta.",
+      "antiCheatingSubmitted": "Užduotis automatiškai pateikta dėl perjungimo į kitą skirtuką."
     }
   }
 }

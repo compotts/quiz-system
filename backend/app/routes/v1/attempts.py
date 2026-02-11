@@ -5,11 +5,12 @@ import unicodedata
 from schemas import (
     StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
     QuizAttemptResponse, QuizResultResponse,
-    SubmitAnswersBatch, SubmitAnswersBatchResponse
+    SubmitAnswersBatch, SubmitAnswersBatchResponse,
+    AntiCheatingEventCreate,
 )
 from app.database.models.quiz import Quiz, Question, Option
 from app.database.models.group import GroupMember
-from app.database.models.attempt import QuizAttempt, Answer
+from app.database.models.attempt import QuizAttempt, Answer, AntiCheatingEvent
 from app.database.models.user import User
 from app.utils.auth import get_current_student, get_current_user
 from app.utils.audit import log_audit
@@ -612,3 +613,25 @@ async def get_current_attempt(
         "answered_questions": answered_ids,
         "questions_order": questions_order
     }
+
+
+@router.post("/{attempt_id}/anti-cheating-events")
+async def log_anti_cheating_event(
+    attempt_id: int,
+    data: AntiCheatingEventCreate,
+    current_user: User = Depends(get_current_student)
+):
+    attempt = await QuizAttempt.objects.select_related("quiz").get_or_none(id=attempt_id)
+    if not attempt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attempt not found")
+    if attempt.student.id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your attempt")
+    if not getattr(attempt.quiz, "anti_cheating_mode", False):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Anti-cheating not enabled for this quiz")
+    details_json = json.dumps(data.details) if data.details is not None else None
+    await AntiCheatingEvent.objects.create(
+        attempt=attempt,
+        event_type=data.event_type,
+        details=details_json,
+    )
+    return {"ok": True}

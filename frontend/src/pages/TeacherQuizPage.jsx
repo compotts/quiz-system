@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,6 +28,8 @@ import {
   Target,
   Timer,
   Edit3,
+  ClipboardList,
+  Users,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
@@ -40,20 +42,7 @@ function formatTime(seconds) {
 
 export default function TeacherQuizPage() {
   const { t } = useTranslation();
-  
-  const TABS = [
-    { id: "questions", icon: HelpCircle, label: t("teacher.quizPage.tabs.questions") },
-    { id: "grading", icon: BarChart3, label: t("teacher.quizPage.tabs.grading") },
-    { id: "settings", icon: Settings, label: t("teacher.quizPage.tabs.settings") },
-  ];
 
-  const STATUS_LABELS = {
-    not_opened: { label: t("teacher.quizPage.statusNotOpened"), color: "text-gray-500" },
-    opened: { label: t("teacher.quizPage.statusOpened"), color: "text-yellow-600 dark:text-yellow-400" },
-    in_progress: { label: t("teacher.quizPage.statusInProgress"), color: "text-blue-600 dark:text-blue-400" },
-    completed: { label: t("teacher.quizPage.statusCompleted"), color: "text-green-600 dark:text-green-400" },
-    expired: { label: t("teacher.quizPage.statusExpired"), color: "text-red-600 dark:text-red-400" },
-  };
   const navigate = useNavigate();
   const { quizId } = useParams();
   const qid = Number(quizId);
@@ -64,6 +53,24 @@ export default function TeacherQuizPage() {
 
   const [quiz, setQuiz] = useState(null);
   const [activeTab, setActiveTab] = useState("questions");
+
+  const TABS = useMemo(() => [
+    { id: "questions", icon: HelpCircle, label: t("teacher.quizPage.tabs.questions") },
+    { id: "grading", icon: BarChart3, label: t("teacher.quizPage.tabs.grading") },
+    ...(quiz?.anti_cheating_mode ? [{ id: "anti_cheating_log", icon: ClipboardList, label: t("teacher.quizPage.tabs.antiCheatingLog") }] : []),
+    { id: "settings", icon: Settings, label: t("teacher.quizPage.tabs.settings") },
+  ], [quiz?.anti_cheating_mode, t]);
+
+  const STATUS_LABELS = {
+    not_opened: { label: t("teacher.quizPage.statusNotOpened"), color: "text-gray-500" },
+    opened: { label: t("teacher.quizPage.statusOpened"), color: "text-yellow-600 dark:text-yellow-400" },
+    in_progress: { label: t("teacher.quizPage.statusInProgress"), color: "text-blue-600 dark:text-blue-400" },
+    completed: { label: t("teacher.quizPage.statusCompleted"), color: "text-green-600 dark:text-green-400" },
+    expired: { label: t("teacher.quizPage.statusExpired"), color: "text-red-600 dark:text-red-400" },
+  };
+
+  const [antiCheatingLog, setAntiCheatingLog] = useState(null);
+  const [loadingAntiCheatingLog, setLoadingAntiCheatingLog] = useState(false);
 
   const [questions, setQuestions] = useState([]);
   const [showCorrectAnswers, setShowCorrectAnswers] = useState(false);
@@ -78,6 +85,7 @@ export default function TeacherQuizPage() {
     time_limit: "",
     question_time_limit: "",
     question_display_mode: "all_on_page",
+    anti_cheating_mode: false,
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [closingQuiz, setClosingQuiz] = useState(false);
@@ -223,6 +231,7 @@ export default function TeacherQuizPage() {
         time_limit: q.time_limit || "",
         question_time_limit: q.question_time_limit || "",
         question_display_mode: q.question_display_mode || "all_on_page",
+        anti_cheating_mode: q.anti_cheating_mode === true,
       });
     } catch (err) {
       setError(err.message || t("teacher.quizzes.errorLoad"));
@@ -260,6 +269,16 @@ export default function TeacherQuizPage() {
   }, [currentUser, qid]);
 
   useEffect(() => {
+    if (activeTab === "anti_cheating_log" && quiz?.anti_cheating_mode && qid) {
+      setLoadingAntiCheatingLog(true);
+      quizzesApi.getAntiCheatingLog(qid)
+        .then((data) => setAntiCheatingLog(data || { events: [], identical_answers_groups: [] }))
+        .catch(() => setAntiCheatingLog({ events: [], identical_answers_groups: [] }))
+        .finally(() => setLoadingAntiCheatingLog(false));
+    }
+  }, [activeTab, quiz?.anti_cheating_mode, qid]);
+
+  useEffect(() => {
     if (settingsForm.timer_mode === "per_question" && settingsForm.question_display_mode !== "one_per_page") {
       setSettingsForm((f) => ({ ...f, question_display_mode: "one_per_page" }));
     }
@@ -278,6 +297,7 @@ export default function TeacherQuizPage() {
         time_limit: settingsForm.timer_mode === "quiz_total" ? (parseInt(settingsForm.time_limit) || null) : null,
         question_time_limit: settingsForm.timer_mode === "per_question" ? (parseInt(settingsForm.question_time_limit) || null) : null,
         question_display_mode: settingsForm.timer_mode === "per_question" ? "one_per_page" : settingsForm.question_display_mode,
+        anti_cheating_mode: settingsForm.anti_cheating_mode,
       });
       await loadQuiz();
     } catch (err) {
@@ -953,6 +973,109 @@ export default function TeacherQuizPage() {
                 </div>
               )}
 
+              {activeTab === "anti_cheating_log" && (
+                <div className="space-y-6">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+                    <h3 className="text-lg font-medium text-[var(--text)]">{t("teacher.quizPage.tabs.antiCheatingLog")}</h3>
+                    <p className="mt-1 text-sm text-[var(--text-muted)]">{t("teacher.quizPage.antiCheatingLogDesc")}</p>
+                    {loadingAntiCheatingLog ? (
+                      <div className="mt-6 flex justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-muted)]" />
+                      </div>
+                    ) : antiCheatingLog && (
+                      <div className="mt-6 space-y-6">
+                        {antiCheatingLog.identical_answers_groups?.length > 0 && (
+                          <div>
+                            <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text)]">
+                              <Users className="h-4 w-4" />
+                              {t("teacher.quizPage.identicalAnswers")}
+                            </h4>
+                            <p className="mb-3 text-xs text-[var(--text-muted)]">{t("teacher.quizPage.identicalAnswersDesc")}</p>
+                            <div className="space-y-3">
+                              {antiCheatingLog.identical_answers_groups.map((g, i) => {
+                                const names = g.student_names || [];
+                                const completedDate = g.completed_at
+                                  ? new Date(g.completed_at).toLocaleString(undefined, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                  : null;
+                                return (
+                                  <div
+                                    key={i}
+                                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4"
+                                  >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                        {t("teacher.quizPage.identicalAnswersGroupCount", { count: names.length })}
+                                      </span>
+                                      {completedDate && (
+                                        <span className="text-xs text-[var(--text-muted)]">
+                                          {t("teacher.quizPage.identicalAnswersCompletedAt", { date: completedDate })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {names.map((name, j) => (
+                                        <span key={j} className="rounded-md border border-amber-500/30 bg-[var(--surface)] px-2.5 py-1 text-sm text-[var(--text)]">
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--text)]">
+                            <ClipboardList className="h-4 w-4" />
+                            {t("teacher.quizPage.antiCheatingEvents")}
+                          </h4>
+                          {antiCheatingLog.events?.length === 0 ? (
+                            <p className="text-sm text-[var(--text-muted)]">{t("teacher.quizPage.noAntiCheatingEvents")}</p>
+                          ) : (
+                            <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+                              <table className="w-full min-w-[400px] text-sm">
+                                <thead>
+                                  <tr className="border-b border-[var(--border)] bg-[var(--bg-card)]">
+                                    <th className="p-3 text-left font-medium text-[var(--text)]">{t("teacher.quizPage.eventTime")}</th>
+                                    <th className="p-3 text-left font-medium text-[var(--text)]">{t("teacher.quizPage.eventStudentName")}</th>
+                                    <th className="p-3 text-left font-medium text-[var(--text)]">{t("teacher.quizPage.eventType")}</th>
+                                    <th className="p-3 text-left font-medium text-[var(--text)]">{t("teacher.quizPage.details")}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(antiCheatingLog.events || []).map((ev) => (
+                                    <tr key={ev.id} className="border-b border-[var(--border)]">
+                                      <td className="p-3 text-[var(--text-muted)]">
+                                        {ev.created_at ? new Date(ev.created_at).toLocaleString() : "—"}
+                                      </td>
+                                      <td className="p-3">{ev.student_name ?? "—"}</td>
+                                      <td className="p-3">{ev.event_type === "tab_switch" ? t("teacher.quizPage.eventTabSwitch") : ev.event_type}</td>
+                                      <td className="p-3 text-[var(--text-muted)]">
+                                        {ev.event_type === "tab_switch" && ev.details
+                                          ? (() => {
+                                              try {
+                                                const d = JSON.parse(ev.details);
+                                                return d.switch_count != null ? t("teacher.quizPage.tabSwitchCount", { count: d.switch_count }) : ev.details;
+                                              } catch {
+                                                return ev.details;
+                                              }
+                                            })()
+                                          : (ev.details ?? "—")}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {activeTab === "settings" && (
                 <div className="space-y-6">
                   <form onSubmit={handleSaveSettings} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -975,6 +1098,20 @@ export default function TeacherQuizPage() {
                         />
                         {t("teacher.quizPage.settingsAllowShowAnswers")}
                       </label>
+
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                        <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                          <input
+                            type="checkbox"
+                            checked={settingsForm.anti_cheating_mode}
+                            onChange={(e) => setSettingsForm((f) => ({ ...f, anti_cheating_mode: e.target.checked }))}
+                          />
+                          {t("teacher.quizPage.settingsAntiCheating")}
+                        </label>
+                        <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                          {t("teacher.quizPage.settingsAntiCheatingExperimental")}
+                        </p>
+                      </div>
                       
                       <div className="border-t border-[var(--border)] pt-4">
                         <label className="block text-sm font-medium text-[var(--text)] mb-2">{t("teacher.quizPage.settingsQuestionDisplay")}</label>

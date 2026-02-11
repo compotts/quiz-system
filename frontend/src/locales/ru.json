@@ -336,6 +336,7 @@
     "tabs": { "groups": "Группы", "quizzes": "Квизы", "results": "Результаты" },
     "groups": {
       "create": "Создать",
+      "loading": "Загрузка...",
       "createPlaceholder": "Название группы",
       "createGroup": "Создать группу",
       "code": "Код",
@@ -414,6 +415,8 @@
       "manualClose": "Пока не завершу",
       "quizTimeLimit": "Лимит времени на квиз (минуты)",
       "allowShowAnswers": "Разрешить просмотр ответов после завершения",
+      "antiCheatingMode": "Режим антисписывания",
+      "antiCheatingExperimental": "Экспериментальная функция.",
       "create": "Создать",
       "creating": "Создание...",
       "questions": "вопросов",
@@ -435,7 +438,19 @@
     },
     "quizPage": {
       "backToGroup": "Назад к группе",
-      "tabs": { "questions": "Вопросы", "grading": "Оценивание", "settings": "Настройки" },
+      "tabs": { "questions": "Вопросы", "grading": "Оценивание", "antiCheatingLog": "Журнал антисписывания", "settings": "Настройки" },
+      "antiCheatingLogDesc": "События переключения вкладок и группы студентов с одинаковыми ответами.",
+      "identicalAnswers": "Одинаковые ответы",
+      "identicalAnswersDesc": "Группы студентов с полностью совпадающими ответами.",
+      "identicalAnswersGroupCount": "{{count}} студентов",
+      "identicalAnswersCompletedAt": "Завершено {{date}}",
+      "antiCheatingEvents": "События антисписывания",
+      "noAntiCheatingEvents": "Нет записей.",
+      "eventTime": "Время",
+      "eventStudentName": "Студент",
+      "eventType": "Тип",
+      "eventTabSwitch": "Переключение вкладки",
+      "tabSwitchCount": "Переключение №{{count}}",
       "showCorrectAnswers": "Показать правильные ответы",
       "noQuestions": "Нет вопросов",
       "addQuestion": "Добавить вопрос",
@@ -474,6 +489,8 @@
       "reissuing": "Перевыпуск...",
       "settingsShowResults": "Показывать результаты студенту после прохождения",
       "settingsAllowShowAnswers": "Разрешить студентам просмотр правильных ответов",
+      "settingsAntiCheating": "Режим антисписывания",
+      "settingsAntiCheatingExperimental": "Экспериментальная функция: отслеживание вкладки, предложение полноэкранного режима, запрет копирования.",
       "settingsQuestionDisplay": "Режим отображения вопросов",
       "displayAllOnPage": "Все вопросы на одной странице",
       "displayOnePerPage": "По одному вопросу на странице",
@@ -624,7 +641,14 @@
       "exit": "Выйти",
       "exitConfirmMessage": "Если вы выйдете, сохранится текущий результат. Выйти?",
       "exitConfirmYes": "Выйти",
-      "exitConfirmNo": "Остаться"
+      "exitConfirmNo": "Остаться",
+      "antiCheatingFullscreenTitle": "Режим антисписывания",
+      "antiCheatingFullscreenPrompt": "Рекомендуется войти в полноэкранный режим. Так проще сосредоточиться и не переключаться на другие вкладки.",
+      "antiCheatingFullscreenPrompt2": "Если вы переключитесь на другую вкладку или покинете окно квиза 2 раза, задание будет завершено автоматически.",
+      "antiCheatingEnterFullscreen": "Войти в полноэкранный режим",
+      "antiCheatingContinueAnyway": "Продолжить без полноэкранного режима",
+      "antiCheatingTabWarning": "Обнаружен уход со вкладки. При повторном переключении задание будет автоматически отправлено.",
+      "antiCheatingSubmitted": "Задание автоматически отправлено из-за переключения на другую вкладку."
     }
   }
 }

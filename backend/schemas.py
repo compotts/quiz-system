@@ -210,6 +210,7 @@ class QuizCreate(BaseModel):
     allow_show_answers: bool = True
     show_results: bool = True
     question_display_mode: str = "all_on_page"
+    anti_cheating_mode: bool = False
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -229,6 +230,7 @@ class QuizUpdate(BaseModel):
     allow_show_answers: Optional[bool] = None
     show_results: Optional[bool] = None
     question_display_mode: Optional[str] = None
+    anti_cheating_mode: Optional[bool] = None
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -251,6 +253,7 @@ class QuizResponse(BaseModel):
     allow_show_answers: bool = True
     show_results: bool = True
     question_display_mode: str = "all_on_page"
+    anti_cheating_mode: bool = False
     created_at: datetime
     question_count: Optional[int] = 0
     is_expired: Optional[bool] = False
@@ -364,6 +367,32 @@ class StudentAttemptStatus(BaseModel):
     answered_count: int = 0
     total_questions: int = 0
     avg_time_per_answer: Optional[float] = None 
+
+
+class AntiCheatingEventCreate(BaseModel):
+    event_type: str = "tab_switch"  # 'tab_switch' or other
+    details: Optional[dict] = None
+
+
+class AntiCheatingEventResponse(BaseModel):
+    id: int
+    attempt_id: int
+    event_type: str
+    details: Optional[str] = None
+    created_at: datetime
+    student_id: Optional[int] = None
+    student_name: Optional[str] = None
+
+
+class IdenticalAnswersGroup(BaseModel):
+    attempt_ids: List[int]
+    student_names: List[str]
+    completed_at: Optional[datetime] = None
+
+
+class AntiCheatingLogResponse(BaseModel):
+    events: List[AntiCheatingEventResponse]
+    identical_answers_groups: List[IdenticalAnswersGroup]
 
 
 class ReissueQuizRequest(BaseModel):

@@ -80,6 +80,7 @@ export default function TeacherGroupPage() {
     available_until: "",
     manual_close: false,
     allow_show_answers: true,
+    anti_cheating_mode: false,
   });
   const [creatingQuiz, setCreatingQuiz] = useState(false);
 
@@ -197,6 +198,7 @@ export default function TeacherGroupPage() {
         available_until: quizForm.manual_close ? null : (quizForm.available_until ? new Date(quizForm.available_until).toISOString() : null),
         manual_close: quizForm.manual_close,
         allow_show_answers: quizForm.allow_show_answers,
+        anti_cheating_mode: quizForm.anti_cheating_mode,
       });
       setShowQuizModal(false);
       setQuizForm({
@@ -207,6 +209,7 @@ export default function TeacherGroupPage() {
         available_until: "",
         manual_close: false,
         allow_show_answers: true,
+        anti_cheating_mode: false,
       });
       await loadQuizzes();
     } catch (err) {
@@ -629,6 +632,19 @@ export default function TeacherGroupPage() {
                     className="mt-2 w-24 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text)]"
                   />
                 )}
+              </div>
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                  <input
+                    type="checkbox"
+                    checked={quizForm.anti_cheating_mode}
+                    onChange={(e) => setQuizForm((f) => ({ ...f, anti_cheating_mode: e.target.checked }))}
+                  />
+                  {t("teacher.groupPage.antiCheatingMode")}
+                </label>
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  {t("teacher.groupPage.antiCheatingExperimental")}
+                </p>
               </div>
               <div>
                 <label className="flex items-center gap-2 text-sm text-[var(--text)]">

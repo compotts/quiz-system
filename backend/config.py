@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     admin_init_enabled: bool = True
     cors_origins: list = ["http://localhost:5173", "https://quiz-system-eta.vercel.app", "http://192.168.68.108:5173"]
     env: str = "dev"
+    api_version: str = "v1" 
     
     class Config:
         env_file = ".env"

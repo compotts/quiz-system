@@ -396,6 +396,9 @@ export const quizzesApi = {
   async closeQuizEarly(quizId) {
     return request(`/quizzes/${quizId}/close`, { method: "POST" });
   },
+  async getAntiCheatingLog(quizId) {
+    return request(`/quizzes/${quizId}/anti-cheating-log`);
+  },
 };
 
 export const attemptsApi = {
@@ -404,6 +407,12 @@ export const attemptsApi = {
   },
   async getAttemptResults(attemptId) {
     return request(`/attempts/results/${attemptId}`);
+  },
+  async logAntiCheatingEvent(attemptId, data) {
+    return request(`/attempts/${attemptId}/anti-cheating-events`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
   async getMyAttempts(quizId = null) {
     const q = quizId != null ? `?quiz_id=${quizId}` : "";

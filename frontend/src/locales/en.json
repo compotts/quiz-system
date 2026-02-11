@@ -356,6 +356,7 @@
     "tabs": { "groups": "Groups", "quizzes": "Quizzes", "results": "Results" },
     "groups": {
       "create": "Create group",
+      "loading": "Loading...",
       "createPlaceholder": "Group name",
       "code": "Code",
       "copyCode": "Copy code",
@@ -434,6 +435,8 @@
       "manualClose": "Until I close",
       "quizTimeLimit": "Quiz time limit (minutes)",
       "allowShowAnswers": "Allow viewing answers after completion",
+      "antiCheatingMode": "Anti-cheating mode",
+      "antiCheatingExperimental": "Experimental feature.",
       "create": "Create",
       "creating": "Creating...",
       "questions": "questions",
@@ -455,7 +458,19 @@
     },
     "quizPage": {
       "backToGroup": "Back to group",
-      "tabs": { "questions": "Questions", "grading": "Grading", "settings": "Settings" },
+      "tabs": { "questions": "Questions", "grading": "Grading", "antiCheatingLog": "Anti-cheating log", "settings": "Settings" },
+      "antiCheatingLogDesc": "Tab switch events and groups of students with identical answers.",
+      "identicalAnswers": "Identical answers",
+      "identicalAnswersDesc": "Groups of students who submitted identical answers.",
+      "identicalAnswersGroupCount": "{{count}} students",
+      "identicalAnswersCompletedAt": "Completed {{date}}",
+      "antiCheatingEvents": "Anti-cheating events",
+      "noAntiCheatingEvents": "No events.",
+      "eventTime": "Time",
+      "eventStudentName": "Student",
+      "eventType": "Type",
+      "eventTabSwitch": "Tab switch",
+      "tabSwitchCount": "Switch #{{count}}",
       "showCorrectAnswers": "Show correct answers",
       "noQuestions": "No questions",
       "addQuestion": "Add question",
@@ -494,6 +509,8 @@
       "reissuing": "Reissuing...",
       "settingsShowResults": "Show results to student after completion",
       "settingsAllowShowAnswers": "Allow students to view correct answers",
+      "settingsAntiCheating": "Anti-cheating mode",
+      "settingsAntiCheatingExperimental": "Experimental: tab visibility tracking, fullscreen prompt, copy disabled.",
       "settingsQuestionDisplay": "Question display mode",
       "displayAllOnPage": "All questions on one page",
       "displayOnePerPage": "One question per page",
@@ -624,7 +641,14 @@
       "exit": "Exit",
       "exitConfirmMessage": "If you exit, your current result will be saved. Exit?",
       "exitConfirmYes": "Exit",
-      "exitConfirmNo": "Stay"
+      "exitConfirmNo": "Stay",
+      "antiCheatingFullscreenTitle": "Anti-cheating mode",
+      "antiCheatingFullscreenPrompt": "Fullscreen is recommended. It helps focus and reduces switching to other tabs.",
+      "antiCheatingFullscreenPrompt2": "If you switch to another tab or exit the window 2 times, the assignment will be submitted automatically.",
+      "antiCheatingEnterFullscreen": "Enter fullscreen",
+      "antiCheatingContinueAnyway": "Continue without fullscreen",
+      "antiCheatingTabWarning": "Tab switch detected. If you switch again, the assignment will be submitted automatically.",
+      "antiCheatingSubmitted": "Assignment was automatically submitted due to switching to another tab."
     }
   }
 }

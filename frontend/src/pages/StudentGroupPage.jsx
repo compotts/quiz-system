@@ -65,12 +65,24 @@ export default function StudentGroupPage() {
   const [attemptDetail, setAttemptDetail] = useState(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
 
+  const [fullscreenPromptDismissed, setFullscreenPromptDismissed] = useState(false);
+  const [visibilitySwitchCount, setVisibilitySwitchCount] = useState(0);
+  const [antiCheatingTabWarningShown, setAntiCheatingTabWarningShown] = useState(false);
+  const [antiCheatingAutoSubmitted, setAntiCheatingAutoSubmitted] = useState(false);
+  const antiCheatingSubmittedRef = useRef(false);
+  const visibilityHiddenAlreadyProcessedRef = useRef(false);
+  const lastLoggedSwitchCountRef = useRef(0);
+
   const showQuizRun = runState === "running" || runState === "results";
 
   const runStateRef = useRef({ runState, runAttemptId, runQuiz, runQuestions, runAnswered, runAnswers });
+  const completeQuizRef = useRef(null);
   useEffect(() => {
     runStateRef.current = { runState, runAttemptId, runQuiz, runQuestions, runAnswered, runAnswers };
   }, [runState, runAttemptId, runQuiz, runQuestions, runAnswered, runAnswers]);
+  useEffect(() => {
+    completeQuizRef.current = completeQuiz;
+  });
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
@@ -289,6 +301,11 @@ export default function StudentGroupPage() {
       } else {
         orderedQuestions.forEach((q) => { if (q?.id != null) runQuestionStartedAtRef.current[q.id] = startedAt; });
       }
+      setFullscreenPromptDismissed(!quiz.anti_cheating_mode);
+      setVisibilitySwitchCount(0);
+      setAntiCheatingTabWarningShown(false);
+      setAntiCheatingAutoSubmitted(false);
+      antiCheatingSubmittedRef.current = false;
       setRunState("running");
     } catch (err) {
       setError(err.message || t("student.quizzes.errorStart"));
@@ -304,6 +321,37 @@ export default function StudentGroupPage() {
       runQuestionStartedAtRef.current[q.id] = Date.now();
     }
   }, [runState, currentQuestionIndex, runQuestions]);
+
+  useEffect(() => {
+    if (runState !== "running" || !runQuiz?.anti_cheating_mode || !fullscreenPromptDismissed) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        visibilityHiddenAlreadyProcessedRef.current = false;
+        return;
+      }
+      if (visibilityHiddenAlreadyProcessedRef.current) return;
+      visibilityHiddenAlreadyProcessedRef.current = true;
+      setVisibilitySwitchCount((prev) => {
+        const next = prev + 1;
+        if (runAttemptId && lastLoggedSwitchCountRef.current !== next) {
+          lastLoggedSwitchCountRef.current = next;
+          attemptsApi.logAntiCheatingEvent(runAttemptId, {
+            event_type: "tab_switch",
+            details: { switch_count: next },
+          }).catch(() => {});
+        }
+        if (next >= 2 && !antiCheatingSubmittedRef.current) {
+          antiCheatingSubmittedRef.current = true;
+          setAntiCheatingAutoSubmitted(true);
+          setTimeout(() => completeQuizRef.current?.(), 0);
+        }
+        return next;
+      });
+      setAntiCheatingTabWarningShown(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [runState, runQuiz?.anti_cheating_mode, fullscreenPromptDismissed, runAttemptId]);
 
   const handleAnswerChange = (questionId, value, isText = false) => {
     if (runQuestionAnsweredAtRef.current[questionId] == null) {
@@ -381,6 +429,9 @@ export default function StudentGroupPage() {
   };
 
   const exitQuizRun = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.()?.catch(() => {});
+    }
     setRunState(null);
     setRunQuiz(null);
     setRunAttemptId(null);
@@ -393,7 +444,14 @@ export default function StudentGroupPage() {
     setTimeLeft(null);
     setTimerActive(false);
     setShowCorrectAnswers(false);
+    setFullscreenPromptDismissed(false);
+    setVisibilitySwitchCount(0);
+    setAntiCheatingTabWarningShown(false);
+    setAntiCheatingAutoSubmitted(false);
     setError("");
+    antiCheatingSubmittedRef.current = false;
+    visibilityHiddenAlreadyProcessedRef.current = false;
+    lastLoggedSwitchCountRef.current = 0;
     runStartedAtRef.current = null;
     runQuestionStartedAtRef.current = {};
     runQuestionAnsweredAtRef.current = {};
@@ -443,7 +501,7 @@ export default function StudentGroupPage() {
                     style={{ backgroundColor: group?.color || "#6366f1" }}
                   />
                   <h1 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
-                    {group?.name || t("teacher.groups.create")}
+                    {group?.name || t("teacher.groups.loading")}
                   </h1>
                 </div>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -496,6 +554,38 @@ export default function StudentGroupPage() {
           )}
 
           {showQuizRun ? (
+            runState === "running" && runQuiz?.anti_cheating_mode && !fullscreenPromptDismissed ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
+                <h3 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.antiCheatingFullscreenTitle")}</h3>
+                <p className="mt-3 text-sm text-[var(--text-muted)] max-w-md">
+                  {t("student.groupPage.antiCheatingFullscreenPrompt")}
+                </p>
+                <p className="mt-3 text-sm text-[var(--text-muted)] max-w-md">
+                  {t("student.groupPage.antiCheatingFullscreenPrompt2")}
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await document.documentElement.requestFullscreen?.();
+                      } catch (_) {}
+                      setFullscreenPromptDismissed(true);
+                    }}
+                    className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg-elevated)] hover:opacity-90"
+                  >
+                    {t("student.groupPage.antiCheatingEnterFullscreen")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFullscreenPromptDismissed(true)}
+                    className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                  >
+                    {t("student.groupPage.antiCheatingContinueAnyway")}
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className={runState === "running" && runQuiz?.question_display_mode === "one_per_page" ? "flex flex-col min-h-0 flex-1" : ""}>
               <div className="mb-6 flex shrink-0 items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -525,6 +615,18 @@ export default function StudentGroupPage() {
                   </button>
                 ) : null}
               </div>
+
+              {runState === "running" && runQuiz?.anti_cheating_mode && fullscreenPromptDismissed && antiCheatingTabWarningShown && visibilitySwitchCount >= 1 && (
+                <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                  {t("student.groupPage.antiCheatingTabWarning")}
+                </div>
+              )}
+
+              {runState === "results" && antiCheatingAutoSubmitted && (
+                <p className="mb-4 text-sm text-[var(--text-muted)]">
+                  {t("student.groupPage.antiCheatingSubmitted")}
+                </p>
+              )}
 
               {exitConfirmOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -613,7 +715,17 @@ export default function StudentGroupPage() {
               )}
 
               {runState === "running" && (
-                <div className={runQuiz?.question_display_mode === "one_per_page" ? "flex flex-col min-h-0 flex-1" : "space-y-4"}>
+                <div
+                  className={runQuiz?.question_display_mode === "one_per_page" ? "flex flex-col min-h-0 flex-1" : "space-y-4"}
+                  {...(runQuiz?.anti_cheating_mode && {
+                    style: { userSelect: "none" },
+                    onCopy: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    onKeyDown: (e) => {
+                      if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C" || e.key === "x" || e.key === "X")) e.preventDefault();
+                    },
+                  })}
+                >
                   <div className={runQuiz?.question_display_mode === "one_per_page" ? "flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden pb-24" : ""}>
                     {timerActive && timeLeft !== null && (
                       <div className={`rounded-xl border p-4 flex items-center justify-between ${
@@ -826,6 +938,7 @@ export default function StudentGroupPage() {
                 </div>
               )}
             </div>
+            )
           ) : (
             <>
               {loading ? (
@@ -1027,7 +1140,7 @@ export default function StudentGroupPage() {
                 </div>
               )}
             </>
-          )}
+          ) }
         </div>
       </div>
     </div>

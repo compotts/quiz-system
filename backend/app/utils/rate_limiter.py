@@ -7,7 +7,6 @@ import asyncio
 
 class RateLimiter:
     def __init__(self):
-        # {ip_address: [(timestamp, count), ...]}
         self.requests: Dict[str, list] = defaultdict(list)
         self.lock = asyncio.Lock()
     
@@ -17,8 +16,6 @@ class RateLimiter:
         max_requests: int = 5,
         period_seconds: int = 60
     ) -> bool:
-        # max_requests - максимум запросов
-        # period_seconds - период в секундах
         client_ip = request.client.host
         current_time = datetime.utcnow()
         
@@ -67,5 +64,5 @@ async def check_registration_rate_limit(request: Request):
     await rate_limiter.check_rate_limit(
         request, 
         max_requests=settings.rate_limit_login, 
-        period_seconds=settings.rate_limit_period * 5  # минут для регистрации (rate_limit_period это секунды, сейчас в настройках 60 секунд поэтому 60 * 5 = 300 секунд = 5 минут)
+        period_seconds=settings.rate_limit_period * 5  
     )

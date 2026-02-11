@@ -43,3 +43,13 @@ class Answer(Model):
     points_earned: float = Float(default=0.0)
     time_spent: int = Integer(nullable=True)
     answered_at: datetime = DateTime(default=utc_now)
+
+
+class AntiCheatingEvent(Model):
+    ormar_config = base_ormar_config.copy(tablename="anti_cheating_events")
+
+    id: int = Integer(primary_key=True)
+    attempt: QuizAttempt = ForeignKey(QuizAttempt, related_name="anti_cheating_events")
+    event_type: str = String(max_length=30)
+    details: str = Text(nullable=True)
+    created_at: datetime = DateTime(default=utc_now)

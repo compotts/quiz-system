@@ -23,10 +23,6 @@ async def _is_maintenance_mode() -> bool:
 
 
 class MaintenanceMiddleware(BaseHTTPMiddleware):
-    """При включённом maintenance_mode возвращает 503 для всех запросов,
-    кроме GET /auth/registration-settings, POST /auth/login, GET /health, GET /.
-    """
-
     def __init__(self, app, cache_seconds: float = 5.0):
         super().__init__(app)
         self.cache_seconds = cache_seconds
