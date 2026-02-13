@@ -117,7 +117,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--bg)]" />
         <div className="relative mx-auto max-w-4xl text-center">
           <div
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-300 home-animate-fade-down"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-4 py-2 text-sm text-blue-700 dark:border-blue-400/25 dark:bg-blue-500/15 dark:text-blue-300 home-animate-fade-down"
             style={{ opacity: 0, animationDelay: "0.1s" }}
           >
             <Sparkles className="h-4 w-4 shrink-0" aria-hidden />

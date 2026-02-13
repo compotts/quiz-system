@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Quizz",
-    "appNameDev": "Quizz (development)",
+    "appNameDev": "Quizz",
     "close": "Close",
     "save": "Save",
     "cancel": "Cancel",
@@ -49,7 +49,7 @@
     },
     "howToStartTitle": "How to start",
     "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard.",
-    "firstRequestWarning": "The project is being developed, many functions are temporarily unavailable, you can already register.",
+    "firstRequestWarning": "All functions are already available! We invite you to register and start using our service.",
     "maintenanceTitle": "Site under maintenance",
     "maintenanceMessage": "The site is temporarily unavailable. We are performing maintenance.",
     "maintenanceAdminHint": "If you are an administrator, please log in.",

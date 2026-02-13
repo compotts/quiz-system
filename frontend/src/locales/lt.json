@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Quizz",
-    "appNameDev": "Quizz (kūrimas)",
+    "appNameDev": "Quizz",
     "close": "Uždaryti",
     "save": "Išsaugoti",
     "cancel": "Atšaukti",
@@ -49,7 +49,7 @@
     },
     "howToStartTitle": "Kaip pradėti",
     "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą.",
-    "firstRequestWarning": "Projektas kuriamas, Daugelis funkcijų laikinai nepasiekiamos, jau galite užsiregistruoti",
+    "firstRequestWarning": "Visos funkcijos jau prieinamos! Kviečiame registruotis ir pradėti naudotis mūsų paslauga.",
     "maintenanceTitle": "Svetainė techninėje priežiūroje",
     "maintenanceMessage": "Svetainė laikinai nepasiekiama. Atliekame techninius darbus.",
     "maintenanceAdminHint": "Jei esate administratorius — prisijunkite.",
