@@ -140,6 +140,7 @@ class AdminSettingsUpdate(BaseModel):
 class AdminStatsResponse(BaseModel):
     users_total: int = 0
     users_admin: int = 0
+    users_developer: int = 0
     users_teacher: int = 0
     users_student: int = 0
     groups_count: int = 0

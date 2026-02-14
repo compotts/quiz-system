@@ -21,7 +21,7 @@ export default function Blog() {
   const [showPreview, setShowPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "developer";
 
   const loadPosts = useCallback(async () => {
     try {

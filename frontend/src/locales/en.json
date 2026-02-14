@@ -126,6 +126,7 @@
     "goToDashboard": "Go to dashboard",
     "roles": {
       "admin": "Administrator",
+      "developer": "Developer",
       "teacher": "Teacher",
       "student": "Student"
     }
@@ -262,7 +263,7 @@
     "experimentalCleanupSuccess": "Cleanup completed. Quizzes deleted: {{count}}.",
     "experimentalCleanupError": "Cleanup failed",
     "status": { "pending": "Pending", "approved": "Approved", "rejected": "Rejected" },
-    "roles": { "admin": "Admin", "teacher": "Teacher", "student": "Student", "teacherShort": "Teacher" },
+    "roles": { "admin": "Admin", "developer": "Developer", "teacher": "Teacher", "student": "Student", "teacherShort": "Teacher" },
     "searchFields": { "all": "Everywhere", "username": "Username", "email": "Email", "firstName": "First Name", "lastName": "Last Name" },
     "filter": "Filter:",
     "roleLabel": "Role:",

@@ -126,6 +126,7 @@
     "goToDashboard": "В дашборд",
     "roles": {
       "admin": "Администратор",
+      "developer": "Разработчик",
       "teacher": "Преподаватель",
       "student": "Студент"
     }
@@ -242,7 +243,7 @@
     "experimentalCleanupSuccess": "Очистка выполнена. Удалено квизов: {{count}}.",
     "experimentalCleanupError": "Ошибка при очистке",
     "status": { "pending": "На рассмотрении", "approved": "Одобрено", "rejected": "Отклонено" },
-    "roles": { "admin": "Админ", "teacher": "Преподаватель", "student": "Студент", "teacherShort": "Препод." },
+    "roles": { "admin": "Админ", "developer": "Разработчик", "teacher": "Преподаватель", "student": "Студент", "teacherShort": "Препод." },
     "searchFields": { "all": "Везде", "username": "Username", "email": "Email", "firstName": "Имя", "lastName": "Фамилия" },
     "filter": "Фильтр:",
     "roleLabel": "Роль:",

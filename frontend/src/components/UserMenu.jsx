@@ -29,7 +29,7 @@ export default function UserMenu() {
 
   const handleDashboard = () => {
     setOpen(false);
-    if (userRole === "admin") {
+    if (userRole === "admin" || userRole === "developer") {
       navigate("/dashboard/admin");
     } else if (userRole === "teacher") {
       navigate("/dashboard/teacher");

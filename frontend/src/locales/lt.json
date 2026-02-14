@@ -126,6 +126,7 @@
     "goToDashboard": "Į valdymo skydą",
     "roles": {
       "admin": "Administratorius",
+      "developer": "Kūrėjas",
       "teacher": "Dėstytojas",
       "student": "Studentas"
     }
@@ -262,7 +263,7 @@
     "experimentalCleanupSuccess": "Valymas atliktas. Ištrinta kvizų: {{count}}.",
     "experimentalCleanupError": "Valymo klaida",
     "status": { "pending": "Svarstoma", "approved": "Patvirtinta", "rejected": "Atmesta" },
-    "roles": { "admin": "Admin", "teacher": "Dėstytojas", "student": "Studentas", "teacherShort": "Dėst." },
+    "roles": { "admin": "Admin", "developer": "Kūrėjas", "teacher": "Dėstytojas", "student": "Studentas", "teacherShort": "Dėst." },
     "searchFields": { "all": "Visur", "username": "Vart. vardas", "email": "El. paštas", "firstName": "Vardas", "lastName": "Pavardė" },
     "filter": "Filtras:",
     "roleLabel": "Rolė:",

@@ -15,7 +15,7 @@ export default function BlogPostPage() {
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "developer";
 
   useEffect(() => {
     const loadUser = async () => {

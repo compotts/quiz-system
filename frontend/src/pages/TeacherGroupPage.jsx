@@ -89,7 +89,7 @@ export default function TeacherGroupPage() {
     authApi.getMe().then((u) => {
       if (ignore) return;
       setCurrentUser(u);
-      if (u.role !== "teacher" && u.role !== "admin") navigate("/", { replace: true });
+      if (u.role !== "teacher" && u.role !== "admin" && u.role !== "developer") navigate("/", { replace: true });
     }).catch(() => navigate("/", { replace: true }));
     return () => { ignore = true; };
   }, [navigate]);
@@ -130,7 +130,7 @@ export default function TeacherGroupPage() {
   };
 
   useEffect(() => {
-    if (!currentUser || (currentUser.role !== "teacher" && currentUser.role !== "admin")) return;
+    if (!currentUser || (currentUser.role !== "teacher" && currentUser.role !== "admin" && currentUser.role !== "developer")) return;
     loadAll();
   }, [currentUser, gid]);
 

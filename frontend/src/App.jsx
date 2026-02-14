@@ -45,7 +45,7 @@ function App() {
           try {
             const user = await authApi.getMe();
             if (cancelled) return;
-            if (user?.role === "admin") setMaintenanceAdmin(user);
+            if (user?.role === "admin" || user?.role === "developer") setMaintenanceAdmin(user);
           } catch {
           }
         }
@@ -62,7 +62,7 @@ function App() {
   }, []);
 
   const maintenanceMode = siteStatus?.maintenance_mode === true;
-  const showMaintenanceOnly = (maintenanceMode || backendUnavailable) && maintenanceAdmin?.role !== "admin";
+  const showMaintenanceOnly = (maintenanceMode || backendUnavailable) && maintenanceAdmin?.role !== "admin" && maintenanceAdmin?.role !== "developer";
 
   if (gateLoading) {
     return (
@@ -78,7 +78,7 @@ function App() {
         siteStatus={siteStatus}
         backendUnavailable={backendUnavailable}
         onLoginSuccess={(user) => {
-          if (user?.role === "admin") setMaintenanceAdmin(user);
+          if (user?.role === "admin" || user?.role === "developer") setMaintenanceAdmin(user);
         }}
       />
     );

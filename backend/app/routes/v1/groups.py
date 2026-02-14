@@ -58,7 +58,7 @@ async def get_my_groups(current_user: User = Depends(get_current_user)):
     from datetime import datetime
     now = datetime.utcnow()
     
-    if current_user.role == "teacher" or current_user.role == "admin":
+    if current_user.role in ("teacher", "admin", "developer"):
         groups = await Group.objects.select_related("teacher").filter(teacher=current_user).all()
         
         result = []
@@ -126,7 +126,7 @@ async def get_group(
         group=group, user=current_user
     ).exists()
     
-    if not (is_teacher or is_member or current_user.role == "admin"):
+    if not (is_teacher or is_member or current_user.role in ("admin", "developer")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -171,7 +171,7 @@ async def update_group(
             detail="Group not found"
         )
     
-    if group.teacher.id != current_user.id and current_user.role != "admin":
+    if group.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only group owner can update it"
@@ -213,7 +213,7 @@ async def delete_group(
             detail="Group not found"
         )
     
-    if group.teacher.id != current_user.id and current_user.role != "admin":
+    if group.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only group owner can delete it"
@@ -308,7 +308,7 @@ async def get_group_members(
             detail="Group not found"
         )
     
-    if group.teacher.id != current_user.id and current_user.role != "admin":
+    if group.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only group owner can view members"
@@ -346,7 +346,7 @@ async def remove_member(
             detail="Group not found"
         )
     
-    if group.teacher.id != current_user.id and current_user.role != "admin":
+    if group.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only group owner can remove members"

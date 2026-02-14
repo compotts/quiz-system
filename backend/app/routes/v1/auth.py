@@ -204,7 +204,7 @@ async def login(
             detail="Account is not active. Please wait for approval."
         )
 
-    if await is_maintenance_mode() and user.role != UserRole.ADMIN.value:
+    if await is_maintenance_mode() and user.role not in (UserRole.ADMIN.value, UserRole.DEVELOPER.value):
         await log_audit(
             "login_failed",
             username=user.username,

@@ -123,7 +123,7 @@ async def get_current_user_optional(
 
 
 async def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN.value:
+    if current_user.role not in (UserRole.ADMIN.value, UserRole.DEVELOPER.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
@@ -132,7 +132,7 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
 
 
 async def get_current_teacher(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in [UserRole.TEACHER.value, UserRole.ADMIN.value]:
+    if current_user.role not in [UserRole.TEACHER.value, UserRole.ADMIN.value, UserRole.DEVELOPER.value]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions. Teacher role required."
@@ -141,7 +141,7 @@ async def get_current_teacher(current_user: User = Depends(get_current_user)) ->
 
 
 async def get_current_student(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in [UserRole.STUDENT.value, UserRole.TEACHER.value, UserRole.ADMIN.value]:
+    if current_user.role not in [UserRole.STUDENT.value, UserRole.TEACHER.value, UserRole.ADMIN.value, UserRole.DEVELOPER.value]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"

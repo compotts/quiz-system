@@ -31,6 +31,7 @@ import {
   Layers,
   FileQuestion,
   ArrowRight,
+  Code2,
 } from "lucide-react";
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
 import UserDetailsModal from "../components/UserDetailsModal.jsx";
@@ -52,6 +53,7 @@ const STATUS_COLORS = {
 
 const ROLE_ICONS = {
   admin: { icon: Shield, color: "text-purple-600 dark:text-purple-400" },
+  developer: { icon: Code2, color: "text-amber-600 dark:text-amber-400" },
   teacher: { icon: UserCog, color: "text-blue-600 dark:text-blue-400" },
   student: { icon: GraduationCap, color: "text-green-600 dark:text-green-400" },
 };
@@ -163,7 +165,7 @@ export default function AdminDashboard() {
     }
     try {
       const user = await authApi.getMe();
-      if (user.role !== "admin") {
+      if (user.role !== "admin" && user.role !== "developer") {
         navigate("/");
         return;
       }
@@ -654,7 +656,7 @@ export default function AdminDashboard() {
                       </div>
                       <p className="mt-2 text-2xl font-semibold text-[var(--text)]">{stats.users_total}</p>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        {t("admin.roles.admin")}: {stats.users_admin} · {t("admin.roles.teacherShort")}: {stats.users_teacher} · {t("admin.roles.student")}: {stats.users_student}
+                        {t("admin.roles.admin")}: {stats.users_admin} · {t("admin.roles.developer")}: {stats.users_developer ?? 0} · {t("admin.roles.teacherShort")}: {stats.users_teacher} · {t("admin.roles.student")}: {stats.users_student}
                       </p>
                     </button>
                     <button
@@ -847,7 +849,7 @@ export default function AdminDashboard() {
                               </button>
                               {roleSelectOpen === req.id && (
                                 <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-md)]">
-                                  {["admin", "teacher", "student"].map((key) => {
+                                  {["admin", "developer", "teacher", "student"].map((key) => {
                                     const { icon: Icon } = ROLE_ICONS[key] || {};
                                     return (
                                       <button
@@ -992,7 +994,7 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-[var(--text-muted)]">{t("admin.roleLabel")}</span>
-                  {["", "admin", "teacher", "student"].map((id) => (
+                  {["", "admin", "developer", "teacher", "student"].map((id) => (
                     <button
                       key={id || "all"}
                       onClick={() => {
@@ -1136,7 +1138,7 @@ export default function AdminDashboard() {
                                   </button>
                                   {userRoleSelectOpen === user.id && (
                                     <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-md)]">
-                                      {["admin", "teacher", "student"].map((key) => {
+                                      {["admin", "developer", "teacher", "student"].map((key) => {
                                         const { icon: Icon } = ROLE_ICONS[key] || {};
                                         return (
                                           <button

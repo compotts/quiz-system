@@ -42,7 +42,7 @@ async def get_blog_posts(
 ):
     query = BlogPost.objects.select_related("author")
     
-    is_admin = current_user and current_user.role == "admin"
+    is_admin = current_user and current_user.role in ("admin", "developer")
     if not is_admin or not include_unpublished:
         query = query.filter(is_published=True)
     
@@ -65,7 +65,7 @@ async def get_blog_post(
             detail="Blog post not found"
         )
     
-    is_admin = current_user and current_user.role == "admin"
+    is_admin = current_user and current_user.role in ("admin", "developer")
     if not post.is_published and not is_admin:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

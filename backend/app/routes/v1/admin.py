@@ -185,6 +185,7 @@ async def update_settings(
 async def get_admin_stats(current_admin: User = Depends(get_current_admin)):
     users_total = await User.objects.count()
     users_admin = await User.objects.filter(role=UserRole.ADMIN.value).count()
+    users_developer = await User.objects.filter(role=UserRole.DEVELOPER.value).count()
     users_teacher = await User.objects.filter(role=UserRole.TEACHER.value).count()
     users_student = await User.objects.filter(role=UserRole.STUDENT.value).count()
     groups_count = await Group.objects.count()
@@ -198,6 +199,7 @@ async def get_admin_stats(current_admin: User = Depends(get_current_admin)):
     return AdminStatsResponse(
         users_total=users_total,
         users_admin=users_admin,
+        users_developer=users_developer,
         users_teacher=users_teacher,
         users_student=users_student,
         groups_count=groups_count,
@@ -667,7 +669,7 @@ async def experimental_cleanup(
     request: Request,
     current_admin: User = Depends(get_current_admin)
 ):
-    if current_admin.id != 1:
+    if current_admin.role != UserRole.DEVELOPER.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only developer can perform this action"

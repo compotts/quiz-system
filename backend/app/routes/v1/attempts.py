@@ -65,7 +65,7 @@ async def start_quiz_attempt(
         group=quiz.group, user=current_user
     ).exists()
     
-    if not is_member and current_user.role != "admin":
+    if not is_member and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this group"
@@ -480,7 +480,7 @@ async def get_attempt_results(
     is_student = attempt.student.id == current_user.id
     is_teacher = attempt.quiz.teacher.id == current_user.id
     
-    if not (is_student or is_teacher or current_user.role == "admin"):
+    if not (is_student or is_teacher or current_user.role in ("admin", "developer")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -550,7 +550,7 @@ async def get_quiz_results(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"

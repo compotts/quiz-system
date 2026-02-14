@@ -48,7 +48,7 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true,
       setTimeout(() => {
         handleClose();
         setTimeout(() => {
-          if (user.role === "admin") {
+          if (user.role === "admin" || user.role === "developer") {
             navigate("/dashboard/admin");
           } else if (user.role === "teacher") {
             navigate("/dashboard/teacher");
@@ -87,7 +87,7 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true,
         setTimeout(() => {
           handleClose();
           setTimeout(() => {
-            if (user.role === "admin") {
+            if (user.role === "admin" || user.role === "developer") {
               navigate("/dashboard/admin");
             } else if (user.role === "teacher") {
               navigate("/dashboard/teacher");

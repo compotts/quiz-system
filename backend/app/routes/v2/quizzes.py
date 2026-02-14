@@ -33,7 +33,7 @@ async def create_quiz(
             detail="Group not found"
         )
     
-    if group.teacher.id != current_user.id and current_user.role != "admin":
+    if group.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only create quizzes in your own groups"
@@ -91,7 +91,7 @@ async def get_quizzes(
     now = datetime.utcnow()
     query = Quiz.objects.select_related(["group", "teacher"])
     
-    if current_user.role == "teacher" or current_user.role == "admin":
+    if current_user.role in ("teacher", "admin", "developer"):
         if group_id:
             query = query.filter(group=group_id, teacher=current_user)
         else:
@@ -153,7 +153,7 @@ async def get_quiz(
         group=quiz.group, user=current_user
     ).exists()
     
-    if not (is_teacher or is_member or current_user.role == "admin"):
+    if not (is_teacher or is_member or current_user.role in ("admin", "developer")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -196,7 +196,7 @@ async def get_quiz_anti_cheating_log(
     quiz = await Quiz.objects.select_related(["group", "teacher"]).get_or_none(id=quiz_id)
     if not quiz:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     if not getattr(quiz, "anti_cheating_mode", False):
         return {"events": [], "identical_answers_groups": []}
@@ -290,7 +290,7 @@ async def update_quiz(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only quiz owner can update it"
@@ -344,7 +344,7 @@ async def delete_quiz(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only quiz owner can delete it"
@@ -399,7 +399,7 @@ async def create_question(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -473,7 +473,7 @@ async def create_questions_batch(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -554,7 +554,7 @@ async def get_questions(
         group=quiz.group, user=current_user
     ).exists()
     
-    if not (is_teacher or is_member or current_user.role == "admin"):
+    if not (is_teacher or is_member or current_user.role in ("admin", "developer")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -605,7 +605,7 @@ async def update_question(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -674,7 +674,7 @@ async def delete_question(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -719,7 +719,7 @@ async def delete_all_questions(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -759,7 +759,7 @@ async def get_student_statuses(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -838,7 +838,7 @@ async def get_student_detail(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -944,7 +944,7 @@ async def reissue_quiz(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -993,7 +993,7 @@ async def close_quiz_early(
             detail="Quiz not found"
         )
     
-    if quiz.teacher.id != current_user.id and current_user.role != "admin":
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"

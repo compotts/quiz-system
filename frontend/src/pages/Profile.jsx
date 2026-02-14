@@ -138,7 +138,7 @@ export default function Profile() {
   };
 
   const goDashboard = () => {
-    if (user?.role === "admin") navigate("/dashboard/admin");
+    if (user?.role === "admin" || user?.role === "developer") navigate("/dashboard/admin");
     else if (user?.role === "teacher") navigate("/dashboard/teacher");
     else navigate("/dashboard/student");
   };
