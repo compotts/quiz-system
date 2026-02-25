@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     version: str = "1.1"
+    title: str = "API for quizzez.site"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 7
     bcrypt_rounds: int = 12

@@ -12,7 +12,7 @@ else:
 
 
 app = FastAPI(
-    title="Quizz System API",
+    title=str(settings.title),
     version=str(settings.version),
     lifespan=lifespan,
     docs_url="/docs" if settings.env == "dev" else None,
