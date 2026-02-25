@@ -14,7 +14,13 @@ class Settings(BaseSettings):
     rate_limit_period: int = 60
     captcha_after_attempts: int = 3
     admin_init_enabled: bool = True
-    cors_origins: list = ["http://localhost:5173", "https://quiz-system-eta.vercel.app", "http://192.168.68.108:5173"]
+    cors_origins: list = [
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "https://quiz-system-eta.vercel.app",
+        "http://192.168.68.108:5173",
+        "https://quizzez.site",
+    ]
     env: str = "dev"
     api_version: str = "v1" 
     

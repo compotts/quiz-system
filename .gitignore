@@ -218,3 +218,4 @@ __marimo__/
 .db
 seed_data.py
 req_test.py
+.sql
