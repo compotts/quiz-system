@@ -40,7 +40,7 @@ app.include_router(blog.router)
 
 @app.get("/")
 async def root():
-    return {"version": settings.version, "api": settings.api_version}
+    return {"version": settings.version, "api": settings.api_version, "title": settings.title}
 
 
 @app.get("/health")
