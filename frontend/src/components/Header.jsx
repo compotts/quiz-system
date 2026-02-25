@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../hooks/useTheme.js";
@@ -10,6 +11,12 @@ export default function Header() {
   const { t } = useTranslation();
   const { isDark, toggle } = useTheme();
   const { lang, setLang, langs } = useLanguage();
+  const [, setAuthVersion] = useState(0);
+  useEffect(() => {
+    const handler = () => setAuthVersion((v) => v + 1);
+    window.addEventListener("auth:logout", handler);
+    return () => window.removeEventListener("auth:logout", handler);
+  }, []);
   const isAuth = !!getAccessToken();
 
   return (

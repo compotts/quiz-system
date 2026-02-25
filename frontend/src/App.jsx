@@ -15,6 +15,7 @@ import StudentDashboard from "./pages/StudentDashboard.jsx";
 import StudentGroupPage from "./pages/StudentGroupPage.jsx";
 import Profile from "./pages/Profile.jsx";
 import MaintenancePage from "./pages/MaintenancePage.jsx";
+import { SiteStatusContext } from "./contexts/SiteStatusContext.jsx";
 import { authApi } from "./services/api.js";
 
 function App() {
@@ -37,7 +38,9 @@ function App() {
         const status = {
           maintenance_mode: !!data.maintenance_mode,
           registration_enabled: data.registration_enabled !== false,
-          home_banner_text: data.home_banner_text || "",
+          auto_registration_enabled: !!data.auto_registration_enabled,
+          contact_enabled: data.contact_enabled !== false,
+          home_banner_text: data.home_banner_text || {},
           home_banner_style: data.home_banner_style || "warning",
         };
         setSiteStatus(status);
@@ -85,26 +88,28 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg)] transition-colors duration-200">
-      <Header />
-      <main className="flex flex-1 flex-col">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/info" element={<Info />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:postId" element={<BlogPostPage />} />
-          <Route path="/admin/init" element={<AdminInit />} />
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
-          <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
-          <Route path="/dashboard/teacher/group/:groupId" element={<TeacherGroupPage />} />
-          <Route path="/dashboard/teacher/quiz/:quizId" element={<TeacherQuizPage />} />
-          <Route path="/dashboard/student" element={<StudentDashboard />} />
-          <Route path="/dashboard/student/groups/:groupId" element={<StudentGroupPage />} />
-        </Routes>
-      </main>
-      {!hideFooter && <Footer />}
-    </div>
+    <SiteStatusContext.Provider value={siteStatus}>
+      <div className="flex min-h-screen flex-col bg-[var(--bg)] transition-colors duration-200">
+        <Header />
+        <main className="flex flex-1 flex-col">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/info" element={<Info />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:postId" element={<BlogPostPage />} />
+            <Route path="/admin/init" element={<AdminInit />} />
+            <Route path="/dashboard/admin" element={<AdminDashboard />} />
+            <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
+            <Route path="/dashboard/teacher/group/:groupId" element={<TeacherGroupPage />} />
+            <Route path="/dashboard/teacher/quiz/:quizId" element={<TeacherQuizPage />} />
+            <Route path="/dashboard/student" element={<StudentDashboard />} />
+            <Route path="/dashboard/student/groups/:groupId" element={<StudentGroupPage />} />
+          </Routes>
+        </main>
+        {!hideFooter && <Footer />}
+      </div>
+    </SiteStatusContext.Provider>
   );
 }
 

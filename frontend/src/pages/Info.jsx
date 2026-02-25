@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { contactApi, authApi } from "../services/api.js";
+import { contactApi } from "../services/api.js";
+import { useSiteStatus } from "../contexts/SiteStatusContext.jsx";
 
 const ALL_SECTIONS = [
   { id: "faq", labelKey: "info.navFaq" },
@@ -41,18 +42,13 @@ function FAQItem({ q, a }) {
 
 export default function Info() {
   const { t } = useTranslation();
-  const [contactEnabled, setContactEnabled] = useState(true);
+  const siteStatus = useSiteStatus();
+  const contactEnabled = siteStatus?.contact_enabled !== false;
   const [activeSection, setActiveSection] = useState("faq");
   const [contactMessage, setContactMessage] = useState("");
   const [contactSent, setContactSent] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState("");
-
-  useEffect(() => {
-    authApi.getRegistrationSettings().then((data) => {
-      setContactEnabled(data.contact_enabled !== false);
-    }).catch(() => setContactEnabled(true));
-  }, []);
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();

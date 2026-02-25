@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { X, Eye, EyeOff } from "lucide-react";
 import { authApi, saveTokens } from "../services/api.js";
 
-export default function AuthModal({ isOpen, onClose, registrationEnabled = true, onLoginSuccess }) {
+export default function AuthModal({ isOpen, onClose, registrationEnabled = true, autoRegistrationEnabled = false, onLoginSuccess }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scrollYRef = useRef(0);
@@ -31,7 +31,6 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true,
     message: "",
     role: "student",
   });
-  const [autoRegistrationEnabled, setAutoRegistrationEnabled] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -134,14 +133,6 @@ export default function AuthModal({ isOpen, onClose, registrationEnabled = true,
       setIsSwitching(false);
     }, 200);
   };
-
-  useEffect(() => {
-    if (isOpen && !isLogin && registrationEnabled) {
-      authApi.getRegistrationSettings().then((data) => {
-        setAutoRegistrationEnabled(data.auto_registration_enabled);
-      }).catch(() => setAutoRegistrationEnabled(false));
-    }
-  }, [isOpen, isLogin, registrationEnabled]);
 
   useEffect(() => {
     if (isOpen && !registrationEnabled && !isLogin) {

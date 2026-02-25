@@ -26,6 +26,10 @@ async function request(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
+      if (response.status === 401 && token) {
+        clearTokens();
+        window.dispatchEvent(new Event("auth:logout"));
+      }
       throw new ApiError(
         data.detail || "ошибка сервера",
         response.status

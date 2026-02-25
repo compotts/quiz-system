@@ -12,9 +12,10 @@ import {
   Smartphone,
   ArrowRight,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import AuthModal from "../components/AuthModal.jsx";
-import { authApi } from "../services/api.js";
+import { useSiteStatus } from "../contexts/SiteStatusContext.jsx";
 
 const FEATURES = [
   { key: "quizzes", icon: ClipboardList, color: "emerald" },
@@ -47,28 +48,12 @@ const BANNER_STYLE_CLASSES = {
 export default function Home() {
   const { t, i18n } = useTranslation();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [siteStatus, setSiteStatus] = useState({
+  const siteStatus = useSiteStatus() ?? {
     maintenance_mode: false,
     registration_enabled: true,
     home_banner_text: {},
     home_banner_style: "warning",
-  });
-  const [statusLoading, setStatusLoading] = useState(true);
-
-  useEffect(() => {
-    authApi
-      .getRegistrationSettings()
-      .then((data) => {
-        setSiteStatus({
-          maintenance_mode: !!data.maintenance_mode,
-          registration_enabled: data.registration_enabled !== false,
-          home_banner_text: data.home_banner_text || {},
-          home_banner_style: data.home_banner_style || "warning",
-        });
-      })
-      .catch(() => {})
-      .finally(() => setStatusLoading(false));
-  }, []);
+  };
 
   const getBannerText = () => {
     const bannerTexts = siteStatus.home_banner_text;
@@ -87,12 +72,21 @@ export default function Home() {
   const bannerText = getBannerText();
   const showBanner = !!bannerText;
 
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/gi;
+  const bannerParts = bannerText
+    ? bannerText.split(urlRegex).map((part) => {
+        const isUrl = /^https?:\/\//i.test(part);
+        return { type: isUrl ? "link" : "text", value: part, href: isUrl ? part : undefined };
+      })
+    : [];
+
   return (
     <div className="flex flex-1 flex-col">
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         registrationEnabled={siteStatus.registration_enabled}
+        autoRegistrationEnabled={siteStatus.auto_registration_enabled}
       />
 
       {showBanner && (
@@ -100,7 +94,22 @@ export default function Home() {
           className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
           role="alert"
         >
-          {bannerText}
+          {bannerParts.map((part, i) =>
+            part.type === "link" ? (
+              <a
+                key={i}
+                href={part.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold underline decoration-2 underline-offset-2 hover:no-underline"
+              >
+                {part.value}
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+              </a>
+            ) : (
+              <span key={i}>{part.value}</span>
+            )
+          )}
         </div>
       )}
 
