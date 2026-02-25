@@ -219,8 +219,7 @@
     "publishImmediately": "Publish immediately",
     "draft": "Draft",
     "noPosts": "No posts yet",
-    "confirmDelete": "Delete this blog post?",
-    "refreshDraftsHint": "It is recommended to refresh the page a few seconds after logging in to correctly display drafts"
+    "confirmDelete": "Delete this blog post?"
   },
   "admin": {
     "dashboardTitle": "Admin Panel",

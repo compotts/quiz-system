@@ -219,8 +219,7 @@
     "publishImmediately": "Publikuoti iškart",
     "draft": "Juodraštis",
     "noPosts": "Įrašų dar nėra",
-    "confirmDelete": "Ištrinti šį blogo įrašą?",
-    "refreshDraftsHint": "Rekomenduojama atnaujinti puslapį po kelių sekundžių nuo prisijungimo, kad būtų teisingai rodomi juodraščiai"
+    "confirmDelete": "Ištrinti šį blogo įrašą?"
   },
   "admin": {
     "dashboardTitle": "Administratoriaus skydas",
