@@ -2,8 +2,7 @@ import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from app.database.models.system_setting import SystemSetting
-
+from app.utils.settings_loader import get_single_bool
 
 
 ALLOWED_PATH_PREFIXES_MAINTENANCE = ("/admin",)
@@ -18,8 +17,7 @@ ALLOWED_PATHS_MAINTENANCE = {
 
 
 async def _is_maintenance_mode() -> bool:
-    s = await SystemSetting.objects.get_or_none(key="maintenance_mode")
-    return s is not None and s.value.lower() == "true"
+    return await get_single_bool("maintenance_mode", False)
 
 
 class MaintenanceMiddleware(BaseHTTPMiddleware):

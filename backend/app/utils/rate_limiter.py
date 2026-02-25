@@ -9,7 +9,7 @@ class RateLimiter:
     def __init__(self):
         self.requests: Dict[str, list] = defaultdict(list)
         self.lock = asyncio.Lock()
-    
+
     async def check_rate_limit(
         self,
         request: Request,
@@ -18,14 +18,14 @@ class RateLimiter:
     ) -> bool:
         client_ip = request.client.host
         current_time = datetime.utcnow()
-        
+
         async with self.lock:
             cutoff_time = current_time - timedelta(seconds=period_seconds)
             self.requests[client_ip] = [
                 req_time for req_time in self.requests[client_ip]
                 if req_time > cutoff_time
             ]
-            
+
             if len(self.requests[client_ip]) >= max_requests:
                 raise HTTPException(
                     status_code=429,
