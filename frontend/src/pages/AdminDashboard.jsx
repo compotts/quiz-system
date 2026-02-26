@@ -516,6 +516,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteRegistrationRequest = async (requestId) => {
+    if (!window.confirm(t("admin.confirmDeleteRegistrationRequest"))) return;
+    setProcessingRequest(requestId);
+    try {
+      await adminApi.deleteRegistrationRequest(requestId);
+      loadRequests();
+    } catch (err) {
+      setError(err.message || t("admin.errorDeleteRequest"));
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
   const handleChangeUserRole = async (userId, newRole) => {
     setProcessingUser(userId);
     try {
@@ -835,61 +848,78 @@ export default function AdminDashboard() {
                           </p>
                         </div>
 
-                        {req.status === "pending" && (
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {req.status === "pending" && (
+                            <>
+                              <div className="relative">
+                                <button
+                                  onClick={() =>
+                                    setRoleSelectOpen(roleSelectOpen === req.id ? null : req.id)
+                                  }
+                                  className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)]"
+                                >
+                                  {t(`admin.roles.${selectedRole}`) || selectedRole}
+                                  <ChevronDown className="h-4 w-4" />
+                                </button>
+                                {roleSelectOpen === req.id && (
+                                  <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-md)]">
+                                    {["admin", "developer", "teacher", "student"].map((key) => {
+                                      const { icon: Icon } = ROLE_ICONS[key] || {};
+                                      return (
+                                        <button
+                                          key={key}
+                                          onClick={() => {
+                                            setSelectedRole(key);
+                                            setRoleSelectOpen(null);
+                                          }}
+                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
+                                        >
+                                          {Icon && <Icon className="h-4 w-4" />}
+                                          {t(`admin.roles.${key}`)}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                               <button
-                                onClick={() =>
-                                  setRoleSelectOpen(roleSelectOpen === req.id ? null : req.id)
-                                }
-                                className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--text-muted)]"
+                                onClick={() => handleReviewRequest(req.id, true)}
+                                disabled={processingRequest === req.id}
+                                className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-green-700 disabled:opacity-50"
                               >
-                                {t(`admin.roles.${selectedRole}`) || selectedRole}
-                                <ChevronDown className="h-4 w-4" />
+                                {processingRequest === req.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                                {t("admin.approve")}
                               </button>
-                              {roleSelectOpen === req.id && (
-                                <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-[var(--shadow-md)]">
-                                  {["admin", "developer", "teacher", "student"].map((key) => {
-                                    const { icon: Icon } = ROLE_ICONS[key] || {};
-                                    return (
-                                      <button
-                                        key={key}
-                                        onClick={() => {
-                                          setSelectedRole(key);
-                                          setRoleSelectOpen(null);
-                                        }}
-                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
-                                      >
-                                        {Icon && <Icon className="h-4 w-4" />}
-                                        {t(`admin.roles.${key}`)}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
+                              <button
+                                onClick={() => handleReviewRequest(req.id, false)}
+                                disabled={processingRequest === req.id}
+                                className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-red-700 disabled:opacity-50"
+                              >
+                                <X className="h-4 w-4" />
+                                {t("admin.reject")}
+                              </button>
+                            </>
+                          )}
+                          {currentUser?.role === "developer" && (
                             <button
-                              onClick={() => handleReviewRequest(req.id, true)}
+                              onClick={() => handleDeleteRegistrationRequest(req.id)}
                               disabled={processingRequest === req.id}
-                              className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-green-700 disabled:opacity-50"
+                              className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+                              title={t("admin.deleteRequest")}
                             >
                               {processingRequest === req.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Check className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4" />
                               )}
-                              {t("admin.approve")}
+                              {t("admin.deleteRequest")}
                             </button>
-                            <button
-                              onClick={() => handleReviewRequest(req.id, false)}
-                              disabled={processingRequest === req.id}
-                              className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-red-700 disabled:opacity-50"
-                            >
-                              <X className="h-4 w-4" />
-                              {t("admin.reject")}
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

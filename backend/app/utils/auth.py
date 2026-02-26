@@ -131,6 +131,15 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
     return current_user
 
 
+async def get_current_developer(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in [UserRole.DEVELOPER.value, UserRole.ADMIN.value]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions. Developer role required."
+        )
+    return current_user
+
+
 async def get_current_teacher(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role not in [UserRole.TEACHER.value, UserRole.ADMIN.value, UserRole.DEVELOPER.value]:
         raise HTTPException(

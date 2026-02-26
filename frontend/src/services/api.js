@@ -126,6 +126,12 @@ export const adminApi = {
     });
   },
 
+  async deleteRegistrationRequest(requestId) {
+    return request(`/admin/registration-requests/${requestId}`, {
+      method: "DELETE",
+    });
+  },
+
   async getSettings() {
     return request("/admin/settings");
   },

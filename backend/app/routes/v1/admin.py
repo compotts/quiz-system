@@ -13,7 +13,7 @@ from app.database.models.attempt import QuizAttempt, Answer
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
 from app.database.models.contact_message import ContactMessage
 from app.database.models.system_setting import SystemSetting
-from app.utils.auth import get_password_hash, get_current_admin
+from app.utils.auth import get_password_hash, get_current_admin, get_current_developer
 from app.database.database import utc_now
 from app.utils.audit import log_audit
 from config import settings
@@ -323,6 +323,31 @@ async def approve_all_registration_requests(
         request=request,
     )
     return {"message": f"Approved {approved} registration requests", "approved": approved}
+
+
+@router.delete("/registration-requests/{request_id}")
+async def delete_registration_request(
+    request_id: int,
+    request: Request,
+    current_admin: User = Depends(get_current_developer)
+):
+    reg_request = await RegistrationRequest.objects.get_or_none(id=request_id)
+    if not reg_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Registration request not found"
+        )
+    await reg_request.delete()
+    await log_audit(
+        "registration_request_deleted",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="registration",
+        resource_id=str(request_id),
+        details={"username": reg_request.username},
+        request=request,
+    )
+    return {"message": "Registration request deleted"}
 
 
 @router.post("/registration-requests/{request_id}/review")
