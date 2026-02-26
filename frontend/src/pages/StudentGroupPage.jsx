@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { authApi, attemptsApi, groupsApi, quizzesApi } from "../services/api.js";
+import MathText from "../components/MathText.jsx";
 
 function formatDate(dateString, locale = "ru-RU") {
   if (!dateString) return "—";
@@ -681,7 +682,7 @@ export default function StudentGroupPage() {
                       <div key={i} className={`rounded-lg border p-4 ${
                         a.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
                       }`}>
-                        <p className="font-medium text-[var(--text)]">{a.question_text}</p>
+                        {runResults?.allow_math ? <MathText as="p" className="font-medium text-[var(--text)]">{a.question_text}</MathText> : <p className="font-medium text-[var(--text)]">{a.question_text}</p>}
                         {a.question_image_url && (
                           <div className="mt-2">
                             <img
@@ -703,17 +704,11 @@ export default function StudentGroupPage() {
                           <div className="mt-3 rounded-lg bg-[var(--bg)] p-3">
                             <p className="text-sm text-[var(--text-muted)]">
                               <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
-                              {a.input_type === "select" 
-                                ? (a.selected_texts?.join(", ") || t("student.groupPage.noAnswer"))
-                                : (a.text_answer || t("student.groupPage.noAnswer"))
-                              }
+                              {runResults?.allow_math ? <MathText>{a.input_type === "select" ? (a.selected_texts?.join(", ") || t("student.groupPage.noAnswer")) : (a.text_answer || t("student.groupPage.noAnswer"))}</MathText> : (a.input_type === "select" ? (a.selected_texts?.join(", ") || t("student.groupPage.noAnswer")) : (a.text_answer || t("student.groupPage.noAnswer")))}
                             </p>
                             <p className="mt-1 text-sm text-green-600 dark:text-green-400">
                               <span className="font-medium">{t("student.groupPage.correctAnswerWas")}:</span>{" "}
-                              {a.input_type === "select"
-                                ? (a.correct_option_texts?.join(", ") || "-")
-                                : (a.correct_text_answer || "-")
-                              }
+                              {runResults?.allow_math ? <MathText>{a.input_type === "select" ? (a.correct_option_texts?.join(", ") || "-") : (a.correct_text_answer || "-")}</MathText> : (a.input_type === "select" ? (a.correct_option_texts?.join(", ") || "-") : (a.correct_text_answer || "-"))}
                             </p>
                           </div>
                         )}
@@ -776,7 +771,7 @@ export default function StudentGroupPage() {
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/10 text-xs font-medium text-[var(--accent)]">
                                 {actualIdx + 1}
                               </span>
-                              <span className="font-medium text-[var(--text)] break-words">{q.text}</span>
+                              {runQuiz?.allow_math ? <MathText className="font-medium text-[var(--text)] break-words">{q.text}</MathText> : <span className="font-medium text-[var(--text)] break-words">{q.text}</span>}
                             </div>
                             {q.image_url && (
                               <div className="mt-3">
@@ -833,7 +828,7 @@ export default function StudentGroupPage() {
                                         }}
                                         className="h-4 w-4 shrink-0"
                                       />
-                                      <span className="min-w-0 break-words text-[var(--text)]">{opt.text}</span>
+                                      {runQuiz?.allow_math ? <MathText className="min-w-0 break-words text-[var(--text)]">{opt.text}</MathText> : <span className="min-w-0 break-words text-[var(--text)]">{opt.text}</span>}
                                     </label>
                                   );
                                 })}
@@ -1124,7 +1119,7 @@ export default function StudentGroupPage() {
                                 ans.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
                               }`}
                             >
-                              <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
+                              {attemptDetail?.allow_math ? <MathText as="p" className="font-medium text-[var(--text)]">{ans.question_text}</MathText> : <p className="font-medium text-[var(--text)]">{ans.question_text}</p>}
                               {ans.question_image_url && (
                                 <div className="mt-2">
                                   <img
@@ -1146,15 +1141,11 @@ export default function StudentGroupPage() {
                                 <div className="mt-3 rounded-lg bg-[var(--bg)] p-3">
                                   <p className="text-sm text-[var(--text-muted)]">
                                     <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
-                                    {ans.input_type === "select"
-                                      ? (ans.selected_texts?.join(", ") || t("student.groupPage.noAnswer"))
-                                      : (ans.text_answer || t("student.groupPage.noAnswer"))}
+                                    {attemptDetail?.allow_math ? <MathText>{ans.input_type === "select" ? (ans.selected_texts?.join(", ") || t("student.groupPage.noAnswer")) : (ans.text_answer || t("student.groupPage.noAnswer"))}</MathText> : (ans.input_type === "select" ? (ans.selected_texts?.join(", ") || t("student.groupPage.noAnswer")) : (ans.text_answer || t("student.groupPage.noAnswer")))}
                                   </p>
                                   <p className="mt-1 text-sm text-green-600 dark:text-green-400">
                                     <span className="font-medium">{t("student.groupPage.correctAnswerWas")}:</span>{" "}
-                                    {ans.input_type === "select"
-                                      ? (ans.correct_option_texts?.join(", ") || "-")
-                                      : (ans.correct_text_answer || "-")}
+                                    {attemptDetail?.allow_math ? <MathText>{ans.input_type === "select" ? (ans.correct_option_texts?.join(", ") || "-") : (ans.correct_text_answer || "-")}</MathText> : (ans.input_type === "select" ? (ans.correct_option_texts?.join(", ") || "-") : (ans.correct_text_answer || "-"))}
                                   </p>
                                 </div>
                               )}
