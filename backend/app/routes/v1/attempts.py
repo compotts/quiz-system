@@ -534,7 +534,8 @@ async def get_attempt_results(
         "answers": answer_details,
         "percentage": percentage,
         "allow_show_answers": attempt.quiz.allow_show_answers if hasattr(attempt.quiz, 'allow_show_answers') else True,
-        "show_results": attempt.quiz.show_results if hasattr(attempt.quiz, 'show_results') else True
+        "show_results": attempt.quiz.show_results if hasattr(attempt.quiz, 'show_results') else True,
+        "allow_math": getattr(attempt.quiz, "allow_math", False),
     }
 
 

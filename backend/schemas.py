@@ -212,6 +212,7 @@ class QuizCreate(BaseModel):
     show_results: bool = True
     question_display_mode: str = "all_on_page"
     anti_cheating_mode: bool = False
+    allow_math: bool = False
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -232,6 +233,7 @@ class QuizUpdate(BaseModel):
     show_results: Optional[bool] = None
     question_display_mode: Optional[str] = None
     anti_cheating_mode: Optional[bool] = None
+    allow_math: Optional[bool] = None
 
     @field_validator("available_until", mode="after")
     @classmethod
@@ -255,6 +257,7 @@ class QuizResponse(BaseModel):
     show_results: bool = True
     question_display_mode: str = "all_on_page"
     anti_cheating_mode: bool = False
+    allow_math: bool = False
     created_at: datetime
     question_count: Optional[int] = 0
     is_expired: Optional[bool] = False

@@ -63,6 +63,7 @@ async def create_quiz(
         show_results=data.show_results,
         question_display_mode=data.question_display_mode,
         anti_cheating_mode=data.anti_cheating_mode,
+        allow_math=getattr(data, "allow_math", False),
         is_active=True
     )
     await log_audit(
@@ -83,6 +84,8 @@ async def create_quiz(
         qd["question_display_mode"] = "all_on_page"
     if qd.get("anti_cheating_mode") is None:
         qd["anti_cheating_mode"] = False
+    if qd.get("allow_math") is None:
+        qd["allow_math"] = False
     return {
         **qd,
         "group_id": group.id,
@@ -132,6 +135,8 @@ async def get_quizzes(
             qd["question_display_mode"] = "all_on_page"
         if qd.get("anti_cheating_mode") is None:
             qd["anti_cheating_mode"] = False
+        if qd.get("allow_math") is None:
+            qd["allow_math"] = False
         result.append({
             **qd,
             "group_id": quiz.group.id,
@@ -177,6 +182,8 @@ async def get_quiz(
         qd["question_display_mode"] = "all_on_page"
     if qd.get("anti_cheating_mode") is None:
         qd["anti_cheating_mode"] = False
+    if qd.get("allow_math") is None:
+        qd["allow_math"] = False
     return {
         **qd,
         "group_id": quiz.group.id,
@@ -330,6 +337,8 @@ async def update_quiz(
         qd["question_display_mode"] = "all_on_page"
     if qd.get("anti_cheating_mode") is None:
         qd["anti_cheating_mode"] = False
+    if qd.get("allow_math") is None:
+        qd["allow_math"] = False
     return {
         **qd,
         "group_id": quiz.group.id,

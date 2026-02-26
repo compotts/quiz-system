@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -33,6 +33,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
+import MathText from "../components/MathText.jsx";
+import MathToolbar from "../components/MathToolbar.jsx";
 
 function formatTime(seconds) {
   if (seconds == null) return "—";
@@ -87,6 +89,7 @@ export default function TeacherQuizPage() {
     question_time_limit: "",
     question_display_mode: "all_on_page",
     anti_cheating_mode: false,
+    allow_math: false,
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [closingQuiz, setClosingQuiz] = useState(false);
@@ -118,6 +121,16 @@ export default function TeacherQuizPage() {
   const [questionFormImageFile, setQuestionFormImageFile] = useState(null); // File for new question image
   const [createFormImageDragOver, setCreateFormImageDragOver] = useState(false);
   const [editFormImageDragOver, setEditFormImageDragOver] = useState(false);
+  const questionTextRef = useRef(null);
+  const createOptionRefs = useRef([]);
+  const [createFocusedOptionIndex, setCreateFocusedOptionIndex] = useState(null);
+  const createOptionTargetRef = useRef(null);
+  const editQuestionTextRef = useRef(null);
+  const editOptionRefs = useRef([]);
+  const [editFocusedOptionIndex, setEditFocusedOptionIndex] = useState(null);
+  const editOptionTargetRef = useRef(null);
+  const createCorrectAnswerRef = useRef(null);
+  const editCorrectAnswerRef = useRef(null);
 
   const [showStudentDetail, setShowStudentDetail] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
@@ -255,6 +268,7 @@ export default function TeacherQuizPage() {
         question_time_limit: q.question_time_limit || "",
         question_display_mode: q.question_display_mode || "all_on_page",
         anti_cheating_mode: q.anti_cheating_mode === true,
+        allow_math: q.allow_math === true,
       });
     } catch (err) {
       setError(err.message || t("teacher.quizzes.errorLoad"));
@@ -321,6 +335,7 @@ export default function TeacherQuizPage() {
         question_time_limit: settingsForm.timer_mode === "per_question" ? (parseInt(settingsForm.question_time_limit) || null) : null,
         question_display_mode: settingsForm.timer_mode === "per_question" ? "one_per_page" : settingsForm.question_display_mode,
         anti_cheating_mode: settingsForm.anti_cheating_mode,
+        allow_math: settingsForm.allow_math,
       });
       await loadQuiz();
     } catch (err) {
@@ -817,7 +832,7 @@ export default function TeacherQuizPage() {
                                 {q.image_url && (
                                   <ImageIcon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" title={t("teacher.quizPage.hasImage")} />
                                 )}
-                                <span className="font-medium text-[var(--text)]">{q.text}</span>
+                                {quiz?.allow_math ? <MathText className="font-medium text-[var(--text)]">{q.text}</MathText> : <span className="font-medium text-[var(--text)]">{q.text}</span>}
                               </div>
                               <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-muted)]">
                                 <span>{t("teacher.quizPage.points")}: {q.points}</span>
@@ -836,14 +851,14 @@ export default function TeacherQuizPage() {
                                       }`}
                                     >
                                       {showCorrectAnswers && o.is_correct && <CheckCircle className="h-3.5 w-3.5" />}
-                                      {o.text}
+                                      {quiz?.allow_math ? <MathText>{o.text}</MathText> : <span>{o.text}</span>}
                                     </li>
                                   ))}
                                 </ul>
                               )}
                               {showCorrectAnswers && q.input_type !== "select" && q.correct_text_answer && (
                                 <div className="mt-2 text-sm text-green-600 dark:text-green-400">
-                                  {t("teacher.quizPage.correctAnswer")}: {q.correct_text_answer}
+                                  {t("teacher.quizPage.correctAnswer")}: {quiz?.allow_math ? <MathText>{q.correct_text_answer}</MathText> : <span>{q.correct_text_answer}</span>}
                                 </div>
                               )}
                             </div>
@@ -1160,6 +1175,15 @@ export default function TeacherQuizPage() {
                         {t("teacher.quizPage.settingsAllowShowAnswers")}
                       </label>
 
+                      <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                        <input
+                          type="checkbox"
+                          checked={settingsForm.allow_math}
+                          onChange={(e) => setSettingsForm((f) => ({ ...f, allow_math: e.target.checked }))}
+                        />
+                        {t("teacher.quizPage.settingsAllowMath")}
+                      </label>
+
                       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
                         <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                           <input
@@ -1354,13 +1378,31 @@ export default function TeacherQuizPage() {
             >
               <div>
                 <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.questionText")}</label>
+                {quiz?.allow_math && (
+                  <MathToolbar
+                    label={t("teacher.quizPage.insertFormula")}
+                    targetRef={questionTextRef}
+                    value={questionForm.text}
+                    onChange={(v) => setQuestionForm((f) => ({ ...f, text: v }))}
+                    className="mt-1 mb-1"
+                  />
+                )}
                 <textarea
+                  ref={questionTextRef}
                   value={questionForm.text}
                   onChange={(e) => setQuestionForm((f) => ({ ...f, text: e.target.value }))}
                   rows={2}
                   className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                   required
                 />
+                {quiz?.allow_math && questionForm.text?.trim() && (
+                  <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                    <span className="text-xs text-[var(--text-muted)]">{t("teacher.quizPage.preview")}</span>
+                    <div className="mt-1 min-h-[1.5rem] text-[var(--text)]">
+                      <MathText>{questionForm.text}</MathText>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4">
                 <div>
@@ -1395,31 +1437,49 @@ export default function TeacherQuizPage() {
                       + {t("teacher.quizPage.addOption")}
                     </button>
                   </div>
+                  {quiz?.allow_math && (
+                    <MathToolbar
+                      label={t("teacher.quizPage.insertInOption")}
+                      targetRef={createOptionTargetRef}
+                      value={createFocusedOptionIndex != null ? questionForm.options[createFocusedOptionIndex]?.text ?? "" : ""}
+                      onChange={(v) => { if (createFocusedOptionIndex != null) updateOption(createFocusedOptionIndex, { text: v }); }}
+                      className="mt-1 mb-1"
+                    />
+                  )}
                   <div className="mt-2 space-y-2">
                     {questionForm.options.map((opt, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={opt.text}
-                          onChange={(e) => updateOption(idx, { text: e.target.value })}
-                          placeholder={t("teacher.quizPage.optionPlaceholder")}
-                          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
-                        />
-                        <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                      <div key={idx} className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
                           <input
-                            type="checkbox"
-                            checked={!!opt.is_correct}
-                            onChange={(e) => updateOption(idx, { is_correct: e.target.checked })}
+                            ref={(el) => { createOptionRefs.current[idx] = el; }}
+                            type="text"
+                            value={opt.text}
+                            onChange={(e) => updateOption(idx, { text: e.target.value })}
+                            onFocus={() => { setCreateFocusedOptionIndex(idx); createOptionTargetRef.current = createOptionRefs.current[idx]; }}
+                            placeholder={t("teacher.quizPage.optionPlaceholder")}
+                            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                           />
-                          {t("teacher.quizPage.correct")}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeOption(idx)}
-                          className="rounded p-1 text-red-600 hover:bg-red-500/10"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                          <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                            <input
+                              type="checkbox"
+                              checked={!!opt.is_correct}
+                              onChange={(e) => updateOption(idx, { is_correct: e.target.checked })}
+                            />
+                            {t("teacher.quizPage.correct")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeOption(idx)}
+                            className="rounded p-1 text-red-600 hover:bg-red-500/10"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {quiz?.allow_math && opt.text?.trim() && (
+                          <div className="rounded border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1.5 text-sm text-[var(--text)]">
+                            <MathText>{opt.text}</MathText>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1427,7 +1487,17 @@ export default function TeacherQuizPage() {
               ) : (
                 <div>
                   <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.correctAnswer")}</label>
+                  {quiz?.allow_math && (
+                    <MathToolbar
+                      label={t("teacher.quizPage.insertFormula")}
+                      targetRef={createCorrectAnswerRef}
+                      value={questionForm.correct_text_answer}
+                      onChange={(v) => setQuestionForm((f) => ({ ...f, correct_text_answer: v }))}
+                      className="mt-1 mb-1"
+                    />
+                  )}
                   <input
+                    ref={createCorrectAnswerRef}
                     type={questionForm.input_type === "number" ? "number" : "text"}
                     value={questionForm.correct_text_answer}
                     onChange={(e) => setQuestionForm((f) => ({ ...f, correct_text_answer: e.target.value }))}
@@ -1616,13 +1686,31 @@ export default function TeacherQuizPage() {
             >
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.questionText")}</label>
+                {quiz?.allow_math && (
+                  <MathToolbar
+                    label={t("teacher.quizPage.insertFormula")}
+                    targetRef={editQuestionTextRef}
+                    value={editQuestionForm.text}
+                    onChange={(v) => setEditQuestionForm({ ...editQuestionForm, text: v })}
+                    className="mb-1"
+                  />
+                )}
                 <textarea
+                  ref={editQuestionTextRef}
                   value={editQuestionForm.text}
                   onChange={(e) => setEditQuestionForm({ ...editQuestionForm, text: e.target.value })}
                   rows={3}
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                   required
                 />
+                {quiz?.allow_math && editQuestionForm.text?.trim() && (
+                  <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                    <span className="text-xs text-[var(--text-muted)]">{t("teacher.quizPage.preview")}</span>
+                    <div className="mt-1 min-h-[1.5rem] text-[var(--text)]">
+                      <MathText>{editQuestionForm.text}</MathText>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1664,31 +1752,49 @@ export default function TeacherQuizPage() {
                       + {t("teacher.quizPage.addOption")}
                     </button>
                   </div>
+                  {quiz?.allow_math && (
+                    <MathToolbar
+                      label={t("teacher.quizPage.insertInOption")}
+                      targetRef={editOptionTargetRef}
+                      value={editFocusedOptionIndex != null ? (editQuestionForm.options || [])[editFocusedOptionIndex]?.text ?? "" : ""}
+                      onChange={(v) => { if (editFocusedOptionIndex != null) editUpdateOption(editFocusedOptionIndex, { text: v }); }}
+                      className="mb-1"
+                    />
+                  )}
                   <div className="mt-2 space-y-2">
                     {(editQuestionForm.options || []).map((opt, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={opt.text}
-                          onChange={(e) => editUpdateOption(idx, { text: e.target.value })}
-                          placeholder={t("teacher.quizPage.optionPlaceholder")}
-                          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
-                        />
-                        <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                      <div key={idx} className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
                           <input
-                            type="checkbox"
-                            checked={!!opt.is_correct}
-                            onChange={(e) => editUpdateOption(idx, { is_correct: e.target.checked })}
+                            ref={(el) => { editOptionRefs.current[idx] = el; }}
+                            type="text"
+                            value={opt.text}
+                            onChange={(e) => editUpdateOption(idx, { text: e.target.value })}
+                            onFocus={() => { setEditFocusedOptionIndex(idx); editOptionTargetRef.current = editOptionRefs.current[idx]; }}
+                            placeholder={t("teacher.quizPage.optionPlaceholder")}
+                            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text)]"
                           />
-                          {t("teacher.quizPage.correct")}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => editRemoveOption(idx)}
-                          className="rounded p-1 text-red-600 hover:bg-red-500/10"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                          <label className="flex items-center gap-1 whitespace-nowrap text-sm text-[var(--text-muted)]">
+                            <input
+                              type="checkbox"
+                              checked={!!opt.is_correct}
+                              onChange={(e) => editUpdateOption(idx, { is_correct: e.target.checked })}
+                            />
+                            {t("teacher.quizPage.correct")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => editRemoveOption(idx)}
+                            className="rounded p-1 text-red-600 hover:bg-red-500/10"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {quiz?.allow_math && opt.text?.trim() && (
+                          <div className="rounded border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1.5 text-sm text-[var(--text)]">
+                            <MathText>{opt.text}</MathText>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1696,7 +1802,17 @@ export default function TeacherQuizPage() {
               ) : (
                 <div>
                   <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.correctAnswer")}</label>
+                  {quiz?.allow_math && (
+                    <MathToolbar
+                      label={t("teacher.quizPage.insertFormula")}
+                      targetRef={editCorrectAnswerRef}
+                      value={editQuestionForm.correct_text_answer}
+                      onChange={(v) => setEditQuestionForm({ ...editQuestionForm, correct_text_answer: v })}
+                      className="mb-1"
+                    />
+                  )}
                   <input
+                    ref={editCorrectAnswerRef}
                     type={editQuestionForm.input_type === "number" ? "number" : "text"}
                     value={editQuestionForm.correct_text_answer}
                     onChange={(e) => setEditQuestionForm({ ...editQuestionForm, correct_text_answer: e.target.value })}
@@ -1974,7 +2090,7 @@ export default function TeacherQuizPage() {
                                 {idx + 1}
                               </span>
                               <div>
-                                <p className="font-medium text-[var(--text)]">{q.question_text}</p>
+                                {quiz?.allow_math ? <MathText as="p" className="font-medium text-[var(--text)]">{q.question_text}</MathText> : <p className="font-medium text-[var(--text)]">{q.question_text}</p>}
                                 <div className="mt-1 flex items-center gap-3 text-xs text-[var(--text-muted)]">
                                   <span>{q.points_earned} / {q.points} {t("student.groupPage.points")}</span>
                                   {q.time_spent != null && (
@@ -2020,7 +2136,7 @@ export default function TeacherQuizPage() {
                                   {!opt.was_selected && opt.is_correct && (
                                     <CheckCircle className="h-3.5 w-3.5 opacity-50" />
                                   )}
-                                  {opt.text}
+                                  {quiz?.allow_math ? <MathText>{opt.text}</MathText> : <span>{opt.text}</span>}
                                 </div>
                               ))}
                             </div>
@@ -2031,13 +2147,13 @@ export default function TeacherQuizPage() {
                               <div className="flex items-center gap-2">
                                 <span className="text-[var(--text-muted)]">{t("teacher.quizPage.detailStudentAnswer")}:</span>
                                 <span className={q.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                  {q.text_answer || "—"}
+                                  {quiz?.allow_math ? <MathText>{q.text_answer || "—"}</MathText> : (q.text_answer || "—")}
                                 </span>
                               </div>
                               {!q.is_correct && q.correct_text_answer && (
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="text-[var(--text-muted)]">{t("teacher.quizPage.correctAnswer")}:</span>
-                                  <span className="text-green-600 dark:text-green-400">{q.correct_text_answer}</span>
+                                  <span className="text-green-600 dark:text-green-400">{quiz?.allow_math ? <MathText>{q.correct_text_answer}</MathText> : q.correct_text_answer}</span>
                                 </div>
                               )}
                             </div>

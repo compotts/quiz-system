@@ -51,6 +51,7 @@ class Quiz(Model):
     show_results: bool = Boolean(default=True) 
     question_display_mode: str = String(max_length=20, default="all_on_page")
     anti_cheating_mode: bool = Boolean(default=False)
+    allow_math: bool = Boolean(default=False)
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)
 
