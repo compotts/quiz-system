@@ -166,14 +166,18 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
-        <div className="mx-auto max-w-3xl home-animate-fade-down" style={{ opacity: 0, animationDelay: "0.15s" }}>
-          <h2 className="text-center text-xl font-semibold tracking-tight text-[var(--text)] sm:text-2xl">
-            {t("home.aboutTitle")}
-          </h2>
-          <div className="mt-6 space-y-4 text-center leading-relaxed text-[var(--text-muted)]">
-            <p>{t("home.about1")}</p>
-            <p>{t("home.about2")}</p>
+      <section className="border-t border-[var(--border)] bg-[var(--bg)] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-2xl home-animate-fade-down" style={{ opacity: 0, animationDelay: "0.15s" }}>
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-8 sm:p-10 shadow-[var(--shadow-sm)]">
+            <div className="border-l-4 border-[var(--accent)] pl-6">
+              <h2 className="text-lg font-semibold tracking-tight text-[var(--text)] sm:text-xl">
+                {t("home.aboutTitle")}
+              </h2>
+              <div className="mt-4 space-y-3 text-[var(--text-muted)] leading-relaxed text-sm sm:text-base">
+                <p>{t("home.about1")}</p>
+                <p>{t("home.about2")}</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
