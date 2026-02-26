@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowLeft, BarChart3, CheckCircle, ChevronRight, ClipboardList, Clock, Loader2, RefreshCw, X } from "lucide-react";
 import { authApi, attemptsApi, groupsApi, quizzesApi } from "../services/api.js";
 import MathText from "../components/MathText.jsx";
+import MathToolbar from "../components/MathToolbar.jsx";
 
 function formatDate(dateString, locale = "ru-RU") {
   if (!dateString) return "—";
@@ -55,6 +56,7 @@ export default function StudentGroupPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const paginationNumbersRef = useRef(null);
   const paginationButtonRefs = useRef([]);
+  const runTextInputRefsByQId = useRef({});
   
   const [timeLeft, setTimeLeft] = useState(null);
   const [timerActive, setTimerActive] = useState(false);
@@ -660,7 +662,7 @@ export default function StudentGroupPage() {
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h3>
-                    {runResults.allow_show_answers && (
+                    {!runResults.attempt?.needs_manual_grading && runResults.allow_show_answers && (
                       <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                         <input
                           type="checkbox"
@@ -671,16 +673,38 @@ export default function StudentGroupPage() {
                       </label>
                     )}
                   </div>
-                  <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
-                    {runResults.attempt?.score} / {runResults.attempt?.max_score}
-                    <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
-                      ({Math.round(runResults.percentage ?? 0)}%)
-                    </span>
-                  </p>
-                  <div className="mt-6 space-y-3">
-                    {(runResults.answers || []).map((a, i) => (
+                  {runResults.attempt?.needs_manual_grading ? (
+                    <>
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">
+                        {t("student.groupPage.resultsAutoGradedOnly")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
+                        {runResults.attempt?.score} / {runResults.attempt?.max_score}
+                        <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
+                          ({Math.round(runResults.percentage ?? 0)}%)
+                        </span>
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">
+                        {t("student.groupPage.resultsScoreExcludesText")}
+                      </p>
+                      <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                        {t("student.groupPage.resultsFullAfterGrading")}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-2xl font-bold text-[var(--accent)]">
+                        {runResults.attempt?.score} / {runResults.attempt?.max_score}
+                        <span className="ml-2 text-lg font-normal text-[var(--text-muted)]">
+                          ({Math.round(runResults.percentage ?? 0)}%)
+                        </span>
+                      </p>
+                      <div className="mt-6 space-y-3">
+                        {(runResults.answers || []).map((a, i) => {
+                      const isTextPending = runResults.attempt?.needs_manual_grading && a.input_type === "text";
+                      return (
                       <div key={i} className={`rounded-lg border p-4 ${
-                        a.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
+                        isTextPending ? "border-amber-500/30 bg-amber-500/5" : a.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
                       }`}>
                         {runResults?.allow_math ? <MathText as="p" className="font-medium text-[var(--text)]">{a.question_text}</MathText> : <p className="font-medium text-[var(--text)]">{a.question_text}</p>}
                         {a.question_image_url && (
@@ -694,13 +718,25 @@ export default function StudentGroupPage() {
                         )}
                         <p
                           className={`mt-2 flex items-center gap-2 text-sm ${
-                            a.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                            isTextPending ? "text-amber-600 dark:text-amber-400" : a.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                           }`}
                         >
-                          {a.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                          {a.points_earned} / {a.max_points} {t("student.groupPage.points")}
+                          {isTextPending ? (
+                            <span className="text-amber-600 dark:text-amber-400">{t("student.groupPage.pendingTeacherReview")}</span>
+                          ) : (
+                            <>
+                              {a.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                              {a.points_earned} / {a.max_points} {t("student.groupPage.points")}
+                            </>
+                          )}
                         </p>
-                        {showCorrectAnswers && !a.is_correct && (
+                        {isTextPending && (
+                          <p className="mt-1 text-sm text-[var(--text-muted)]">
+                            <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
+                            {runResults?.allow_math ? <MathText>{a.text_answer || t("student.groupPage.noAnswer")}</MathText> : (a.text_answer || t("student.groupPage.noAnswer"))}
+                          </p>
+                        )}
+                        {!isTextPending && showCorrectAnswers && !a.is_correct && (
                           <div className="mt-3 rounded-lg bg-[var(--bg)] p-3">
                             <p className="text-sm text-[var(--text-muted)]">
                               <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
@@ -713,14 +749,16 @@ export default function StudentGroupPage() {
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    ); })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {runState === "running" && (
                 <div
-                  className={runQuiz?.question_display_mode === "one_per_page" ? "flex flex-col min-h-0 flex-1" : "space-y-4"}
+                  className={runQuiz?.question_display_mode === "one_per_page" ? "flex flex-col min-h-0 flex-1" : "space-y-8"}
                   {...(runQuiz?.anti_cheating_mode && {
                     style: { userSelect: "none" },
                     onCopy: (e) => e.preventDefault(),
@@ -730,7 +768,7 @@ export default function StudentGroupPage() {
                     },
                   })}
                 >
-                  <div className={runQuiz?.question_display_mode === "one_per_page" ? "flex-1 min-h-0 space-y-4 overflow-y-auto overflow-x-hidden pb-24" : ""}>
+                  <div className={runQuiz?.question_display_mode === "one_per_page" ? "flex-1 min-h-0 space-y-8 overflow-y-auto overflow-x-hidden pb-24" : "space-y-8"}>
                     {timerActive && timeLeft !== null && (
                       <div className={`rounded-xl border p-4 flex items-center justify-between ${
                         timeLeft <= 10 ? "border-red-500/50 bg-red-500/10" : "border-[var(--border)] bg-[var(--surface)]"
@@ -748,7 +786,6 @@ export default function StudentGroupPage() {
                         </span>
                       </div>
                     )}
-                  
                     {(runQuiz?.question_display_mode === "one_per_page" ? [runQuestions[currentQuestionIndex]].filter(Boolean) : runQuestions).map((q, idx) => {
                     const actualIdx = runQuiz?.question_display_mode === "one_per_page" ? currentQuestionIndex : idx;
                     const isAnswered = runAnswered.includes(q.id);
@@ -834,13 +871,46 @@ export default function StudentGroupPage() {
                                 })}
                               </div>
                             ) : (
-                              <input
-                                type={inputType === "number" ? "number" : "text"}
-                                value={answer.text || ""}
-                                onChange={(e) => handleAnswerChange(q.id, e.target.value, true)}
-                                placeholder={inputType === "number" ? t("student.groupPage.enterNumber") : t("student.groupPage.enterAnswer")}
-                                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-[var(--text)]"
-                              />
+                              <div className="space-y-2">
+                                {runQuiz?.allow_math && inputType === "text" && (() => {
+                                  if (!runTextInputRefsByQId.current[q.id]) runTextInputRefsByQId.current[q.id] = { current: null };
+                                  const inputRef = runTextInputRefsByQId.current[q.id];
+                                  return (
+                                    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-2">
+                                      <MathToolbar
+                                        label={t("student.groupPage.formulasToolbar")}
+                                        targetRef={inputRef}
+                                        value={answer.text ?? ""}
+                                        onChange={(v) => handleAnswerChange(q.id, v, true)}
+                                        className="flex-wrap"
+                                      />
+                                    </div>
+                                  );
+                                })()}
+                                {runQuiz?.allow_math && inputType === "text" && (
+                                  <p className="text-xs text-[var(--text-muted)]">{t("student.groupPage.textAnswerMathHint")}</p>
+                                )}
+                                <input
+                                  ref={inputType === "text" && runQuiz?.allow_math ? (el) => {
+                                    if (!runTextInputRefsByQId.current[q.id]) runTextInputRefsByQId.current[q.id] = { current: null };
+                                    runTextInputRefsByQId.current[q.id].current = el;
+                                  } : undefined}
+                                  type={inputType === "number" ? "number" : "text"}
+                                  value={answer.text || ""}
+                                  onChange={(e) => handleAnswerChange(q.id, e.target.value, true)}
+                                  placeholder={inputType === "number" ? t("student.groupPage.enterNumber") : t("student.groupPage.enterAnswer")}
+                                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-[var(--text)]"
+                                />
+                                {runQuiz?.allow_math && inputType === "text" && (() => {
+                                  const t = (answer.text || "").trim();
+                                  const hasMath = t && (t.includes("$") || t.includes("\\"));
+                                  return hasMath ? (
+                                    <div className="rounded border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text)] min-h-[2.5rem] flex items-center">
+                                      <MathText>{answer.text}</MathText>
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
                             )}
                           </div>
                         )}
@@ -1082,7 +1152,7 @@ export default function StudentGroupPage() {
                     <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] p-4">
                       <h2 className="text-lg font-semibold text-[var(--text)]">{t("student.groupPage.results")}</h2>
                       <div className="flex items-center gap-2">
-                        {attemptDetail?.allow_show_answers && (
+                        {!attemptDetail?.attempt?.needs_manual_grading && attemptDetail?.allow_show_answers && (
                           <label className="flex items-center gap-2 text-sm text-[var(--text)]">
                             <input
                               type="checkbox"
@@ -1108,15 +1178,23 @@ export default function StudentGroupPage() {
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--text-muted)]" />
                       ) : (
                         <div className="space-y-4">
+                          {attemptDetail.attempt?.needs_manual_grading && (
+                            <>
+                              <p className="text-sm text-[var(--text-muted)]">{t("student.groupPage.resultsAutoGradedOnly")}</p>
+                              <p className="text-sm text-amber-600 dark:text-amber-400">{t("student.groupPage.resultsFullAfterGrading")}</p>
+                            </>
+                          )}
                           <p className="text-sm text-[var(--text-muted)]">
                             {t("student.groupPage.score")}: {attemptDetail.attempt?.score} / {attemptDetail.attempt?.max_score} (
                             {Math.round(attemptDetail.percentage ?? 0)}%)
                           </p>
-                          {(attemptDetail.answers || []).map((ans, i) => (
+                          {(attemptDetail.answers || []).map((ans, i) => {
+                            const isTextPending = attemptDetail.attempt?.needs_manual_grading && ans.input_type === "text";
+                            return (
                             <div
                               key={i}
                               className={`rounded-lg border p-4 ${
-                                ans.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
+                                isTextPending ? "border-amber-500/30 bg-amber-500/5" : ans.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
                               }`}
                             >
                               {attemptDetail?.allow_math ? <MathText as="p" className="font-medium text-[var(--text)]">{ans.question_text}</MathText> : <p className="font-medium text-[var(--text)]">{ans.question_text}</p>}
@@ -1131,13 +1209,25 @@ export default function StudentGroupPage() {
                               )}
                               <p
                                 className={`mt-2 flex items-center gap-2 text-sm ${
-                                  ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                                  isTextPending ? "text-amber-600 dark:text-amber-400" : ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                                 }`}
                               >
-                                {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                {ans.points_earned} / {ans.max_points} {t("student.groupPage.points")}
+                                {isTextPending ? (
+                                  t("student.groupPage.pendingTeacherReview")
+                                ) : (
+                                  <>
+                                    {ans.is_correct ? <CheckCircle className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                                    {ans.points_earned} / {ans.max_points} {t("student.groupPage.points")}
+                                  </>
+                                )}
                               </p>
-                              {showCorrectAnswersInDetail && !ans.is_correct && (
+                              {isTextPending && (
+                                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                                  <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
+                                  {attemptDetail?.allow_math ? <MathText>{ans.text_answer || t("student.groupPage.noAnswer")}</MathText> : (ans.text_answer || t("student.groupPage.noAnswer"))}
+                                </p>
+                              )}
+                              {!isTextPending && showCorrectAnswersInDetail && !ans.is_correct && (
                                 <div className="mt-3 rounded-lg bg-[var(--bg)] p-3">
                                   <p className="text-sm text-[var(--text-muted)]">
                                     <span className="font-medium">{t("student.groupPage.yourAnswer")}:</span>{" "}
@@ -1150,7 +1240,7 @@ export default function StudentGroupPage() {
                                 </div>
                               )}
                             </div>
-                          ))}
+                          ); })}
                         </div>
                       )}
                     </div>

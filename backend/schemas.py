@@ -341,6 +341,10 @@ class CompleteQuizAttempt(BaseModel):
     attempt_id: int
 
 
+class GradeAnswerRequest(BaseModel):
+    is_correct: bool
+
+
 class QuizAttemptResponse(BaseModel):
     id: int
     quiz_id: int
@@ -353,6 +357,7 @@ class QuizAttemptResponse(BaseModel):
     is_completed: bool
     status: str = "opened"
     questions_order: Optional[List[int]] = None
+    needs_manual_grading: bool = False
 
 
 class QuizResultResponse(BaseModel):
@@ -361,6 +366,7 @@ class QuizResultResponse(BaseModel):
     percentage: float
     allow_show_answers: bool = True
     show_results: bool = True
+    allow_math: bool = False
 
 
 class StudentAttemptStatus(BaseModel):
@@ -375,7 +381,7 @@ class StudentAttemptStatus(BaseModel):
 
 
 class AntiCheatingEventCreate(BaseModel):
-    event_type: str = "tab_switch"  # 'tab_switch' or other
+    event_type: str = "tab_switch"
     details: Optional[dict] = None
 
 

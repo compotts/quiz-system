@@ -8,7 +8,6 @@ from app.middleware.maintenance import MaintenanceMiddleware
 
 from config import settings
 
-# Directory for uploaded question images: backend/static/uploads
 UPLOADS_DIR = Path(__file__).resolve().parent / "static" / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 (UPLOADS_DIR / "questions").mkdir(parents=True, exist_ok=True)

@@ -28,6 +28,7 @@ class QuizAttempt(Model):
     is_completed: bool = Boolean(default=False)
     status: str = String(max_length=20, default="opened")
     questions_order: str = Text(nullable=True)
+    needs_manual_grading: bool = Boolean(default=False)
     created_at: datetime = DateTime(default=utc_now)
 
 
@@ -41,6 +42,7 @@ class Answer(Model):
     text_answer: str = Text(nullable=True)
     is_correct: bool = Boolean(default=False)
     points_earned: float = Float(default=0.0)
+    manually_graded: bool = Boolean(default=False)
     time_spent: int = Integer(nullable=True)
     answered_at: datetime = DateTime(default=utc_now)
 

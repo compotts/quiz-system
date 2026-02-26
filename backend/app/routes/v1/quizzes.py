@@ -18,15 +18,15 @@ from app.database.models.user import User
 from app.utils.auth import get_current_teacher, get_current_user, get_current_student
 from app.utils.audit import log_audit
 from app.database.database import to_naive_utc
+from config import settings
 from datetime import datetime
 import json
 
+
 router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
 
-# Question images: backend/static/uploads/questions
+
 UPLOADS_QUESTIONS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static" / "uploads" / "questions"
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
-MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 @router.post("", response_model=QuizResponse)
@@ -695,16 +695,16 @@ async def upload_question_image(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
     content_type = file.content_type or ""
-    if content_type not in ALLOWED_IMAGE_TYPES:
+    if content_type not in settings.allowed_image_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Allowed types: JPEG, PNG, GIF, WebP"
+            detail=f"Allowed types: {', '.join(settings.allowed_image_types)}"
         )
     contents = await file.read()
-    if len(contents) > MAX_IMAGE_SIZE:
+    if len(contents) > settings.max_image_size:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image must be under 5 MB"
+            detail=f"Image must be under {settings.max_image_size} bytes"
         )
     ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp"}.get(content_type, ".jpg")
     filename = f"{question_id}_{uuid.uuid4().hex[:12]}{ext}"
@@ -939,7 +939,9 @@ async def get_student_statuses(
                 "max_score": attempt.max_score,
                 "answered_count": answered_count,
                 "total_questions": total_questions,
-                "avg_time_per_answer": avg_time
+                "avg_time_per_answer": avg_time,
+                "attempt_id": attempt.id,
+                "needs_manual_grading": getattr(attempt, "needs_manual_grading", False),
             })
     
     return result
@@ -1004,6 +1006,7 @@ async def get_student_detail(
         time_spent = answer.time_spent if answer else None
         text_answer = answer.text_answer if answer else None
         
+        needs_manual_grading = (q.input_type or "select") == "text" and answer is not None and not getattr(answer, "manually_graded", False)
         question_details.append({
             "question_id": q.id,
             "question_text": q.text,
@@ -1024,7 +1027,10 @@ async def get_student_detail(
             "points_earned": points_earned,
             "time_spent": time_spent,
             "text_answer": text_answer,
-            "selected_option_ids": selected_options
+            "selected_option_ids": selected_options,
+            "answer_id": answer.id if answer else None,
+            "needs_manual_grading": needs_manual_grading,
+            "manually_graded": getattr(answer, "manually_graded", False) if answer else False,
         })
     
     total_time = sum(q["time_spent"] or 0 for q in question_details if q["answered"])
@@ -1044,7 +1050,9 @@ async def get_student_detail(
         "answered_count": answered_count,
         "correct_count": correct_count,
         "total_questions": len(questions),
-        "questions": question_details
+        "questions": question_details,
+        "needs_manual_grading": getattr(attempt, "needs_manual_grading", False) if attempt else False,
+        "allow_math": getattr(quiz, "allow_math", False),
     }
 
 

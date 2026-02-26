@@ -490,6 +490,12 @@ export const attemptsApi = {
       body: JSON.stringify({ attempt_id: attemptId }),
     });
   },
+  async gradeAnswer(attemptId, answerId, isCorrect) {
+    return request(`/attempts/${attemptId}/answers/${answerId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_correct: isCorrect }),
+    });
+  },
 };
 
 export function saveTokens(accessToken, refreshToken) {

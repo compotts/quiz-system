@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     rate_limit_period: int = 60
     captcha_after_attempts: int = 3
     admin_init_enabled: bool = True
+    max_image_size: int = 5 * 1024 * 1024
+    allowed_image_types: list = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     cors_origins: list = [
         "http://localhost:5173",
         "http://localhost:4173",

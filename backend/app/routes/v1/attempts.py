@@ -3,7 +3,7 @@ from typing import List
 import random
 import unicodedata
 from schemas import (
-    StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt,
+    StartQuizAttempt, SubmitAnswer, CompleteQuizAttempt, GradeAnswerRequest,
     QuizAttemptResponse, QuizResultResponse,
     SubmitAnswersBatch, SubmitAnswersBatchResponse,
     AntiCheatingEventCreate,
@@ -12,7 +12,7 @@ from app.database.models.quiz import Quiz, Question, Option
 from app.database.models.group import GroupMember
 from app.database.models.attempt import QuizAttempt, Answer, AntiCheatingEvent
 from app.database.models.user import User
-from app.utils.auth import get_current_student, get_current_user
+from app.utils.auth import get_current_student, get_current_user, get_current_teacher
 from app.utils.audit import log_audit
 from app.database.database import utc_now
 from datetime import datetime
@@ -178,15 +178,20 @@ async def submit_answer(
     input_type = question.input_type or "select"
     if input_type in ("text", "number"):
         text_answer = data.text_answer
-        if text_answer is not None and question.correct_text_answer:
-            if input_type == "number":
-                try:
-                    is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
-                except:
-                    is_correct = False
-            else:
-                is_correct = compare_text_answers(text_answer, question.correct_text_answer)
-        points_earned = question.points if is_correct else 0.0
+        if input_type == "number" and text_answer is not None and question.correct_text_answer:
+            try:
+                is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
+            except:
+                is_correct = False
+            points_earned = question.points if is_correct else 0.0
+        elif input_type == "text":
+            is_correct = False
+            points_earned = 0.0
+        elif text_answer is not None and question.correct_text_answer:
+            is_correct = compare_text_answers(text_answer, question.correct_text_answer)
+            points_earned = question.points if is_correct else 0.0
+        else:
+            points_earned = question.points if is_correct else 0.0
     else:
         all_question_options = await Option.objects.filter(question=question).all()
         all_option_ids = set(opt.id for opt in all_question_options)
@@ -298,15 +303,20 @@ async def submit_answers_batch(
         
         if input_type in ("text", "number"):
             text_answer = answer_data.text_answer
-            if text_answer is not None and question.correct_text_answer:
-                if input_type == "number":
-                    try:
-                        is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
-                    except:
-                        is_correct = False
-                else:
-                    is_correct = text_answer.strip().lower() == question.correct_text_answer.strip().lower()
-            points_earned = question.points if is_correct else 0.0
+            if input_type == "number" and text_answer is not None and question.correct_text_answer:
+                try:
+                    is_correct = float(text_answer.strip()) == float(question.correct_text_answer.strip())
+                except:
+                    is_correct = False
+                points_earned = question.points if is_correct else 0.0
+            elif input_type == "text":
+                is_correct = False
+                points_earned = 0.0
+            elif text_answer is not None and question.correct_text_answer:
+                is_correct = text_answer.strip().lower() == question.correct_text_answer.strip().lower()
+                points_earned = question.points if is_correct else 0.0
+            else:
+                points_earned = question.points if is_correct else 0.0
         else:
             all_question_options = await Option.objects.filter(question=question).all()
             all_option_ids = set(opt.id for opt in all_question_options)
@@ -352,11 +362,13 @@ async def submit_answers_batch(
     
     if data.complete:
         time_spent = int((utc_now() - attempt.started_at).total_seconds())
+        has_text_questions = any((q.input_type or "select") == "text" for q in questions)
         await attempt.update(
             completed_at=utc_now(),
             time_spent=time_spent,
             is_completed=True,
-            status="completed"
+            status="completed",
+            needs_manual_grading=has_text_questions
         )
         await log_audit(
             "attempt_completed",
@@ -409,12 +421,15 @@ async def complete_quiz_attempt(
         )
     
     time_spent = int((utc_now() - attempt.started_at).total_seconds())
+    questions = await Question.objects.filter(quiz=attempt.quiz).all()
+    has_text_questions = any((q.input_type or "select") == "text" for q in questions)
     
     await attempt.update(
         completed_at=utc_now(),
         time_spent=time_spent,
         is_completed=True,
-        status="completed"
+        status="completed",
+        needs_manual_grading=has_text_questions
     )
     await log_audit(
         "attempt_completed",
@@ -528,6 +543,7 @@ async def get_attempt_results(
     attempt_data["quiz_id"] = attempt.quiz.id
     attempt_data["student_id"] = attempt.student.id
     attempt_data["questions_order"] = questions_order
+    attempt_data["needs_manual_grading"] = getattr(attempt, "needs_manual_grading", False)
     
     return {
         "attempt": attempt_data,
@@ -536,6 +552,59 @@ async def get_attempt_results(
         "allow_show_answers": attempt.quiz.allow_show_answers if hasattr(attempt.quiz, 'allow_show_answers') else True,
         "show_results": attempt.quiz.show_results if hasattr(attempt.quiz, 'show_results') else True,
         "allow_math": getattr(attempt.quiz, "allow_math", False),
+    }
+
+
+@router.patch("/{attempt_id}/answers/{answer_id}")
+async def grade_text_answer(
+    attempt_id: int,
+    answer_id: int,
+    data: GradeAnswerRequest,
+    current_user: User = Depends(get_current_teacher),
+):
+    attempt = await QuizAttempt.objects.select_related("quiz").get_or_none(id=attempt_id)
+    if not attempt:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attempt not found")
+    if attempt.quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    answer = await Answer.objects.select_related("question").get_or_none(
+        id=answer_id, attempt=attempt
+    )
+    if not answer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Answer not found")
+    input_type = answer.question.input_type or "select"
+    if input_type != "text":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only text answers can be manually graded",
+        )
+
+    points_earned = answer.question.points if data.is_correct else 0.0
+    await answer.update(
+        is_correct=data.is_correct,
+        points_earned=points_earned,
+        manually_graded=True,
+    )
+
+    all_answers = await Answer.objects.filter(attempt=attempt).all()
+    new_score = sum(a.points_earned for a in all_answers)
+    await attempt.update(score=new_score)
+
+    text_questions = await Question.objects.filter(
+        quiz=attempt.quiz, input_type="text"
+    ).all()
+    text_q_ids = {q.id for q in text_questions}
+    text_answers = [a for a in all_answers if a.question.id in text_q_ids]
+    all_text_graded = all(getattr(a, "manually_graded", False) for a in text_answers)
+    if all_text_graded:
+        await attempt.update(needs_manual_grading=False)
+
+    return {
+        "is_correct": data.is_correct,
+        "points_earned": points_earned,
+        "attempt_score": new_score,
+        "attempt_max_score": attempt.max_score,
     }
 
 
@@ -574,7 +643,8 @@ async def get_quiz_results(
             "max_score": attempt.max_score,
             "percentage": percentage,
             "time_spent": attempt.time_spent,
-            "completed_at": attempt.completed_at
+            "completed_at": attempt.completed_at,
+            "needs_manual_grading": getattr(attempt, "needs_manual_grading", False),
         })
     
     return results
