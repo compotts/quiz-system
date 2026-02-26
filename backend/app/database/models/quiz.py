@@ -65,7 +65,8 @@ class Question(Model):
     text: str = Text()
     order: int = Integer()
     points: float = Float(default=1.0)
-    correct_text_answer: str = Text(nullable=True) 
+    correct_text_answer: str = Text(nullable=True)
+    image_url: str = String(max_length=512, nullable=True)  # path for question image, e.g. /uploads/questions/123_abc.jpg
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)
 

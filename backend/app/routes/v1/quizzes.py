@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pathlib import Path
+import uuid
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from typing import List
 from schemas import (
     QuizCreate, QuizUpdate, QuizResponse,
@@ -18,6 +22,11 @@ from datetime import datetime
 import json
 
 router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
+
+# Question images: backend/static/uploads/questions
+UPLOADS_QUESTIONS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static" / "uploads" / "questions"
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 @router.post("", response_model=QuizResponse)
@@ -336,7 +345,7 @@ async def delete_quiz(
     request: Request,
     current_user: User = Depends(get_current_teacher)
 ):
-    quiz = await Quiz.objects.select_related("teacher", "group").get_or_none(id=quiz_id)
+    quiz = await Quiz.objects.select_related(["teacher", "group"]).get_or_none(id=quiz_id)
     
     if not quiz:
         raise HTTPException(
@@ -659,6 +668,101 @@ async def update_question(
     return {"message": "Question updated successfully"}
 
 
+@router.post("/{quiz_id}/questions/{question_id}/image")
+async def upload_question_image(
+    quiz_id: int,
+    question_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    question = await Question.objects.get_or_none(id=question_id, quiz=quiz)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Allowed types: JPEG, PNG, GIF, WebP"
+        )
+    contents = await file.read()
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Image must be under 5 MB"
+        )
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp"}.get(content_type, ".jpg")
+    filename = f"{question_id}_{uuid.uuid4().hex[:12]}{ext}"
+    UPLOADS_QUESTIONS_DIR.mkdir(parents=True, exist_ok=True)
+    filepath = UPLOADS_QUESTIONS_DIR / filename
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    url_path = f"/uploads/questions/{filename}"
+    old_url = question.image_url
+    await question.update(image_url=url_path)
+    if old_url and old_url.startswith("/uploads/questions/"):
+        old_name = old_url.split("/")[-1]
+        old_path = UPLOADS_QUESTIONS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    await log_audit(
+        "question_image_uploaded",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="question",
+        resource_id=str(question_id),
+        details={"quiz_id": quiz_id},
+        request=request,
+    )
+    return {"image_url": url_path}
+
+
+@router.delete("/{quiz_id}/questions/{question_id}/image")
+async def delete_question_image(
+    quiz_id: int,
+    question_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_teacher)
+):
+    quiz = await Quiz.objects.get_or_none(id=quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+    if quiz.teacher.id != current_user.id and current_user.role not in ("admin", "developer"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    question = await Question.objects.get_or_none(id=question_id, quiz=quiz)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+    old_url = question.image_url
+    await question.update(image_url=None)
+    if old_url and old_url.startswith("/uploads/questions/"):
+        old_name = old_url.split("/")[-1]
+        old_path = UPLOADS_QUESTIONS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    await log_audit(
+        "question_image_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="question",
+        resource_id=str(question_id),
+        details={"quiz_id": quiz_id},
+        request=request,
+    )
+    return {"message": "Image removed"}
+
+
 @router.delete("/{quiz_id}/questions/{question_id}")
 async def delete_question(
     quiz_id: int,
@@ -687,10 +791,18 @@ async def delete_question(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Question not found"
         )
-    
+    old_image_url = question.image_url
     await Answer.objects.filter(question=question).delete()
     await Option.objects.filter(question=question).delete()
     await question.delete()
+    if old_image_url and old_image_url.startswith("/uploads/questions/"):
+        old_name = old_image_url.split("/")[-1]
+        old_path = UPLOADS_QUESTIONS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
 
     await log_audit(
         "question_deleted",

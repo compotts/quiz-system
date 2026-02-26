@@ -682,6 +682,15 @@ export default function StudentGroupPage() {
                         a.is_correct ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
                       }`}>
                         <p className="font-medium text-[var(--text)]">{a.question_text}</p>
+                        {a.question_image_url && (
+                          <div className="mt-2">
+                            <img
+                              src={`${import.meta.env.VITE_API_URL || ""}${a.question_image_url}`}
+                              alt=""
+                              className="max-h-48 w-auto rounded-lg border border-[var(--border)] object-contain bg-[var(--bg-card)]"
+                            />
+                          </div>
+                        )}
                         <p
                           className={`mt-2 flex items-center gap-2 text-sm ${
                             a.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
@@ -769,6 +778,15 @@ export default function StudentGroupPage() {
                               </span>
                               <span className="font-medium text-[var(--text)] break-words">{q.text}</span>
                             </div>
+                            {q.image_url && (
+                              <div className="mt-3">
+                                <img
+                                  src={`${import.meta.env.VITE_API_URL || ""}${q.image_url}`}
+                                  alt=""
+                                  className="max-h-64 w-auto rounded-lg border border-[var(--border)] object-contain bg-[var(--bg-card)]"
+                                />
+                              </div>
+                            )}
                             <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
                               <span>{q.points} {t("student.groupPage.points")}</span>
                               {inputType === "select" && isMultiple && (
@@ -1107,6 +1125,15 @@ export default function StudentGroupPage() {
                               }`}
                             >
                               <p className="font-medium text-[var(--text)]">{ans.question_text}</p>
+                              {ans.question_image_url && (
+                                <div className="mt-2">
+                                  <img
+                                    src={`${import.meta.env.VITE_API_URL || ""}${ans.question_image_url}`}
+                                    alt=""
+                                    className="max-h-48 w-auto rounded-lg border border-[var(--border)] object-contain bg-[var(--bg-card)]"
+                                  />
+                                </div>
+                              )}
                               <p
                                 className={`mt-2 flex items-center gap-2 text-sm ${
                                   ans.is_correct ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"

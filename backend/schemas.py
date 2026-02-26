@@ -303,6 +303,7 @@ class QuestionResponse(BaseModel):
     order: int
     points: float
     correct_text_answer: Optional[str] = None
+    image_url: Optional[str] = None
     options: List[OptionResponse]
     is_multiple_choice: bool = False 
 

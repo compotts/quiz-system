@@ -1,9 +1,17 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.database.database import lifespan
 from app.middleware.maintenance import MaintenanceMiddleware
 
 from config import settings
+
+# Directory for uploaded question images: backend/static/uploads
+UPLOADS_DIR = Path(__file__).resolve().parent / "static" / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+(UPLOADS_DIR / "questions").mkdir(parents=True, exist_ok=True)
 
 if settings.api_version == "v2":
     from app.routes.v2 import auth, admin, groups, quizzes, attempts, contact, blog
@@ -36,6 +44,8 @@ app.include_router(quizzes.router)
 app.include_router(attempts.router)
 app.include_router(contact.router)
 app.include_router(blog.router)
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 @app.get("/")

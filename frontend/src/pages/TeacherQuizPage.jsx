@@ -30,6 +30,7 @@ import {
   Edit3,
   ClipboardList,
   Users,
+  Image as ImageIcon,
 } from "lucide-react";
 import { authApi, quizzesApi } from "../services/api.js";
 
@@ -113,6 +114,10 @@ export default function TeacherQuizPage() {
   const [savingQuestion, setSavingQuestion] = useState(false);
   const [questionFormError, setQuestionFormError] = useState("");
   const [editQuestionError, setEditQuestionError] = useState("");
+  const [uploadingQuestionImage, setUploadingQuestionImage] = useState(false);
+  const [questionFormImageFile, setQuestionFormImageFile] = useState(null); // File for new question image
+  const [createFormImageDragOver, setCreateFormImageDragOver] = useState(false);
+  const [editFormImageDragOver, setEditFormImageDragOver] = useState(false);
 
   const [showStudentDetail, setShowStudentDetail] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
@@ -120,6 +125,24 @@ export default function TeacherQuizPage() {
   const [showOverallStats, setShowOverallStats] = useState(true);
   const [showConfirmDeleteQuiz, setShowConfirmDeleteQuiz] = useState(false);
   const [deletingQuizAssignment, setDeletingQuizAssignment] = useState(false);
+
+  const getImageFileFromDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    return file && file.type.startsWith("image/") ? file : null;
+  };
+  const getImageFileFromPaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return null;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        return file || null;
+      }
+    }
+    return null;
+  };
 
   const handleExportQuestions = () => {
     if (!questions.length) return;
@@ -465,8 +488,12 @@ export default function TeacherQuizPage() {
     }
 
     setCreatingQuestion(true);
+    const imageFileToUpload = questionFormImageFile;
     try {
-      await quizzesApi.createQuestion(qid, data);
+      const created = await quizzesApi.createQuestion(qid, data);
+      if (imageFileToUpload && created?.id) {
+        await quizzesApi.uploadQuestionImage(qid, created.id, imageFileToUpload);
+      }
       setShowQuestionForm(false);
       setQuestionForm({
         text: "",
@@ -476,6 +503,7 @@ export default function TeacherQuizPage() {
         options: [{ text: "", is_correct: false, order: 0 }],
         correct_text_answer: "",
       });
+      setQuestionFormImageFile(null);
       await loadQuestions();
     } catch (err) {
       setQuestionFormError(err.message || t("teacher.quizzes.errorQuestionCreate"));
@@ -601,6 +629,36 @@ export default function TeacherQuizPage() {
       setEditQuestionError(err.message || t("teacher.quizzes.errorQuestionUpdate"));
     } finally {
       setSavingQuestion(false);
+    }
+  };
+
+  const handleUploadQuestionImage = async (file) => {
+    if (!editingQuestion || !file) return;
+    setUploadingQuestionImage(true);
+    setEditQuestionError("");
+    try {
+      const { image_url } = await quizzesApi.uploadQuestionImage(qid, editingQuestion.id, file);
+      setEditingQuestion((prev) => (prev ? { ...prev, image_url } : null));
+      await loadQuestions();
+    } catch (err) {
+      setEditQuestionError(err.message || t("teacher.quizPage.errorImageUpload"));
+    } finally {
+      setUploadingQuestionImage(false);
+    }
+  };
+
+  const handleRemoveQuestionImage = async () => {
+    if (!editingQuestion || !editingQuestion.image_url) return;
+    setUploadingQuestionImage(true);
+    setEditQuestionError("");
+    try {
+      await quizzesApi.deleteQuestionImage(qid, editingQuestion.id);
+      setEditingQuestion((prev) => (prev ? { ...prev, image_url: null } : null));
+      await loadQuestions();
+    } catch (err) {
+      setEditQuestionError(err.message || t("teacher.quizPage.errorImageRemove"));
+    } finally {
+      setUploadingQuestionImage(false);
     }
   };
 
@@ -756,6 +814,9 @@ export default function TeacherQuizPage() {
                                 <span className="rounded-full bg-[var(--bg-card)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
                                   {idx + 1}
                                 </span>
+                                {q.image_url && (
+                                  <ImageIcon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" title={t("teacher.quizPage.hasImage")} />
+                                )}
                                 <span className="font-medium text-[var(--text)]">{q.text}</span>
                               </div>
                               <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-muted)]">
@@ -1267,7 +1328,7 @@ export default function TeacherQuizPage() {
           <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.addQuestion")}</h2>
-              <button onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
+              <button onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); setQuestionFormImageFile(null); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1280,7 +1341,17 @@ export default function TeacherQuizPage() {
                 </button>
               </div>
             )}
-            <form onSubmit={handleCreateQuestion} className="space-y-4">
+            <form
+              onSubmit={handleCreateQuestion}
+              className="space-y-4"
+              onPaste={(e) => {
+                const file = getImageFileFromPaste(e);
+                if (file) {
+                  e.preventDefault();
+                  setQuestionFormImageFile(file);
+                }
+              }}
+            >
               <div>
                 <label className="block text-sm font-medium text-[var(--text)]">{t("teacher.quizPage.questionText")}</label>
                 <textarea
@@ -1365,6 +1436,80 @@ export default function TeacherQuizPage() {
                 </div>
               )}
 
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.questionImage")}</label>
+                {questionFormImageFile ? (
+                  <div
+                    className="space-y-2"
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setCreateFormImageDragOver(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setCreateFormImageDragOver(false); }}
+                    onDrop={(e) => {
+                      setCreateFormImageDragOver(false);
+                      const file = getImageFileFromDrop(e);
+                      if (file) setQuestionFormImageFile(file);
+                    }}
+                  >
+                    <img
+                      src={URL.createObjectURL(questionFormImageFile)}
+                      alt=""
+                      className="max-h-48 w-auto rounded-lg border border-[var(--border)] object-contain bg-[var(--bg-card)]"
+                    />
+                    <div className="flex gap-2">
+                      <label className="flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)]">
+                        <Upload className="h-4 w-4" />
+                        {t("teacher.quizPage.replaceImage")}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) setQuestionFormImageFile(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setQuestionFormImageFile(null)}
+                        className="flex items-center gap-1 rounded-lg border border-red-500/30 px-3 py-1.5 text-sm text-red-600 hover:bg-red-500/10 dark:text-red-400"
+                      >
+                        {t("teacher.quizPage.removeImage")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`rounded-lg border border-dashed bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-muted)] transition-colors ${
+                      createFormImageDragOver ? "border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--text)]" : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)]"
+                    }`}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setCreateFormImageDragOver(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setCreateFormImageDragOver(false); }}
+                    onDrop={(e) => {
+                      setCreateFormImageDragOver(false);
+                      const file = getImageFileFromDrop(e);
+                      if (file) setQuestionFormImageFile(file);
+                    }}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <ImageIcon className="h-4 w-4 shrink-0" />
+                      <span>{t("teacher.quizPage.addImage")}</span>
+                      <span className="text-xs opacity-80">({t("teacher.quizPage.dragOrPaste")})</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setQuestionFormImageFile(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
@@ -1376,7 +1521,7 @@ export default function TeacherQuizPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); }}
+                  onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); setQuestionFormImageFile(null); }}
                   className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-muted)]"
                 >
                   {t("common.cancel")}
@@ -1458,7 +1603,17 @@ export default function TeacherQuizPage() {
                 </button>
               </div>
             )}
-            <form onSubmit={handleSaveQuestion} className="space-y-4">
+            <form
+              onSubmit={handleSaveQuestion}
+              className="space-y-4"
+              onPaste={(e) => {
+                const file = getImageFileFromPaste(e);
+                if (file && editingQuestion && !uploadingQuestionImage) {
+                  e.preventDefault();
+                  handleUploadQuestionImage(file);
+                }
+              }}
+            >
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.questionText")}</label>
                 <textarea
@@ -1549,6 +1704,82 @@ export default function TeacherQuizPage() {
                   />
                 </div>
               )}
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">{t("teacher.quizPage.questionImage")}</label>
+                {editingQuestion.image_url ? (
+                  <div
+                    className="space-y-2"
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setEditFormImageDragOver(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setEditFormImageDragOver(false); }}
+                    onDrop={(e) => {
+                      setEditFormImageDragOver(false);
+                      const file = getImageFileFromDrop(e);
+                      if (file && !uploadingQuestionImage) handleUploadQuestionImage(file);
+                    }}
+                  >
+                    <img
+                      src={`${import.meta.env.VITE_API_URL || ""}${editingQuestion.image_url}`}
+                      alt=""
+                      className="max-h-48 w-auto rounded-lg border border-[var(--border)] object-contain bg-[var(--bg-card)]"
+                    />
+                    <div className="flex gap-2">
+                      <label className="flex cursor-pointer items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--border)] hover:text-[var(--text)] disabled:opacity-50">
+                        {uploadingQuestionImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        {t("teacher.quizPage.replaceImage")}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          className="hidden"
+                          disabled={uploadingQuestionImage}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleUploadQuestionImage(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleRemoveQuestionImage}
+                        disabled={uploadingQuestionImage}
+                        className="flex items-center gap-1 rounded-lg border border-red-500/30 px-3 py-1.5 text-sm text-red-600 hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                      >
+                        {t("teacher.quizPage.removeImage")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`rounded-lg border border-dashed bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-muted)] transition-colors ${
+                      editFormImageDragOver ? "border-[var(--accent)] bg-[var(--accent)]/5 text-[var(--text)]" : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)]"
+                    } ${uploadingQuestionImage ? "opacity-50 pointer-events-none" : ""}`}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (!uploadingQuestionImage) setEditFormImageDragOver(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setEditFormImageDragOver(false); }}
+                    onDrop={(e) => {
+                      setEditFormImageDragOver(false);
+                      const file = getImageFileFromDrop(e);
+                      if (file && !uploadingQuestionImage) handleUploadQuestionImage(file);
+                    }}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2">
+                      {uploadingQuestionImage ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <ImageIcon className="h-4 w-4 shrink-0" />}
+                      <span>{t("teacher.quizPage.addImage")}</span>
+                      <span className="text-xs opacity-80">({t("teacher.quizPage.dragOrPaste")})</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        className="hidden"
+                        disabled={uploadingQuestionImage}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUploadQuestionImage(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"

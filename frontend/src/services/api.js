@@ -372,6 +372,23 @@ export const quizzesApi = {
       body: JSON.stringify(data),
     });
   },
+  async uploadQuestionImage(quizId, questionId, file) {
+    const url = `${API_BASE_URL}/quizzes/${quizId}/questions/${questionId}/image`;
+    const token = localStorage.getItem("access_token");
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new ApiError(data.detail || "Upload failed", res.status);
+    return data;
+  },
+  async deleteQuestionImage(quizId, questionId) {
+    return request(`/quizzes/${quizId}/questions/${questionId}/image`, { method: "DELETE" });
+  },
   async deleteQuestion(quizId, questionId) {
     return request(`/quizzes/${quizId}/questions/${questionId}`, {
       method: "DELETE",

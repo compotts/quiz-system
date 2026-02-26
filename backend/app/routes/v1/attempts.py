@@ -502,6 +502,7 @@ async def get_attempt_results(
         answer_details.append({
             "question_id": question.id,
             "question_text": question.text,
+            "question_image_url": getattr(question, "image_url", None),
             "input_type": input_type,
             "selected_options": selected_ids,
             "selected_texts": selected_texts,

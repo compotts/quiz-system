@@ -217,5 +217,6 @@ __marimo__/
 
 .db
 seed_data.py
+backend/static/uploads/
 req_test.py
 .sql
