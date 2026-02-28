@@ -12,8 +12,10 @@ from app.database.models.user import User, UserRole
 from app.database.models.audit_log import AuditLog
 from app.database.models.group import Group, GroupMember
 from app.database.models.quiz import Quiz, Question, Option
-from app.database.models.attempt import QuizAttempt, Answer
+from app.database.models.attempt import QuizAttempt, Answer, AntiCheatingEvent
 from app.database.models.registration_request import RegistrationRequest, RegistrationStatus
+from app.database.models.registration_code import RegistrationCode
+from app.database.models.blog_post import BlogPost
 from app.database.models.contact_message import ContactMessage
 from app.database.models.system_setting import SystemSetting
 from app.utils.auth import get_password_hash, get_current_admin, get_current_developer
@@ -679,6 +681,52 @@ async def delete_user(
         )
     
     deleted_username = user.username
+
+    attempts_as_student = await QuizAttempt.objects.filter(student=user).all()
+    for attempt in attempts_as_student:
+        await AntiCheatingEvent.objects.filter(attempt=attempt).delete()
+        await Answer.objects.filter(attempt=attempt).delete()
+        await attempt.delete()
+    await GroupMember.objects.filter(user=user).delete()
+
+    quizzes_as_teacher = await Quiz.objects.filter(teacher=user).all()
+    for quiz in quizzes_as_teacher:
+        attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
+        for attempt in attempts:
+            await AntiCheatingEvent.objects.filter(attempt=attempt).delete()
+            await Answer.objects.filter(attempt=attempt).delete()
+            await attempt.delete()
+        for question in await Question.objects.filter(quiz=quiz).all():
+            await Option.objects.filter(question=question).delete()
+        await Question.objects.filter(quiz=quiz).delete()
+        await quiz.delete()
+
+    groups_as_teacher = await Group.objects.filter(teacher=user).all()
+    for group in groups_as_teacher:
+        group_quizzes = await Quiz.objects.filter(group=group).all()
+        for quiz in group_quizzes:
+            attempts = await QuizAttempt.objects.filter(quiz=quiz).all()
+            for attempt in attempts:
+                await AntiCheatingEvent.objects.filter(attempt=attempt).delete()
+                await Answer.objects.filter(attempt=attempt).delete()
+                await attempt.delete()
+            for question in await Question.objects.filter(quiz=quiz).all():
+                await Option.objects.filter(question=question).delete()
+            await Question.objects.filter(quiz=quiz).delete()
+            await quiz.delete()
+        await GroupMember.objects.filter(group=group).delete()
+        await group.delete()
+
+    for req in await RegistrationRequest.objects.filter(reviewed_by=user).all():
+        await req.update(reviewed_by=None)
+    for code in await RegistrationCode.objects.filter(creator=user).all():
+        await code.update(creator=None)
+    for code in await RegistrationCode.objects.filter(used_by=user).all():
+        await code.update(used_by=None)
+
+    await BlogPost.objects.filter(author=user).delete()
+    await ContactMessage.objects.filter(user_id=user.id).update(user_id=None)
+
     await user.delete()
 
     await log_audit(
