@@ -130,6 +130,10 @@
     "passwordMismatch": "Slaptažodžiai nesutampa",
     "backToHome": "Į pradžią",
     "goToDashboard": "Į valdymo skydą",
+    "avatar": "Profilio nuotrauka",
+    "uploadAvatar": "Keisti nuotrauką",
+    "removeAvatar": "Pašalinti nuotrauką",
+    "avatarRemoved": "Nuotrauka pašalinta",
     "roles": {
       "admin": "Administratorius",
       "developer": "Kūrėjas",

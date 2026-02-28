@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Trash2 } from "lucide-react";
 import { adminApi } from "../services/api.js";
+
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
   const { t } = useTranslation();
@@ -11,6 +13,7 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [deletingAvatar, setDeletingAvatar] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
@@ -45,6 +48,20 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
       setIsClosing(false);
       onClose();
     }, 300);
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!userId) return;
+    setDeletingAvatar(true);
+    try {
+      const u = await adminApi.deleteUserAvatar(userId);
+      setUserDetails(u);
+      onSaved?.();
+    } catch (err) {
+      setSaveError(err.message || t("admin.errorUpdateUserDetails"));
+    } finally {
+      setDeletingAvatar(false);
+    }
   };
 
   const handleSave = async () => {
@@ -123,6 +140,31 @@ export default function UserDetailsModal({ isOpen, onClose, userId, onSaved }) {
           )}
           {userDetails && (
             <>
+              {userDetails.avatar_url && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+                  <img
+                    src={`${API_BASE}${userDetails.avatar_url}`}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-full object-cover border border-[var(--border)]"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[var(--text-muted)]">{t("profile.avatar")}</p>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      disabled={deletingAvatar}
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                    >
+                      {deletingAvatar ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      {t("profile.removeAvatar")}
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3 text-sm">
                 <p><span className="text-[var(--text-muted)]">ID:</span> {userDetails.id}</p>
                 <p>

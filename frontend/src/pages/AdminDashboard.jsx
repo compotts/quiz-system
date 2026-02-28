@@ -36,6 +36,8 @@ import {
 import { authApi, adminApi, getAccessToken } from "../services/api.js";
 import UserDetailsModal from "../components/UserDetailsModal.jsx";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 const TABS = [
   { id: "overview", icon: LayoutDashboard },
   { id: "requests", icon: ClipboardList },
@@ -1111,11 +1113,19 @@ export default function AdminDashboard() {
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-card)] ${
-                                ROLE_ICONS[user.role]?.color || ""
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--bg-card)] ${
+                                !user.avatar_url ? ROLE_ICONS[user.role]?.color || "" : ""
                               }`}
                             >
-                              <RoleIcon className="h-5 w-5" />
+                              {user.avatar_url ? (
+                                <img
+                                  src={`${API_BASE}${user.avatar_url}`}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <RoleIcon className="h-5 w-5 shrink-0" />
+                              )}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">

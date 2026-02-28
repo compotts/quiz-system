@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from schemas import (
@@ -19,6 +22,8 @@ from app.utils.audit import log_audit
 from config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+UPLOADS_AVATARS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static" / "uploads" / "avatars"
 
 
 @router.get("/can-initialize", response_model=bool)
@@ -687,6 +692,38 @@ async def delete_user(
     )
     
     return {"message": "User deleted successfully"}
+
+
+@router.delete("/users/{user_id}/avatar", response_model=UserResponse)
+async def delete_user_avatar(
+    user_id: int,
+    request: Request,
+    current_admin: User = Depends(get_current_admin)
+):
+    user = await User.objects.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    old_url = getattr(user, "avatar_url", None)
+    await user.update(avatar_url=None)
+    await user.load_all()
+    if old_url and old_url.startswith("/uploads/avatars/"):
+        old_name = old_url.split("/")[-1]
+        old_path = UPLOADS_AVATARS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    await log_audit(
+        "avatar_deleted_by_admin",
+        user_id=current_admin.id,
+        username=current_admin.username,
+        resource_type="user",
+        resource_id=str(user_id),
+        details={"target_username": user.username},
+        request=request,
+    )
+    return user
 
 
 @router.post("/experimental-cleanup")

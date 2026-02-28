@@ -4,15 +4,27 @@ import { useTranslation } from "react-i18next";
 import { User, ChevronDown, LayoutDashboard, LogOut } from "lucide-react";
 import { clearTokens, authApi } from "../services/api.js";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 export default function UserMenu() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  const [user, setUser] = useState(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
-    authApi.getMe().then((user) => setUserRole(user.role)).catch(() => {});
+    authApi.getMe().then(setUser).catch(() => {});
+  }, []);
+  useEffect(() => {
+    const onLogout = () => setUser(null);
+    const onProfileUpdate = () => authApi.getMe().then(setUser).catch(() => {});
+    window.addEventListener("auth:logout", onLogout);
+    window.addEventListener("auth:profile-updated", onProfileUpdate);
+    return () => {
+      window.removeEventListener("auth:logout", onLogout);
+      window.removeEventListener("auth:profile-updated", onProfileUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -26,6 +38,9 @@ export default function UserMenu() {
     }
     return () => document.removeEventListener("click", handleClickOutside);
   }, [open]);
+
+  const userRole = user?.role;
+  const avatarUrl = user?.avatar_url ? `${API_BASE}${user.avatar_url}` : null;
 
   const handleDashboard = () => {
     setOpen(false);
@@ -49,14 +64,22 @@ export default function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-10 w-10 items-center justify-center gap-0.5 rounded-xl text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] sm:gap-1 sm:px-2 sm:pr-2.5"
+        className="flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[var(--border)] py-1.5 pl-1.5 pr-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)]"
         aria-expanded={open}
         aria-haspopup="true"
         aria-label={t("header.userMenu")}
       >
-        <User className="h-5 w-5" aria-hidden />
+        <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--bg-card)]">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center">
+              <User className="h-4 w-4" aria-hidden />
+            </span>
+          )}
+        </span>
         <ChevronDown
-          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
         />
       </button>

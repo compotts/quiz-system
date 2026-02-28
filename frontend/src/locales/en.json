@@ -130,6 +130,10 @@
     "passwordMismatch": "Passwords do not match",
     "backToHome": "Back to home",
     "goToDashboard": "Go to dashboard",
+    "avatar": "Profile photo",
+    "uploadAvatar": "Change photo",
+    "removeAvatar": "Remove photo",
+    "avatarRemoved": "Photo removed",
     "roles": {
       "admin": "Administrator",
       "developer": "Developer",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,8 +17,12 @@ import {
   PenLine,
   CheckCircle2,
   AlertCircle,
+  ImagePlus,
+  Trash2,
 } from "lucide-react";
 import { authApi } from "../services/api.js";
+
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-[var(--text)] placeholder:text-[var(--text-muted)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:ring-offset-2 focus:ring-offset-[var(--surface)]";
@@ -75,6 +79,10 @@ export default function Profile() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const avatarInputRef = useRef(null);
 
   useEffect(() => {
     authApi
@@ -143,6 +151,39 @@ export default function Profile() {
     else navigate("/dashboard/student");
   };
 
+  const avatarUrl = user?.avatar_url ? `${API_BASE}${user.avatar_url}` : null;
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    setAvatarError("");
+    setAvatarLoading(true);
+    try {
+      const updated = await authApi.uploadAvatar(file);
+      setUser(updated);
+      window.dispatchEvent(new Event("auth:profile-updated"));
+    } catch (err) {
+      setAvatarError(err.message || "Upload failed");
+    } finally {
+      setAvatarLoading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarError("");
+    setAvatarLoading(true);
+    try {
+      const updated = await authApi.deleteAvatar();
+      setUser(updated);
+      window.dispatchEvent(new Event("auth:profile-updated"));
+    } catch (err) {
+      setAvatarError(err.message || "Failed to remove");
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
@@ -183,10 +224,58 @@ export default function Profile() {
       <header className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-md)] sm:p-8">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--border)]/30 via-transparent to-transparent" aria-hidden />
         <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
-          <div
-            className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-2 ${avatarStyle}`}
-          >
-            <User className="h-10 w-10" strokeWidth={1.5} />
+          <div className="flex shrink-0 flex-col items-center gap-2">
+            <div
+              className={`relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 ${avatarStyle}`}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-10 w-10" strokeWidth={1.5} />
+              )}
+              {avatarLoading && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            {avatarError && (
+              <p className="max-w-[20rem] text-center text-xs text-red-600 dark:text-red-400">{avatarError}</p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={avatarLoading}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--text)] transition-colors hover:bg-[var(--border)] disabled:opacity-50"
+              >
+                <ImagePlus className="h-3.5 w-3.5" />
+                {t("profile.uploadAvatar")}
+              </button>
+              {user.avatar_url && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={avatarLoading}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {t("profile.removeAvatar")}
+                </button>
+              )}
+            </div>
           </div>
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">

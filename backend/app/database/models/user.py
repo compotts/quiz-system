@@ -22,6 +22,7 @@ class User(Model):
     hashed_password: str = String(max_length=255)
     role: str = String(max_length=20, default=UserRole.STUDENT.value)
     is_active: bool = Boolean(default=True)
+    avatar_url: str = String(max_length=512, nullable=True)
     registration_ip: str = String(max_length=100, nullable=True)
     created_at: datetime = DateTime(default=utc_now)
     updated_at: datetime = DateTime(default=utc_now)

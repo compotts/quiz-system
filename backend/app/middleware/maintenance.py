@@ -9,6 +9,9 @@ ALLOWED_PATH_PREFIXES_MAINTENANCE = ("/admin",)
 ALLOWED_PATHS_MAINTENANCE = {
     ("GET", "/auth/registration-settings"),
     ("GET", "/auth/me"),
+    ("PATCH", "/auth/me"),
+    ("POST", "/auth/me/avatar"),
+    ("DELETE", "/auth/me/avatar"),
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
     ("GET", "/health"),

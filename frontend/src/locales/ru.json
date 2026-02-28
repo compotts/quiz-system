@@ -130,6 +130,10 @@
     "passwordMismatch": "Пароли не совпадают",
     "backToHome": "На главную",
     "goToDashboard": "В дашборд",
+    "avatar": "Фото профиля",
+    "uploadAvatar": "Изменить фото",
+    "removeAvatar": "Удалить фото",
+    "avatarRemoved": "Фото удалено",
     "roles": {
       "admin": "Администратор",
       "developer": "Разработчик",

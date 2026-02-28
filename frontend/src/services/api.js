@@ -75,6 +75,32 @@ export const authApi = {
     });
   },
 
+  async uploadAvatar(file) {
+    const url = `${API_BASE_URL}/auth/me/avatar`;
+    const token = localStorage.getItem("access_token");
+    const formData = new FormData();
+    formData.append("file", file);
+    const config = {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    };
+    const response = await fetch(url, config);
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && token) {
+        clearTokens();
+        window.dispatchEvent(new Event("auth:logout"));
+      }
+      throw new ApiError(data.detail || "ошибка сервера", response.status);
+    }
+    return data;
+  },
+
+  async deleteAvatar() {
+    return request("/auth/me/avatar", { method: "DELETE" });
+  },
+
   async changePassword(currentPassword, newPassword) {
     return request("/auth/change-password", {
       method: "POST",
@@ -187,6 +213,10 @@ export const adminApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  },
+
+  async deleteUserAvatar(userId) {
+    return request(`/admin/users/${userId}/avatar`, { method: "DELETE" });
   },
 
   async changeUserRole(userId, newRole) {

@@ -11,6 +11,7 @@ from config import settings
 UPLOADS_DIR = Path(__file__).resolve().parent / "static" / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 (UPLOADS_DIR / "questions").mkdir(parents=True, exist_ok=True)
+(UPLOADS_DIR / "avatars").mkdir(parents=True, exist_ok=True)
 
 if settings.api_version == "v2":
     from app.routes.v2 import auth, admin, groups, quizzes, attempts, contact, blog

@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+import os
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from schemas import (
     UserRegisterRequest, UserLogin, Token, UserResponse,
     RefreshTokenRequest, RegisterResponse, ProfileUpdate, ChangePasswordRequest
@@ -12,9 +16,12 @@ from app.utils.auth import (
 )
 from app.utils.rate_limiter import check_login_rate_limit, check_registration_rate_limit
 from app.utils.audit import log_audit
+from config import settings
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+UPLOADS_AVATARS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static" / "uploads" / "avatars"
 
 
 async def _get_setting(key: str, default: str) -> bool:
@@ -258,6 +265,80 @@ async def update_me(
 
     await current_user.update(**update_data)
     await current_user.load_all()
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    content_type = file.content_type or ""
+    if content_type not in settings.allowed_image_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Allowed types: {', '.join(settings.allowed_image_types)}"
+        )
+    contents = await file.read()
+    if len(contents) > settings.max_image_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Image must be under {settings.max_image_size} bytes"
+        )
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/gif": ".gif", "image/webp": ".webp"}.get(
+        content_type, ".jpg"
+    )
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:12]}{ext}"
+    UPLOADS_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    filepath = UPLOADS_AVATARS_DIR / filename
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    url_path = f"/uploads/avatars/{filename}"
+    old_url = getattr(current_user, "avatar_url", None)
+    await current_user.update(avatar_url=url_path)
+    await current_user.load_all()
+    if old_url and old_url.startswith("/uploads/avatars/"):
+        old_name = old_url.split("/")[-1]
+        old_path = UPLOADS_AVATARS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    await log_audit(
+        "avatar_uploaded",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="auth",
+        request=request,
+    )
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserResponse)
+async def delete_avatar(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    old_url = getattr(current_user, "avatar_url", None)
+    await current_user.update(avatar_url=None)
+    await current_user.load_all()
+    if old_url and old_url.startswith("/uploads/avatars/"):
+        old_name = old_url.split("/")[-1]
+        old_path = UPLOADS_AVATARS_DIR / old_name
+        if old_path.exists():
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+    await log_audit(
+        "avatar_deleted",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="auth",
+        request=request,
+    )
     return current_user
 
 

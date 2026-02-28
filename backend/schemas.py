@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     last_name: Optional[str]
     role: str
     is_active: bool
+    avatar_url: Optional[str] = None
     registration_ip: Optional[str] = None
     created_at: datetime
 
