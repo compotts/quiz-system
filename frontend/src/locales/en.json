@@ -93,7 +93,13 @@
     "errorRegister": "Registration error",
     "required": " *",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "tipsTitle": "Tips for a secure account",
+    "tipPasswordLength": "Use at least 6 characters for your password.",
+    "tipPasswordVariety": "Combine letters, numbers, and symbols for a stronger password.",
+    "tipPasswordUnique": "Don't reuse passwords from other sites.",
+    "tipEmailValid": "Use a valid email address — it may be used for account recovery.",
+    "tipUsernameRemember": "Choose a username you'll remember; you can add your name in profile later."
   },
   "userMenu": {
     "dashboard": "Go to Dashboard",

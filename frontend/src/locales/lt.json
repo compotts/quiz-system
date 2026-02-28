@@ -93,7 +93,13 @@
     "errorRegister": "Registracijos klaida",
     "required": " *",
     "showPassword": "Rodyti slaptažodį",
-    "hidePassword": "Slėpti slaptažodį"
+    "hidePassword": "Slėpti slaptažodį",
+    "tipsTitle": "Patarimai saugiai paskyrai",
+    "tipPasswordLength": "Naudokite bent 6 simbolius slaptažodžiui.",
+    "tipPasswordVariety": "Derinkite raides, skaičius ir simbolius stipresniam slaptažodžiui.",
+    "tipPasswordUnique": "Nenaudokite to paties slaptažodžio kituose puslapiuose.",
+    "tipEmailValid": "Naudokite galiojantį el. paštą — jis gali būti naudojamas paskyros atkūrimui.",
+    "tipUsernameRemember": "Pasirinkite įsimintiną vartotojo vardą; vardą galite pridėti profile vėliau."
   },
   "userMenu": {
     "dashboard": "Eiti į valdymo skydą",

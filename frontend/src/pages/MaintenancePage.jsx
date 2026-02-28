@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Wrench, LogIn, Moon, Sun } from "lucide-react";
+import { Wrench, LogIn, Moon, Sun, ExternalLink } from "lucide-react";
 import AuthModal from "../components/AuthModal.jsx";
 import { useTheme } from "../hooks/useTheme.js";
 import { useLanguage } from "../hooks/useLanguage.js";
@@ -34,6 +34,14 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
   const bannerText = getBannerText(siteStatus?.home_banner_text, lang);
   const showBanner = !backendUnavailable && bannerText && bannerText.trim();
 
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/gi;
+  const bannerParts = bannerText
+    ? bannerText.split(urlRegex).map((part) => {
+        const isUrl = /^https?:\/\//i.test(part);
+        return { type: isUrl ? "link" : "text", value: part, href: isUrl ? part : undefined };
+      })
+    : [];
+
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg)]">
       <AuthModal
@@ -47,7 +55,22 @@ export default function MaintenancePage({ siteStatus, backendUnavailable, onLogi
           className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
           role="alert"
         >
-          {bannerText}
+          {bannerParts.map((part, i) =>
+            part.type === "link" ? (
+              <a
+                key={i}
+                href={part.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold underline decoration-2 underline-offset-2 hover:no-underline"
+              >
+                {part.value}
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+              </a>
+            ) : (
+              <span key={i}>{part.value}</span>
+            )
+          )}
         </div>
       )}
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 lg:px-8">

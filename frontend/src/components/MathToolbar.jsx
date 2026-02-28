@@ -1,9 +1,6 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-/**
- * Returns true if position pos is inside $...$ or $$...$$ in value.
- */
 function isInsideMath(value, pos) {
   const s = value ?? "";
   if (pos <= 0 || pos > s.length) return false;
@@ -32,15 +29,10 @@ function isInsideMath(value, pos) {
   return false;
 }
 
-/**
- * Buttons insert LaTeX at cursor in the target input/textarea.
- * Props: targetRef (ref to input), value (string), onChange (string => void)
- */
 export default function MathToolbar({ targetRef, value, onChange, className = "", label }) {
   const { t } = useTranslation();
   const cursorAfterRef = useRef(null);
 
-  /** @param {string} snippet - LaTeX to insert. @param {number} [cursorOffset] - position inside snippet to place cursor (default: end). */
   const insert = (snippet, cursorOffset = undefined) => {
     const el = targetRef?.current;
     if (!el || onChange == null) return;
@@ -92,27 +84,17 @@ export default function MathToolbar({ targetRef, value, onChange, className = ""
     { label: "—/—", titleKey: "mathBtn.fractionEmpty", snippet: "$\\frac{}{}$", cursorOffset: 7 },
     { label: "√", titleKey: "mathBtn.sqrt", snippet: "$\\sqrt{x}$" },
     { label: "2√5", titleKey: "mathBtn.coefSqrt", snippet: "$2\\sqrt{5}$" },
-    { label: "∑", titleKey: "mathBtn.sum", snippet: "$\\sum_{i=1}^{n}$" },
-    { label: "∫", titleKey: "mathBtn.integral", snippet: "$\\int_{a}^{b}$" },
     { label: "sin", titleKey: "mathBtn.sin", snippet: "$\\sin x$" },
     { label: "cos", titleKey: "mathBtn.cos", snippet: "$\\cos x$" },
     { label: "tan", titleKey: "mathBtn.tan", snippet: "$\\tan x$" },
     { label: "°", titleKey: "mathBtn.degrees", snippet: "$90^\\circ$" },
-    { label: "α", titleKey: "mathBtn.alpha", snippet: "$\\alpha$" },
-    { label: "β", titleKey: "mathBtn.beta", snippet: "$\\beta$" },
-    { label: "π", titleKey: "mathBtn.pi", snippet: "$\\pi$" },
-    { label: "γ", titleKey: "mathBtn.gamma", snippet: "$\\gamma$" },
-    { label: "Δ", titleKey: "mathBtn.delta", snippet: "$\\Delta$" },
     { label: "≠", titleKey: "mathBtn.neq", snippet: "$\\neq$" },
     { label: "≤", titleKey: "mathBtn.leq", snippet: "$\\leq$" },
     { label: "≥", titleKey: "mathBtn.geq", snippet: "$\\geq$" },
     { label: "≈", titleKey: "mathBtn.approx", snippet: "$\\approx$" },
     { label: "∞", titleKey: "mathBtn.infinity", snippet: "$\\infty$" },
     { label: "×", titleKey: "mathBtn.times", snippet: "$\\times$" },
-    { label: "÷", titleKey: "mathBtn.div", snippet: "$\\div$" },
     { label: "±", titleKey: "mathBtn.pm", snippet: "$\\pm$" },
-    { label: "($)", titleKey: "mathBtn.wrapInline", snippet: "$$", wrap: true },
-    { label: "($$)", titleKey: "mathBtn.wrapBlock", snippet: "$$$$", wrap: true },
   ];
 
   const ns = "teacher.quizPage";

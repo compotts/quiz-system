@@ -14,6 +14,7 @@ import TeacherQuizPage from "./pages/TeacherQuizPage.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import StudentGroupPage from "./pages/StudentGroupPage.jsx";
 import Profile from "./pages/Profile.jsx";
+import Auth from "./pages/Auth.jsx";
 import MaintenancePage from "./pages/MaintenancePage.jsx";
 import { SiteStatusContext } from "./contexts/SiteStatusContext.jsx";
 import { authApi } from "./services/api.js";
@@ -94,6 +95,7 @@ function App() {
         <main className="flex flex-1 flex-col">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/info" element={<Info />} />
             <Route path="/blog" element={<Blog />} />

@@ -566,7 +566,7 @@ export default function TeacherGroupPage() {
 
       {showQuizModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.groupPage.createQuiz")}</h2>
               <button onClick={() => setShowQuizModal(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">

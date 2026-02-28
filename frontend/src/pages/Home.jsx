@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
@@ -14,7 +13,6 @@ import {
   Sparkles,
   ExternalLink,
 } from "lucide-react";
-import AuthModal from "../components/AuthModal.jsx";
 import { useSiteStatus } from "../contexts/SiteStatusContext.jsx";
 
 const FEATURES = [
@@ -47,7 +45,6 @@ const BANNER_STYLE_CLASSES = {
 
 export default function Home() {
   const { t, i18n } = useTranslation();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const siteStatus = useSiteStatus() ?? {
     maintenance_mode: false,
     registration_enabled: true,
@@ -82,13 +79,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        registrationEnabled={siteStatus.registration_enabled}
-        autoRegistrationEnabled={siteStatus.auto_registration_enabled}
-      />
-
       {showBanner && (
         <div
           className={`border-b px-4 py-3 text-center text-sm font-medium sm:px-6 ${bannerStyle}`}
@@ -148,13 +138,13 @@ export default function Home() {
             className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center home-animate-fade-down"
             style={{ opacity: 0, animationDelay: "0.5s" }}
           >
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
+            <Link
+              to="/auth"
               className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-[var(--bg-elevated)] shadow-[var(--shadow-md)] transition-all hover:opacity-90 hover:scale-[1.02] hover:shadow-lg"
             >
               <LogIn className="h-4 w-4" />
               {t("home.login")}
-            </button>
+            </Link>
             <Link
               to="/blog"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-3.5 text-sm font-medium text-[var(--text)] transition-all hover:bg-[var(--bg-card)] hover:border-[var(--text-muted)]/30"
@@ -225,13 +215,13 @@ export default function Home() {
             {t("home.howToStart")}
           </p>
           <div className="mt-10">
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-[var(--bg-elevated)] transition-all hover:opacity-90 hover:scale-[1.02]"
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-6 py-3.5 text-sm font-semibold text-[var(--bg-elevated)] transition-all hover:opacity-90 active:scale-[0.98]"
             >
               {t("home.login")}
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
         </div>
       </section>

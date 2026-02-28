@@ -13,10 +13,6 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
-/**
- * Parse string into segments: { type: 'text'|'math', content: string, display?: boolean }
- * Supports $$..$$, $..$, \[..\], \(..\)
- */
 function parseMath(str) {
   if (str == null || typeof str !== "string") return [{ type: "text", content: "" }];
   const segments = [];
@@ -107,9 +103,6 @@ function renderToHtml(str) {
   return html;
 }
 
-/**
- * Renders text with LaTeX math. Use $...$ for inline and $$...$$ for block.
- */
 export default function MathText({ children, className = "", as: Tag = "span", ...props }) {
   const html = useMemo(() => {
     const text = children == null ? "" : typeof children === "string" ? children : String(children);

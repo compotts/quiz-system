@@ -1381,8 +1381,8 @@ export default function TeacherQuizPage() {
       </div>
 
       {showQuestionForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.addQuestion")}</h2>
               <button onClick={() => { setShowQuestionForm(false); setQuestionFormError(""); setQuestionFormImageFile(null); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
@@ -1642,7 +1642,7 @@ export default function TeacherQuizPage() {
 
       {confirmDeleteQuestion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <p className="text-[var(--text)]">{t("teacher.quizPage.confirmDeleteQuestion")}</p>
             <div className="mt-4 flex gap-2">
               <button
@@ -1667,7 +1667,7 @@ export default function TeacherQuizPage() {
 
       {confirmDeleteAllQuestions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <p className="text-[var(--text)]">{t("teacher.quizPage.confirmDeleteAllQuestions")}</p>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
               {t("teacher.quizPage.deleteAllWarning", { count: questions.length })}
@@ -1694,8 +1694,8 @@ export default function TeacherQuizPage() {
       )}
 
       {editingQuestion && editQuestionForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.editQuestion")}</h2>
               <button onClick={() => { setEditingQuestion(null); setEditQuestionForm(null); setEditQuestionError(""); }} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
@@ -1963,8 +1963,8 @@ export default function TeacherQuizPage() {
       )}
 
       {showReissueModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.quizPage.reissueTitle")}</h2>
               <button onClick={() => setShowReissueModal(false)} className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--border)]">
@@ -2020,7 +2020,7 @@ export default function TeacherQuizPage() {
 
       {showStudentDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
             <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] p-4">
               <div>
                 <h2 className="text-lg font-semibold text-[var(--text)]">

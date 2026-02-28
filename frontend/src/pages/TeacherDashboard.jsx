@@ -189,7 +189,7 @@ export default function TeacherDashboard() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 overscroll-contain">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-[var(--text)]">{t("teacher.groups.createGroup")}</h2>
               <button

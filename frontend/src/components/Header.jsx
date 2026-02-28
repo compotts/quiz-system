@@ -53,7 +53,14 @@ export default function Header() {
               </button>
             ))}
           </div>
-          {isAuth && <UserMenu />}
+          {isAuth ? <UserMenu /> : (
+            <Link
+              to="/auth"
+              className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-card)] sm:px-4"
+            >
+              {t("auth.login")}
+            </Link>
+          )}
           <button
             type="button"
             onClick={toggle}
