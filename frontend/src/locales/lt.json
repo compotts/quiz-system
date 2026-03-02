@@ -40,12 +40,15 @@
     "about2": "Mes įgyvendinome galimybę kurti viktorinas, jas vykdyti ir peržiūrėti rezultatus bei daug kitų funkcijų. Projektas yra aktyviai vystomas.",
     "featuresTitle": "Galimybės",
     "features": {
-      "quizzes": { "title": "Viktorinos", "desc": "Klausimai su keliais atsakymų variantais, laikmatis ir keli bandymai." },
+      "quizzes": { "title": "Viktorinos", "desc": "Klausimai su keliais atsakymų variantais, laikmatis ir daug kitų nuostatų." },
       "groups": { "title": "Grupės", "desc": "Grupių kūrimas studentams, kuriose bus jiems skirtos viktorinos." },
       "attempts": { "title": "Bandymai", "desc": "Jūsų sprendimų istorija ir statistika išsaugoma bei lieka prieinama jums ir dėstytojams." },
       "stats": { "title": "Statistika", "desc": "Kiekvienas dėstytojas gali peržiūrėti išsamią kiekvienos viktorinos ir studento statistiką." },
       "themes": { "title": "Kiekvieno skoniui", "desc": "Be šviesios temos, sukurta ir tamsi tema nakties laikui." },
-      "responsive": { "title": "Adaptyvumas", "desc": "Patogiai pritaikyta kiekvienam įrenginiui ir ekrano dydžiui!" }
+      "responsive": { "title": "Adaptyvumas", "desc": "Patogiai pritaikyta kiekvienam įrenginiui ir ekrano dydžiui!" },
+      "math": { "title": "Matematika", "desc": "Formulių palaikymas klausimuose ir atsakymuose." },
+      "questionTypes": { "title": "Įvairūs klausimų tipai", "desc": "Vieno ir kelių atsakymų pasirinkimas, vilkimo ir numetimo, teksto ir skaičiaus įvedimas." },
+      "images": { "title": "Paveikslėliai", "desc": "Paveikslėlių palaikymas klausimuose." }
     },
     "howToStartTitle": "Kaip pradėti",
     "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą.",

@@ -40,12 +40,15 @@
     "about2": "We have implemented the ability to create quizzes, conduct them, and view results, among many other features. The project is under active development.",
     "featuresTitle": "Features",
     "features": {
-      "quizzes": { "title": "Quizzes", "desc": "Multiple-choice questions, timer, and multiple attempts." },
+      "quizzes": { "title": "Quizzes", "desc": "Multiple-choice questions, timer, and many other settings." },
       "groups": { "title": "Groups", "desc": "Create groups for students containing specific quizzes for them." },
       "attempts": { "title": "Attempts", "desc": "Your attempt history and statistics are saved and remain accessible to you and teachers." },
       "stats": { "title": "Statistics", "desc": "Each teacher can view detailed statistics for every quiz and student." },
       "themes": { "title": "For every taste", "desc": "In addition to the light theme, a dark theme is implemented for nighttime." },
-      "responsive": { "title": "Responsiveness", "desc": "Conveniently adapted for every device and screen size!" }
+      "responsive": { "title": "Responsiveness", "desc": "Conveniently adapted for every device and screen size!" },
+      "math": { "title": "Math formulas", "desc": "Support for formulas in questions and answers." },
+      "questionTypes": { "title": "Various question types", "desc": "Single and multiple choice, drag-and-drop, text and number input." },
+      "images": { "title": "Images", "desc": "Support for images in questions." }
     },
     "howToStartTitle": "How to start",
     "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard.",

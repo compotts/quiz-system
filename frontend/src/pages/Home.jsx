@@ -12,6 +12,9 @@ import {
   ArrowRight,
   Sparkles,
   ExternalLink,
+  Calculator,
+  ListChecks,
+  Image,
 } from "lucide-react";
 import { useSiteStatus } from "../contexts/SiteStatusContext.jsx";
 
@@ -22,6 +25,9 @@ const FEATURES = [
   { key: "stats", icon: TrendingUp, color: "amber" },
   { key: "themes", icon: Palette, color: "rose" },
   { key: "responsive", icon: Smartphone, color: "cyan" },
+  { key: "math", icon: Calculator, color: "emerald" },
+  { key: "questionTypes", icon: ListChecks, color: "blue" },
+  { key: "images", icon: Image, color: "cyan" },
 ];
 
 const COLOR_CLASSES = {
