@@ -29,7 +29,8 @@
   "footer": {
     "home": "Home",
     "faq": "FAQ",
-    "policy": "Policy"
+    "policy": "Policy",
+    "contact": "Contact administration"
   },
   "home": {
     "tagline": "Create quizzes, take tests, and track results — all in one place.",

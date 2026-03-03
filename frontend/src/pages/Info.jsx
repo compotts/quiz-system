@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { contactApi } from "../services/api.js";
@@ -10,6 +11,8 @@ const ALL_SECTIONS = [
   { id: "terms", labelKey: "info.navTerms" },
   { id: "contact", labelKey: "info.navContact" },
 ];
+
+const VALID_HASHES = ALL_SECTIONS.map((s) => s.id);
 
 const FAQ_IDS = ["1", "2", "3", "4", "5"];
 
@@ -42,9 +45,25 @@ function FAQItem({ q, a }) {
 
 export default function Info() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const siteStatus = useSiteStatus();
   const contactEnabled = siteStatus?.contact_enabled !== false;
-  const [activeSection, setActiveSection] = useState("faq");
+  const hashToSection = (hash) => {
+    const id = (hash || "").replace(/^#/, "");
+    return VALID_HASHES.includes(id) ? id : "faq";
+  };
+  const [activeSection, setActiveSection] = useState(() => hashToSection(location.hash));
+
+  useEffect(() => {
+    const section = hashToSection(location.hash);
+    setActiveSection(section);
+  }, [location.hash]);
+
+  const goToSection = (id) => {
+    setActiveSection(id);
+    navigate(`/info#${id}`, { replace: true });
+  };
   const [contactMessage, setContactMessage] = useState("");
   const [contactSent, setContactSent] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
@@ -78,7 +97,7 @@ export default function Info() {
               <button
                 key={section.id}
                 type="button"
-                onClick={() => setActiveSection(section.id)}
+                onClick={() => goToSection(section.id)}
                 className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   activeSection === section.id
                     ? "bg-[var(--accent)] text-[var(--bg-elevated)]"
@@ -95,7 +114,7 @@ export default function Info() {
       <div className="flex-1 bg-[var(--bg)] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-3xl">
           {activeSection === "faq" && (
-            <section>
+            <section id="faq">
               <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
                 {t("info.faqTitle")}
               </h1>
@@ -113,7 +132,7 @@ export default function Info() {
           )}
 
           {activeSection === "privacy" && (
-            <section>
+            <section id="privacy">
               <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
                 {t("info.navPrivacy")}
               </h1>
@@ -132,7 +151,7 @@ export default function Info() {
           )}
 
           {activeSection === "terms" && (
-            <section>
+            <section id="terms">
               <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
                 {t("info.navTerms")}
               </h1>
@@ -151,7 +170,7 @@ export default function Info() {
           )}
 
           {activeSection === "contact" && (
-            <section>
+            <section id="contact">
               <h1 className="text-2xl font-semibold text-[var(--text)] sm:text-3xl">
                 {t("info.contactTitle")}
               </h1>
