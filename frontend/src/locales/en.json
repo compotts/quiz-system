@@ -37,9 +37,32 @@
     "login": "Login",
     "devBlog": "Dev blog about fixes and additions to the project",
     "aboutTitle": "About the project",
+    "subtitle": "for education",
+    "howToStartTitle": "How to get started",
+    "howToStartDesc": "Three simple steps to create your first quiz",
+    "featuresDesc": "Complete set of tools for creating and managing quizzes",
+    "steps": {
+      "register": {
+        "title": "Register",
+        "desc": "Create a free account in seconds and get access to all platform features."
+      },
+      "create": {
+        "title": "Create Quiz",
+        "desc": "Add questions, configure settings, and create the perfect quiz for your students."
+      },
+      "share": {
+        "title": "Share",
+        "desc": "Send the link to students and track their results in real-time."
+      }
+    },
     "about1": "Quizz is an intellectual entertainment game or test where participants answer questions from various fields of knowledge to score maximum points.",
     "about2": "We have implemented the ability to create quizzes, conduct them, and view results, among many other features. The project is under active development.",
     "featuresTitle": "Features",
+    "benefits": {
+      "easy": { "title": "Simple and Fast", "desc": "Intuitive interface allows you to create quizzes in minutes without complex settings." },
+      "secure": { "title": "Secure", "desc": "Your data is protected, and access to quizzes is controlled by a system of rights and groups." },
+      "accessible": { "title": "Accessible Everywhere", "desc": "Works on any device - computers, tablets, and smartphones." }
+    },
     "features": {
       "quizzes": { "title": "Quizzes", "desc": "Multiple-choice questions, timer, and many other settings." },
       "groups": { "title": "Groups", "desc": "Create groups for students containing specific quizzes for them." },
@@ -51,7 +74,6 @@
       "questionTypes": { "title": "Various question types", "desc": "Single and multiple choice, drag-and-drop, text and number input." },
       "images": { "title": "Images", "desc": "Support for images in questions." }
     },
-    "howToStartTitle": "How to start",
     "howToStart": "Submit a registration request and wait for administrative approval. Once a role (student or teacher) is assigned, you can start using our service. Logging into your account will automatically take you to your dashboard.",
     "firstRequestWarning": "All functions are already available! We invite you to register and start using our service.",
     "maintenanceTitle": "Site under maintenance",

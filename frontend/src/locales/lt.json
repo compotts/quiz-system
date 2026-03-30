@@ -37,9 +37,31 @@
     "login": "Prisijungti",
     "devBlog": "Dev blogas apie projekto pataisymus ir papildymus",
     "aboutTitle": "Apie projektą",
-    "about1": "„Quizz“ – tai intelektualus pramoginis žaidimas ar testas, kurio metu dalyviai atsakinėja į klausimus iš įvairių sričių, siekdami surinkti kuo daugiau taškų.",
+    "subtitle": "švietimui",
+    "howToStartTitle": "Kaip pradėti",
+    "howToStartDesc": "Trys paprasti žingsniai jūsų pirmajai viktorinai sukurti",
+    "featuresDesc": "Pilnas įrankių rinkinys viktorinoms kurti ir valdyti",
+    "steps": {
+      "register": {
+        "title": "Registruokitės",
+        "desc": "Sukurkite nemokamą paskyrą per kelias sekundes ir gaukite prieigą prie visų platformos funkcijų."
+      },
+      "create": {
+        "title": "Sukurkite viktoriną",
+        "desc": "Pridėkite klausimus, sukonfigūruokite nustatymus ir sukurkite tobulą viktoriną savo mokiniams."
+      },
+      "share": {
+        "title": "Dalinkitės",
+        "desc": "Išsiųskite nuorodą mokiniams ir stebėkite jų rezultatus realiuoju laiku."
+      }
+    },    "about1": "„Quizz“ – tai intelektualus pramoginis žaidimas ar testas, kurio metu dalyviai atsakinėja į klausimus iš įvairių sričių, siekdami surinkti kuo daugiau taškų.",
     "about2": "Mes įgyvendinome galimybę kurti viktorinas, jas vykdyti ir peržiūrėti rezultatus bei daug kitų funkcijų. Projektas yra aktyviai vystomas.",
     "featuresTitle": "Galimybės",
+    "benefits": {
+      "easy": { "title": "Paprasta ir greita", "desc": "Intuityvi sąsaja leidžia sukurti viktorinas per kelias minutes be sudėtingų nustatymų." },
+      "secure": { "title": "Saugu", "desc": "Jūsų duomenys apsaugoti, o prieiga prie viktorinų kontroliuojama teisių ir grupių sistema." },
+      "accessible": { "title": "Prieinama visur", "desc": "Veikia bet kuriame įrenginyje – kompiuteriuose, planšetėse ir išmaniuosiuose telefonuose." }
+    },
     "features": {
       "quizzes": { "title": "Viktorinos", "desc": "Klausimai su keliais atsakymų variantais, laikmatis ir daug kitų nuostatų." },
       "groups": { "title": "Grupės", "desc": "Grupių kūrimas studentams, kuriose bus jiems skirtos viktorinos." },
@@ -51,7 +73,6 @@
       "questionTypes": { "title": "Įvairūs klausimų tipai", "desc": "Vieno ir kelių atsakymų pasirinkimas, vilkimo ir numetimo, teksto ir skaičiaus įvedimas." },
       "images": { "title": "Paveikslėliai", "desc": "Paveikslėlių palaikymas klausimuose." }
     },
-    "howToStartTitle": "Kaip pradėti",
     "howToStart": "Pateikite registracijos paraišką ir palaukite administracijos patvirtinimo. Gavę rolę (studentas, dėstytojas), galėsite pradėti naudotis mūsų paslauga. Prisijungę prie paskyros, automatiškai pateksite į savo valdymo skydą.",
     "firstRequestWarning": "Visos funkcijos jau prieinamos! Kviečiame registruotis ir pradėti naudotis mūsų paslauga.",
     "maintenanceTitle": "Svetainė techninėje priežiūroje",
